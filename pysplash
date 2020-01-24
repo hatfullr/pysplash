@@ -443,8 +443,8 @@ class main():
             # Check if it is a mesa file
             header_attr, cols, data = read_mesa(self.current_file.get())
             if header_attr is not None and cols is not None and data is not None:
-                keys = np.asarray(cols.items())[:,0]
-                values = np.asarray(cols.items())[:,1].astype(int)
+                keys = np.asarray(list(cols.items()))[:,0]
+                values = np.asarray(list(cols.items()))[:,1].astype(int)
                 self.variables = keys[np.argsort(values)]
                 self.data = data
                 self.MESA_mode = True
