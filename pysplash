@@ -561,8 +561,7 @@ class main():
         elif not self.sph_mode and self.MESA_mode: # If we are in MESA mode
             self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
             
-        self.ax.relim()
-        self.canvas.draw()
+        
 
 
 
@@ -586,6 +585,7 @@ class main():
         self.update_axis_labels()
             
         self.plot_data()
+        self.ax.relim()
         self.canvas.draw()
         self.corner_message_text.set("")
         
