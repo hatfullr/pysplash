@@ -1,12 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function # Allows python2 and python3 functionality
+#from __future__ import print_function # Allows python2 and python3 functionality
 
-try:
-    import tkinter as tk # Python 3
-except ImportError:
-    import Tkinter as tk # Python 2
+#try:
+#    import tkinter as tk # Python 3
+#    from tkinter.colorchooser import askcolor
+#except ImportError:
+#    import Tkinter as tk # Python 2
+#    from Tkinter.colorchooser import askcolor
 
+import tkinter as tk # Python 3 only for now
+from tkinter import colorchooser
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -165,6 +169,12 @@ def read_mesa(filename):
     header_attr, cols, data = _read_mesafile(filename, data_rows=num_zones, only='all')
     return header_attr,cols,data
 
+
+def rgb2tk(rgb):
+    """translates an rgb tuple of int to a tkinter friendly color code
+    """
+    return "#%02x%02x%02x" % rgb
+
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self,canvas_,parent_):
         self.toolitems = (
@@ -178,27 +188,13 @@ class CustomToolbar(NavigationToolbar2Tk):
 
 class main():
     
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.wm_title("PySplash")
+    def __init__(self,root):
+        self.root = root
+        
 
         self.data = None
         self.header = None
 
-        self.corner_message_text = tk.StringVar()
-        self.corner_message_text.set("")
-        self.corner_message_label = tk.Label(self.root,textvariable=self.corner_message_text)
-        self.corner_message_label.place(rely=1.0,relx=1.0,x=0,y=0,anchor="se")
-        
-        self.right_frame = tk.Frame()
-        self.left_frame = tk.Frame()
-
-        self.graph_controls_frame = tk.Frame()
-        self.graph_frame = tk.Frame(self.left_frame)
-        self.graph_toolbar_frame = tk.Frame()
-        self.axes_frame = tk.Frame(self.right_frame)
-        self.files_frame = tk.Frame(self.right_frame)
-        
         # Assume an SPH data file by default
         self.variables = [ "x",
                            "y",
@@ -219,11 +215,42 @@ class main():
                            "cc",
                            "divv",
                          ]
+
+        self.sph_mode = True
+        self.MESA_mode = False
+        
+        self.corner_message_text = tk.StringVar()
+        self.corner_message_text.set("")
+        self.corner_message_label = tk.Label(self.root,textvariable=self.corner_message_text)
+        self.corner_message_label.place(rely=1.0,relx=1.0,x=0,y=0,anchor="se")
+        
+        self.right_frame = tk.Frame()
+        self.left_frame = tk.Frame()
+        
+        self.graph_controls_frame = tk.Frame()
+        self.graph_frame = tk.Frame(self.left_frame)
+        self.graph_toolbar_frame = tk.Frame()
+        self.axes_frame = tk.Frame(self.right_frame)
+        self.files_frame = tk.Frame(self.right_frame)
+        self.color_frame = tk.Frame(self.right_frame)
+        
+        
+        # Setup the color controls
+        self.particle_color = tk.StringVar()
+        self.particle_core_color = tk.StringVar()
+        self.particle_color.set("#000000")
+        self.particle_core_color.set("#000000")
+        tk.Label(self.color_frame,text="Particles").grid(row=0,column=0,sticky='W')
+        tk.Label(self.color_frame,text="Core particles").grid(row=1,column=0,sticky='W')
+        self.particle_color_button = tk.Button(self.color_frame,command=self.choose_particle_color,height=1,width=2,padx=0,pady=0,bg=self.particle_color.get())
+        self.particle_core_color_button = tk.Button(self.color_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
+        self.particle_color_button.grid(row=0,column=1)
+        self.particle_core_color_button.grid(row=1,column=1)
         
 
         # Setup the axes prompt
-        self.axish_var = tk.StringVar(self.root)
-        self.axisv_var = tk.StringVar(self.root)
+        self.axish_var = tk.StringVar()
+        self.axisv_var = tk.StringVar()
         self.axish_var.set(self.variables[0])
         self.axisv_var.set(self.variables[1])
 
@@ -253,7 +280,7 @@ class main():
         
 
         # Setup the files prompt
-        self.files_var = tk.StringVar(self.root)
+        self.files_var = tk.StringVar()
         if len(sys.argv) > 1:
             self.files_var.set(" ".join(sys.argv[1:]))
 
@@ -274,7 +301,9 @@ class main():
         # Setup the graph
         self.fig = Figure(figsize=(7,7),dpi=100)
         self.ax = self.fig.add_subplot(111)
-        
+
+        self.particles = []
+        self.core_particles = []
         
         self.canvas = FigureCanvasTkAgg(self.fig,master=self.graph_frame)
 
@@ -302,6 +331,7 @@ class main():
         # Right side
         self.files_frame.grid(row=0,column=0)
         self.axes_frame.grid(row=1,column=0)
+        self.color_frame.grid(row=2,column=0)
 
         # Left side
         self.graph_frame.grid(row=0,column=0)
@@ -315,10 +345,31 @@ class main():
         # Draw the first file
         self.read_file()
         self.draw_plot()
+
         
-        self.root.mainloop()
+        
         
 
+    def choose_particle_color(self,*args):
+        self.particle_color.set(colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1])
+        self.particle_color_button.config(bg=self.particle_color.get())
+
+        for particles in self.particles:
+            particles.set_color(self.particle_color.get())
+
+        self.canvas.draw()
+        
+    def choose_particle_core_color(self,*args):
+        self.particle_core_color.set(colorchooser.askcolor(parent=self.root,initialcolor=self.particle_core_color.get())[1])
+        self.particle_core_color_button.config(bg=self.particle_core_color.get())
+
+        for core_particles in self.core_particles:
+            core_particles.set_color(self.particle_core_color.get())
+
+        self.canvas.draw()
+
+
+        
     def update_axis_labels(self,*args):
         self.hlabel.set_text(self.axish_var.get())
         self.vlabel.set_text(self.axisv_var.get())
@@ -384,6 +435,8 @@ class main():
                                "cc",
                                "divv",
                              ]
+            self.sph_mode = True
+            self.MESA_mode = False
         else:
             # This is some other file
 
@@ -394,6 +447,8 @@ class main():
                 values = np.asarray(cols.items())[:,1].astype(int)
                 self.variables = keys[np.argsort(values)]
                 self.data = data
+                self.MESA_mode = True
+                self.sph_mode = False
             else:                
                 # Unrecognized file format
                 self.corner_message_text.set("Unrecognized file type '"+self.current_file.get()+"'")
@@ -403,6 +458,9 @@ class main():
                 self.axish_menu.config(state='disabled')
                 self.axisv_menu.config(state='disabled')
 
+                self.sph_mode = False
+                self.MESA_mode = False
+                
                 return False
         
 
@@ -456,17 +514,26 @@ class main():
             self.axisv_islog.set(0)
             self.axisv_log_button.config(state='disabled')
             
+        if self.sph_mode and not self.MESA_mode: # If we are in SPH mode,
+            self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
+            core_idx = np.where(self.data[:,12] == 0)[0] # True only in StarSmasher
+            if len(core_idx) > 0:
+                self.core_particles.append(self.ax.scatter(x[core_idx],y[core_idx],s=1,marker='.',color=self.particle_core_color.get()))
+        elif not self.sph_mode and self.MESA_mode: # If we are in MESA mode
+            self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
             
-        self.ax.scatter(x,y,s=1,marker='.',color='k')
         self.ax.relim()
         self.canvas.draw()
 
 
 
     def clear_plot(self,*args):
-        for child in self.ax.get_children():
-            if type(child).__name__ == 'PathCollection':
-                child.remove()
+        for particles in self.particles:
+            particles.remove()
+            self.particles.remove(particles)
+        for core_particles in self.core_particles:
+            core_particles.remove()
+            self.core_particles.remove(core_particles)
 
     def draw_plot(self,*args):
         # Update the data in the plot
@@ -528,5 +595,11 @@ class main():
         isread = self.read_file()
         if isread: self.draw_plot()
 
-        
-main()
+
+
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    root.wm_title("PySplash")
+    main(root)
+    root.mainloop()
