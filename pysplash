@@ -269,14 +269,34 @@ class main():
 
         self.axish_islog = tk.IntVar()
         self.axisv_islog = tk.IntVar()
+        self.axish_is10 = tk.IntVar()
+        self.axisv_is10 = tk.IntVar()
         self.axish_islog.set(0)
         self.axisv_islog.set(0)
-        self.axish_log_button = tk.Checkbutton(self.axes_frame,command=self.draw_plot,variable=self.axish_islog)
-        self.axisv_log_button = tk.Checkbutton(self.axes_frame,command=self.draw_plot,variable=self.axisv_islog)
-        self.axish_log_button.grid(row=0,column=2)
-        self.axisv_log_button.grid(row=1,column=2)
-        tk.Label(self.axes_frame,text="log").grid(row=0,column=3)
-        tk.Label(self.axes_frame,text="log").grid(row=1,column=3)
+        self.axish_is10.set(0)
+        self.axisv_is10.set(0)
+        smallframeh = tk.Frame(self.axes_frame)
+        self.axish_log_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_islog)
+        self.axish_10_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_is10)
+        tk.Label(smallframeh,text="log").grid(row=0,column=1)
+        tk.Label(smallframeh,text="10^").grid(row=1,column=1)
+        self.axish_log_button.grid(row=0,column=0)
+        self.axish_10_button.grid(row=1,column=0)
+
+        smallframeh.grid(row=0,column=2)
+        
+        smallframev = tk.Frame(self.axes_frame)
+        self.axisv_log_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_islog)
+        self.axisv_10_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_is10)
+        tk.Label(smallframev,text="log").grid(row=0,column=1)
+        tk.Label(smallframev,text="10^").grid(row=1,column=1)
+        self.axisv_log_button.grid(row=0,column=0)
+        self.axisv_10_button.grid(row=1,column=0)
+
+        smallframev.grid(row=1,column=2)
+        
+        
+        
         
 
         # Setup the files prompt
@@ -371,16 +391,28 @@ class main():
 
         
     def update_axis_labels(self,*args):
-        self.hlabel.set_text(self.axish_var.get())
-        self.vlabel.set_text(self.axisv_var.get())
-        self.draw_plot()
+        if self.axish_islog.get() == 1 and self.axish_is10.get() == 0: # Only log10
+            self.hlabel.set_text("log "+self.axish_var.get())
+        elif self.axish_islog.get() == 0 and self.axish_is10.get() == 1: # Only 10^
+            self.hlabel.set_text("10^ "+self.axish_var.get())
+        elif self.axish_islog.get() == self.axish_is10.get(): # Both or neither
+            self.hlabel.set_text(self.axish_var.get())
 
+        if self.axisv_islog.get() == 1 and self.axisv_is10.get() == 0: # Only log10
+            self.vlabel.set_text("log "+self.axisv_var.get())
+        elif self.axisv_islog.get() == 0 and self.axisv_is10.get() == 1: # Only 10^
+            self.vlabel.set_text("10^ "+self.axisv_var.get())
+        elif self.axisv_islog.get() == self.axisv_is10.get(): # Both or neither
+            self.vlabel.set_text(self.axisv_var.get())
+
+            
+            
     def update_axes_menu(self,*args):
         # We have to completely re-make the optionmenu lists because tkinter sucks with these.
         self.axish_menu.destroy()
         self.axisv_menu.destroy()
-        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.update_axis_labels)
-        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.update_axis_labels)
+        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.draw_plot)
+        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.draw_plot)
         self.axish_menu.config(width=self.axis_menu_width.get())
         self.axisv_menu.config(width=self.axis_menu_width.get())
         self.axish_menu.grid(row=0,column=1)
@@ -513,6 +545,13 @@ class main():
         else:
             self.axisv_islog.set(0)
             self.axisv_log_button.config(state='disabled')
+
+
+        if self.axish_is10.get() == 1:
+            x = 10.**x
+        if self.axisv_is10.get() == 1:
+            y = 10.**y
+            
             
         if self.sph_mode and not self.MESA_mode: # If we are in SPH mode,
             self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
@@ -543,8 +582,11 @@ class main():
             self.ax.set_aspect('equal')
         else:
             self.ax.set_aspect('auto')
-        
+
+        self.update_axis_labels()
+            
         self.plot_data()
+        self.canvas.draw()
         self.corner_message_text.set("")
         
     def next_file(self,*args):
