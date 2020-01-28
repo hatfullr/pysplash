@@ -22,12 +22,8 @@ import matplotlib.pyplot as plt
 from glob import glob
 import sys
 import numpy as np
-
-
-
-
-
-
+import time
+import multiprocessing as mp
 
 
 
@@ -190,8 +186,12 @@ class main():
     
     def __init__(self,root):
         self.root = root
-        
 
+        # Init kernels for SPH code
+        self.ntab = 100000 # ntab = 100000 from StarSmasher
+        self.ctab = float(self.ntab - 1)/4.
+        self.init_kernels() # Cubic spline only for now
+        
         self.data = None
         self.header = None
 
@@ -215,6 +215,17 @@ class main():
                            "cc",
                            "divv",
                          ]
+        self.color_variables = [ "",
+                                 "column density",
+                               ]
+        self.cmap_names = [ 'nipy_spectral','viridis', 'plasma', 'inferno', 'magma', 'cividis',
+                            'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds','YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu','GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn',
+                            'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone', 'pink','spring', 'summer', 'autumn', 'winter', 'cool', 'Wistia','hot', 'afmhot', 'gist_heat', 'copper',
+                            'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu','RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic',
+                            'twilight', 'twilight_shifted', 'hsv',
+                            'Pastel1', 'Pastel2', 'Paired', 'Accent','Dark2', 'Set1', 'Set2', 'Set3','tab10', 'tab20', 'tab20b', 'tab20c',
+                            'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern','gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg','gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'
+                          ]
 
         self.sph_mode = True
         self.MESA_mode = False
@@ -234,6 +245,23 @@ class main():
         self.files_frame = tk.Frame(self.right_frame)
         self.color_frame = tk.Frame(self.right_frame)
         
+
+        # Setup the graph
+        self.fig = Figure(figsize=(7,7),dpi=100)
+        self.ax = self.fig.add_subplot(111)
+
+        self.particles = []
+        self.core_particles = []
+        self.im = None
+        
+        self.canvas = FigureCanvasTkAgg(self.fig,master=self.graph_frame)
+
+        self.canvas.get_tk_widget().grid(row=0,column=0)
+        self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame)
+        self.toolbar.update()
+        
+        self.ax.set_position([0.125,0.125,0.7,0.825])
+
         
         # Setup the color controls
         self.particle_color = tk.StringVar()
@@ -246,38 +274,60 @@ class main():
         self.particle_core_color_button = tk.Button(self.color_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
         self.particle_color_button.grid(row=0,column=1)
         self.particle_core_color_button.grid(row=1,column=1)
-        
 
+        self.cmap_idx = tk.StringVar()
+        self.cmap_idx.set("0")
+        self.cmap = tk.StringVar()
+        self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
+        self.cmap_idx.trace('w',self.update_cmap)
+        tk.Label(self.color_frame,text="cmap").grid(row=0,column=2)
+        self.cmap_entry = tk.Entry(self.color_frame,textvariable=self.cmap_idx,width=2)
+        self.cmap_entry.grid(row=0,column=3)
+        
         # Setup the axes prompt
         self.axish_var = tk.StringVar()
         self.axisv_var = tk.StringVar()
-        self.axish_var.set(self.variables[0])
-        self.axisv_var.set(self.variables[1])
+        self.axisc_var = tk.StringVar()
+        self.axish_var.set(self.variables[0]) # x by default
+        self.axisv_var.set(self.variables[1]) # y by default
+        self.axisc_var.set(self.color_variables[0]) # Nothing by default
 
         self.axis_menu_width = tk.IntVar()
         self.axis_menu_width.set(20)
 
         self.axish_label = tk.Label(self.axes_frame,text="Horizontal Axis").grid(row=0,column=0,sticky='w')
         self.axisv_label = tk.Label(self.axes_frame,text="Vertical Axis").grid(row=1,column=0,sticky='w')
-
-        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.update_axis_labels)
-        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.update_axis_labels)
+        self.axisc_label = tk.Label(self.axes_frame,text="Colorbar").grid(row=2,column=0,sticky='w')
+        
+        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.draw_plot)
+        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.draw_plot)
+        self.axisc_menu = tk.OptionMenu(self.axes_frame,self.axisc_var,*self.color_variables,command=self.draw_plot)
         self.axish_menu.config(width=self.axis_menu_width.get())
         self.axisv_menu.config(width=self.axis_menu_width.get())
+        self.axisc_menu.config(width=self.axis_menu_width.get())
         self.axish_menu.grid(row=0,column=1)
         self.axisv_menu.grid(row=1,column=1)
+        self.axisc_menu.grid(row=2,column=1)
 
         self.axish_islog = tk.IntVar()
         self.axisv_islog = tk.IntVar()
+        self.axisc_islog = tk.IntVar()
         self.axish_is10 = tk.IntVar()
         self.axisv_is10 = tk.IntVar()
+        self.axisc_is10 = tk.IntVar()
         self.axish_islog.set(0)
         self.axisv_islog.set(0)
+        self.axisc_islog.set(0)
         self.axish_is10.set(0)
         self.axisv_is10.set(0)
+        self.axisc_is10.set(0)
+        
         smallframeh = tk.Frame(self.axes_frame)
         self.axish_log_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_islog)
         self.axish_10_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_is10)
+        # Disable the buttons initially
+        #self.axish_log_button.config(state='disabled')
+        #self.axish_10_button.config(state='disabled')
         tk.Label(smallframeh,text="log").grid(row=0,column=1)
         tk.Label(smallframeh,text="10^").grid(row=1,column=1)
         self.axish_log_button.grid(row=0,column=0)
@@ -288,6 +338,9 @@ class main():
         smallframev = tk.Frame(self.axes_frame)
         self.axisv_log_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_islog)
         self.axisv_10_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_is10)
+        # Disable the buttons initially
+        #self.axisv_log_button.config(state='disabled')
+        #self.axisv_10_button.config(state='disabled')
         tk.Label(smallframev,text="log").grid(row=0,column=1)
         tk.Label(smallframev,text="10^").grid(row=1,column=1)
         self.axisv_log_button.grid(row=0,column=0)
@@ -295,9 +348,49 @@ class main():
 
         smallframev.grid(row=1,column=2)
         
+        smallframec = tk.Frame(self.axes_frame)
+        self.axisc_log_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_islog)
+        self.axisc_10_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_is10)
+        # Disable the buttons initially
+        #self.axisc_log_button.config(state='disabled')
+        #self.axisc_10_button.config(state='disabled')
+        tk.Label(smallframec,text="log").grid(row=0,column=1)
+        tk.Label(smallframec,text="10^").grid(row=1,column=1)
+        self.axisc_log_button.grid(row=0,column=0)
+        self.axisc_10_button.grid(row=1,column=0)
+
+        smallframec.grid(row=2,column=2)
+
+
+        # Divide by 10 initially because full resolution takes a long time to compute
+        fig_pix = np.asarray(self.fig.get_size_inches() * self.fig.dpi / 10.,dtype=int) # figure size in pixels
         
+        smallframers = tk.Frame(self.axes_frame)
+        self.resolution_scale_x = tk.IntVar()
+        self.resolution_scale_y = tk.IntVar()
+        self.resolution_scale_z = tk.IntVar()
+        self.resolution_scale_x.set(fig_pix[0])
+        self.resolution_scale_y.set(fig_pix[1])
+        self.resolution_scale_z.set(min(fig_pix))
+
+        smallerframers = tk.Frame(smallframers)
         
+        tk.Label(smallerframers,text="Resolution (px)").grid(row=0,column=0)
+        tk.Button(smallerframers,text="Draw",command=self.draw_plot,width=5,height=1,padx=0,pady=0).grid(row=0,column=1)
+
+        smallerframers.grid(row=0,column=0,columnspan=6)
         
+        self.resolution_scale_x_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_x,width=4)
+        self.resolution_scale_y_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_y,width=4)
+        self.resolution_scale_z_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_z,width=4)
+        self.resolution_scale_x_entry.grid(row=1,column=0)
+        tk.Label(smallframers,text="x").grid(row=1,column=1)
+        self.resolution_scale_y_entry.grid(row=1,column=2)
+        tk.Label(smallframers,text="y").grid(row=1,column=3)
+        self.resolution_scale_z_entry.grid(row=1,column=4)
+        tk.Label(smallframers,text="z").grid(row=1,column=5)
+
+        smallframers.grid(row=2,column=3)
 
         # Setup the files prompt
         self.files_var = tk.StringVar()
@@ -318,23 +411,26 @@ class main():
 
         
 
-        # Setup the graph
-        self.fig = Figure(figsize=(7,7),dpi=100)
-        self.ax = self.fig.add_subplot(111)
-
-        self.particles = []
-        self.core_particles = []
-        
-        self.canvas = FigureCanvasTkAgg(self.fig,master=self.graph_frame)
-
-        self.canvas.get_tk_widget().grid(row=0,column=0)
-        self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame)
-        self.toolbar.update()
-        
+        # Setup the colorbar
         pos = self.ax.get_position()
-        self.ax.set_position([0.125,0.125,0.825,0.825])
-        self.hlabel = self.fig.text((pos.x1+pos.x0)/2.,0.01,self.axish_var.get(),ha='center')
-        self.vlabel = self.fig.text(0.01,(pos.y1+pos.y0)/2.,self.axisv_var.get(),va='center',rotation='vertical')
+
+        self.cax_xbuff = tk.DoubleVar()
+        self.cax_width = tk.DoubleVar()
+        self.cax_buff = tk.DoubleVar() # A "universal" buffer that helps make space for tick labels and the axis label
+        self.cax_xbuff.set(0.01)
+        self.cax_width.set(0.05)
+        self.cax_buff.set(0.05)
+        self.cax = self.fig.add_axes([pos.x1+self.cax_xbuff.get(),pos.y0,self.cax_width.get(),pos.height]) # Right side by default
+        self.cax.xaxis.set_visible(False)
+        self.cax.yaxis.tick_right()
+        #self.cax.set_visible(False)
+
+        self.hlabel_buff = tk.DoubleVar()
+        self.vlabel_buff = tk.DoubleVar()
+        self.hlabel_buff.set(0.1)
+        self.vlabel_buff.set(0.1)
+        self.hlabel = self.fig.text((pos.x1+pos.x0)/2.,pos.y0-self.hlabel_buff.get(),self.axish_var.get(),ha='center')
+        self.vlabel = self.fig.text(pos.x0-self.vlabel_buff.get(),(pos.y1+pos.y0)/2.,self.axisv_var.get(),va='center',rotation='vertical')
         
         # Beneath the graph, give user some controls
         self.skip_magnitude = tk.IntVar()
@@ -366,8 +462,37 @@ class main():
         self.read_file()
         self.draw_plot()
 
+
+    def update_cmap(self,*args):
+        try:
+            if int(self.cmap_idx.get()) in np.arange(len(self.cmap_names)):
+                self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
+        except ValueError:
+            # The user did not use an integer value
+            return
+
+        self.im.set_cmap(self.cmap.get())
+
+        self.canvas.draw()
+
         
+    def draw_colorbar(self,*args):
+        # Draw the colorbar relative to the axis
+        pos = self.ax.get_position()
         
+        if self.axisc_var.get() == "" and self.cax.get_visible():
+            # Reposition the axis back to what it was without the colorbar
+            self.cax.set_visible(False)
+            self.ax.set_position([pos.x0,pos.y0,pos.width + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), pos.height])
+            return
+        
+        self.cax.set_visible(True)
+        # Adjust the size of the axis to accommodate the colorbar
+        self.ax.set_position([pos.x0,pos.y0,pos.width - (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), pos.height])
+        # For now, draw colorbar to the right side only
+        self.cax.set_position([pos.x1 - self.cax_width.get() - self.cax_buff.get(),pos.y0,self.cax_width.get(),pos.height])
+
+        self.fig.colorbar(self.im,cax=self.cax)
         
 
     def choose_particle_color(self,*args):
@@ -405,19 +530,27 @@ class main():
         elif self.axisv_islog.get() == self.axisv_is10.get(): # Both or neither
             self.vlabel.set_text(self.axisv_var.get())
 
+        #self.hlabel = self.fig.text((pos.x1+pos.x0)/2.,0.01,self.axish_var.get(),ha='center')
+        #self.vlabel = self.fig.text(0.01,(pos.y1+pos.y0)/2.,self.axisv_var.get(),va='center',rotation='vertical')
             
+        # Reposition the labels
+        pos = self.ax.get_position()
+        self.hlabel.set_position(((pos.x1+pos.x0)/2.,pos.y0 - self.hlabel_buff.get()))
             
     def update_axes_menu(self,*args):
         # We have to completely re-make the optionmenu lists because tkinter sucks with these.
         self.axish_menu.destroy()
         self.axisv_menu.destroy()
+        self.axisc_menu.destroy()
         self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.draw_plot)
         self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.draw_plot)
+        self.axisc_menu = tk.OptionMenu(self.axes_frame,self.axisc_var,*self.color_variables,command=self.draw_plot)
         self.axish_menu.config(width=self.axis_menu_width.get())
         self.axisv_menu.config(width=self.axis_menu_width.get())
+        self.axisc_menu.config(width=self.axis_menu_width.get())
         self.axish_menu.grid(row=0,column=1)
         self.axisv_menu.grid(row=1,column=1)
-        
+        self.axisc_menu.grid(row=2,column=1)
         
         
        
@@ -467,6 +600,9 @@ class main():
                                "cc",
                                "divv",
                              ]
+            self.color_variables = [ "",
+                                     "column density",
+                                   ]
             self.sph_mode = True
             self.MESA_mode = False
         else:
@@ -477,7 +613,8 @@ class main():
             if header_attr is not None and cols is not None and data is not None:
                 keys = np.asarray(list(cols.items()))[:,0]
                 values = np.asarray(list(cols.items()))[:,1].astype(int)
-                self.variables = keys[np.argsort(values)]
+                self.variables = np.insert(keys[np.argsort(values)],0,"")
+                self.color_variables = [ "" ] # No colorbars for MESA files
                 self.data = data
                 self.MESA_mode = True
                 self.sph_mode = False
@@ -503,56 +640,178 @@ class main():
         
         return True
             
-        
-        
+    def init_kernels(self,*args):
+        # Compute kernel tables
+        def w(u):
+            # Inspired by StarSmasher. This is a cubic spline kernel
+            result = np.zeros(len(u))
+            idx1 = u < 0
+            idx2 = np.logical_and(u >= 0,u < 1)
+            idx3 = np.logical_and(u >= 1, u < 2)
 
-
-
-    def plot_data(self,*args):
-        if self.data is None or self.axish_var.get() == "" or self.axisv_var.get() == "":
-            return
-        
-        xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
-        yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
-        
-        if type(xidx).__name__ == 'list':
-            if len(xidx) > 1:
-                print("Something went horribly wrong")
-                sys.exit()
-            xidx = xidx[0]
-        if type(yidx).__name__ == 'list':
-            if len(yidx) > 1:
-                print("Something went horribly wrong")
-                sys.exit()
-            yidx = yidx[0]
-
-        x = self.data[:,xidx]
-        y = self.data[:,yidx]
-
-        if np.all(x > 0):
-            self.axish_log_button.config(state='normal')
-            if self.axish_islog.get() == 1:
-                x = np.log10(x)
-        else:
-            self.axish_islog.set(0)
-            self.axish_log_button.config(state='disabled')
-                
-                
-        if np.all(y > 0):
-            self.axisv_log_button.config(state='normal')
-            if self.axisv_islog.get() == 1:
-                y = np.log10(y)
-        else:
-            self.axisv_islog.set(0)
-            self.axisv_log_button.config(state='disabled')
-
-
-        if self.axish_is10.get() == 1:
-            x = 10.**x
-        if self.axisv_is10.get() == 1:
-            y = 10.**y
+            result[idx1] = 1.
+            result[idx2] = 1.+u[idx2]**2.*(-1.5+0.75*u[idx2])
+            result[idx3] = 0.25*(2.-u[idx3])**3.
             
+            result=result/np.pi
+
+            return result
+        
+        
+        u2 = 4.*np.arange(self.ntab-1) / float(self.ntab - 1)
+        self.wtab = w(np.sqrt(u2))
+        
+        
+    def plot_column_density(self,x,y,z,m,hp,*args):
+        #from scipy.spatial.distance import cdist
+        #from scipy.integrate import simps
+        # Plot data with a colorbar
+        
+        # First, figure out how many pixels are on the screen
+        #dimens = np.asarray(self.fig.get_size_inches() * self.fig.dpi,dtype=int) # in pixels
+        #dimens = dimens/10.
+        #xpix = int(dimens[0])
+        #ypix = int(dimens[1])
+        #zpix = min(xpix,ypix)
+        #zpix = 10
+        xpix = self.resolution_scale_x.get()
+        ypix = self.resolution_scale_y.get()
+        zpix = self.resolution_scale_z.get()
+
+        # Gather necessary particle data
+        #x = data[:,0]
+        #y = data[:,1]
+        #z = data[:,2]
+        #hp = data[:,4]
+        hp2 = np.multiply(hp,2.)
+        
+        # Determine the physical bounds of the grid
+        #xlim = self.ax.get_xlim()
+        #ylim = self.ax.get_ylim()
+        #xmin = xlim[0]
+        #xmax = xlim[1]
+        #ymin = ylim[0]
+        #ymax = ylim[1]
+        xmin = np.amin(x-hp2)
+        xmax = np.amax(x+hp2)
+        ymin = np.amin(y-hp2)
+        ymax = np.amax(y+hp2)
+        zmin = np.amin(z-hp2)
+        zmax = np.amax(z+hp2)
+
+        xpos = np.linspace(xmin,xmax,xpix)
+        ypos = np.linspace(ymin,ymax,ypix)
+        zpos = np.linspace(zmin,zmax,zpix)
+
+        nproc = mp.cpu_count()
+
+        # We assume the image will never be too small (# x pixels < # processes)
+        # Split the # of pixels in the x direction across all processes
+        xpos_proc = np.array_split(xpos,nproc)
+
+        # Keep track of the xpos indices
+        xpos_idx_proc = np.array_split(np.arange(len(xpos),dtype=int),nproc)
+
+        self.corner_message_text.set("Calculating column density...")
+        self.corner_message_label.update_idletasks()
+        
+        start = time.time()
+        q = mp.Queue()
+        process = [None]*nproc
+        for n in range(0,nproc):
+            process[n] = mp.Process(target=self.calculate_coldens, args=(q, n, x,y,z,m,hp, xpos_idx_proc[n], xpos_proc[n], ypos, zpos))
+            process[n].start()
+
+        xpos_idx_proc_calculated = [None]*nproc
+        grids = [None]*nproc
+        for n in range(0,nproc):
+            res = q.get()
+            xpos_idx_proc_calculated[n] = res[0]
+            grids[n] = res[1]
             
+        for proc in process:
+            proc.join()
+
+        grid = np.zeros((xpix,ypix))
+        for n in range(0,nproc):
+            grid_proc = grids[n]
+            grid[xpos_idx_proc_calculated[n]] = grid_proc
+
+        if self.axisc_islog.get() == 1:
+            grid = np.log10(grid)
+
+        print(time.time()-start)
+        self.im = self.ax.imshow(grid,extent=(xmin,xmax,ymin,ymax),cmap=self.cmap.get())
+        self.corner_message_text.set("")
+
+    def calculate_coldens(self,queue,n,x,y,z,m,hp,xpos_idx_proc,xpos,ypos,zpos,*args):
+        # Calculate the column density for this LOS (xpos,ypos)
+        # Points along the LOS, zpos, are given and calculated outside this function
+        # Returns an array of shape (len(xpos), len(ypos)). Each element of the
+        # array is the column density at that (xpos, ypos).
+
+        from scipy.spatial.distance import cdist
+        from scipy.integrate import simps
+
+        #xy = data[:,0:2]
+        #xyz = data[:,0:3]
+        xy = np.column_stack((x,y))
+        xyz = np.column_stack((x,y,z))
+        #z = data[:,2]
+        #m = data[:,3]
+        #hp = data[:,4]
+        hp2 = np.multiply(hp,2.)
+        hp22 = np.power(hp2,2.)
+        hp2p = np.power(hp,2.)
+        hp3p = np.power(hp,3.)
+
+        xpix = len(xpos)
+        ypix = len(ypos)
+        zpix = len(zpos)
+
+        xypos = np.zeros((xpix*ypix,2))
+        xypos[:,0] = np.repeat(xpos,ypix)
+        xypos[:,1] = np.tile(ypos,xpix)
+
+        xyzpos = np.zeros((xpix*ypix*zpix,3))
+        xyzpos[:,0] = np.repeat(xpos,ypix*zpix)
+        xyzpos[:,1] = np.tile(np.repeat(ypos,zpix),xpix)
+        xyzpos[:,2] = np.tile(zpos,xpix*ypix)
+
+
+        #dr = cdist(xyzpos,xyz)
+        
+        
+        drp_arr2 = cdist(xypos,xy,'sqeuclidean')
+        
+        thisgrid = np.zeros((len(xpos),len(ypos)))
+        
+        for i in range(0,len(xpos)):
+            for j in range(0,len(ypos)):
+                drp2 = drp_arr2[i*ypix + j]
+                idx_xy = drp2 < hp22
+                if not np.any(idx_xy): continue
+
+                dens = np.zeros(len(zpos))
+                for k in range(0,len(zpos)):
+                    # Calculate the distance of this (xpos,ypos,zpos) to the particles on the LOS (idx)
+                    
+                    dr2 = drp2[idx_xy] + (zpos[k] - z[idx_xy])**2.
+                    idx = dr2 < hp22[idx_xy]
+                    if not np.any(idx): continue
+                    indices = (self.ctab * dr2[idx]/hp2p[idx_xy][idx]).astype(np.int,copy=False)
+                    wpc = self.wtab[indices] / hp3p[idx_xy][idx]
+                    dens[k] = np.sum(m[idx_xy][idx] * wpc)
+                thisgrid[i][j] = simps(dens,x=zpos)
+                
+        queue.put([xpos_idx_proc,thisgrid])
+
+    
+        
+        
+        
+        
+    def plot_particles(self,x,y,*args):    
         if self.sph_mode and not self.MESA_mode: # If we are in SPH mode,
             self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
             core_idx = np.where(self.data[:,12] == 0)[0] # True only in StarSmasher
@@ -562,7 +821,31 @@ class main():
             self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
             
         
+    def update_log_10_buttons(self,*args):
+        xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
+        yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
+        cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
+        
+        if type(xidx).__name__ == 'list': xidx = xidx[0]
+        if type(yidx).__name__ == 'list': yidx = yidx[0]
+        if type(cidx).__name__ == 'list': cidx = cidx[0]
 
+        x = self.data[:,xidx]
+        y = self.data[:,yidx]
+
+        if np.all(x > 0):
+            # The horizontal axis is able to be in log space
+            self.axish_log_button.config(state='normal')
+        else:
+            self.axish_islog.set(0)
+            self.axish_log_button.config(state='disabled')
+ 
+        if np.all(y > 0):
+            # The vertical axis is able to be in log space
+            self.axisv_log_button.config(state='normal')
+        else:
+            self.axisv_islog.set(0)
+            self.axisv_log_button.config(state='disabled')
 
 
     def clear_plot(self,*args):
@@ -572,19 +855,61 @@ class main():
         for core_particles in self.core_particles:
             core_particles.remove()
             self.core_particles.remove(core_particles)
+        if self.im is not None:
+            self.im.remove()
 
     def draw_plot(self,*args):
+        # For now, return if there is no data to plot
+        if self.data is None:
+            print("No data to plot")
+            return
+        
         # Update the data in the plot
         self.clear_plot()
 
-        if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
-            self.ax.set_aspect('equal')
-        else:
-            self.ax.set_aspect('auto')
+        self.update_log_10_buttons()
 
+        xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
+        yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
+        cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
+        
+        if type(xidx).__name__ == 'list': xidx = xidx[0]
+        if type(yidx).__name__ == 'list': yidx = yidx[0]
+        if type(cidx).__name__ == 'list': cidx = cidx[0]
+
+        x = self.data[:,xidx]
+        y = self.data[:,yidx]
+        
+        if self.axish_islog.get() == 1:
+            x = np.log10(x)
+        if self.axisv_islog.get() == 1:
+            y = np.log10(y)
+        if self.axish_is10.get() == 1:
+            x = 10.**x
+        if self.axisv_is10.get() == 1:
+            y = 10.**y
+
+        
+        # Don't worry about aspect ratios yet, this stuff is a bit complicated.
+        #if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
+        #    self.ax.set_aspect('equal')
+        #else:
+        #    self.ax.set_aspect('auto')
+
+        # Reset the position of the colorbar
+        
+        
         self.update_axis_labels()
+
+        if self.axisc_var.get() == "":
+            self.plot_particles(x,y)
+        elif self.axisc_var.get() == "column density":
             
-        self.plot_data()
+            # Figure out the z axis from the given x and y axes
+            zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
+            self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
+            self.draw_colorbar()
+            
         self.ax.relim()
         self.canvas.draw()
         self.corner_message_text.set("")
