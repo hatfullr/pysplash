@@ -259,8 +259,16 @@ class main():
         self.canvas.get_tk_widget().grid(row=0,column=0)
         self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame)
         self.toolbar.update()
-        
-        self.ax.set_position([0.125,0.125,0.7,0.825])
+
+        self.x0 = tk.DoubleVar()
+        self.y0 = tk.DoubleVar()
+        self.w = tk.DoubleVar()
+        self.h = tk.DoubleVar()
+        self.x0.set(0.125)
+        self.y0.set(0.125)
+        self.w.set(0.7)
+        self.h.set(0.825)
+        self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get(),self.h.get()])
 
         
         # Setup the color controls
@@ -412,6 +420,7 @@ class main():
         
 
         # Setup the colorbar
+        self.colorbar = None
         pos = self.ax.get_position()
 
         self.cax_xbuff = tk.DoubleVar()
@@ -419,8 +428,8 @@ class main():
         self.cax_buff = tk.DoubleVar() # A "universal" buffer that helps make space for tick labels and the axis label
         self.cax_xbuff.set(0.01)
         self.cax_width.set(0.05)
-        self.cax_buff.set(0.05)
-        self.cax = self.fig.add_axes([pos.x1+self.cax_xbuff.get(),pos.y0,self.cax_width.get(),pos.height]) # Right side by default
+        self.cax_buff.set(0.)
+        self.cax = self.fig.add_axes([self.x0.get()+self.w.get()+self.cax_xbuff.get(),self.y0.get(),self.cax_width.get(),self.h.get()]) # Right side by default
         self.cax.xaxis.set_visible(False)
         self.cax.yaxis.tick_right()
         #self.cax.set_visible(False)
@@ -478,22 +487,26 @@ class main():
         
     def draw_colorbar(self,*args):
         # Draw the colorbar relative to the axis
-        pos = self.ax.get_position()
         
-        if self.axisc_var.get() == "" and self.cax.get_visible():
-            # Reposition the axis back to what it was without the colorbar
-            self.cax.set_visible(False)
-            self.ax.set_position([pos.x0,pos.y0,pos.width + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), pos.height])
-            return
-        
-        self.cax.set_visible(True)
-        # Adjust the size of the axis to accommodate the colorbar
-        self.ax.set_position([pos.x0,pos.y0,pos.width - (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), pos.height])
-        # For now, draw colorbar to the right side only
-        self.cax.set_position([pos.x1 - self.cax_width.get() - self.cax_buff.get(),pos.y0,self.cax_width.get(),pos.height])
+        if not self.cax.get_visible() and self.axisc_var.get() != "":
+            self.cax.set_visible(True)
+            # Adjust the size of the axis to accommodate the colorbar
+            self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get() - (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()),self.h.get()])
+            # Get the current axis position and draw the colorbar relative to it
+            pos = self.ax.get_position()
+            # For now, draw colorbar to the right side only
+            self.cax.set_position([pos.x1 + self.cax_xbuff.get(),pos.y0,self.cax_width.get(),pos.height])
 
-        self.fig.colorbar(self.im,cax=self.cax)
-        
+            if self.colorbar is None:
+                self.colorbar = self.fig.colorbar(self.im,cax=self.cax)
+        #print(self.colorbar)
+
+    def hide_colorbar(self,*args):
+        if self.cax.get_visible() and self.axisc_var.get() == "":
+            #if self.colorbar is not None:
+            #    self.colorbar.set_visible(False)
+            self.cax.set_visible(False)
+            self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get() + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), self.h.get()])
 
     def choose_particle_color(self,*args):
         self.particle_color.set(colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1])
@@ -534,8 +547,8 @@ class main():
         #self.vlabel = self.fig.text(0.01,(pos.y1+pos.y0)/2.,self.axisv_var.get(),va='center',rotation='vertical')
             
         # Reposition the labels
-        pos = self.ax.get_position()
-        self.hlabel.set_position(((pos.x1+pos.x0)/2.,pos.y0 - self.hlabel_buff.get()))
+        #pos = self.ax.get_position()
+        self.hlabel.set_position(((self.x0.get()+self.w.get()+self.x0.get())/2.,self.y0.get() - self.hlabel_buff.get()))
             
     def update_axes_menu(self,*args):
         # We have to completely re-make the optionmenu lists because tkinter sucks with these.
@@ -856,7 +869,7 @@ class main():
             core_particles.remove()
             self.core_particles.remove(core_particles)
         if self.im is not None:
-            self.im.remove()
+            self.im.set_visible(False)
 
     def draw_plot(self,*args):
         # For now, return if there is no data to plot
@@ -896,21 +909,31 @@ class main():
         #else:
         #    self.ax.set_aspect('auto')
 
-        # Reset the position of the colorbar
-        
-        
-        self.update_axis_labels()
 
         if self.axisc_var.get() == "":
             self.plot_particles(x,y)
-        elif self.axisc_var.get() == "column density":
+
+            # Need to manually scale the axis because .relim() is not yet supported for scatter plots
+            margin = self.ax.margins()
+            xmin = np.amin(x)
+            xmax = np.amax(x)
+            ymin = np.amin(y)
+            ymax = np.amax(y)
+            dx = xmax-xmin
+            dy = ymax-ymin
+            self.ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
+            self.ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
+            self.hide_colorbar()
             
+        elif self.axisc_var.get() == "column density":
             # Figure out the z axis from the given x and y axes
             zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
             self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
+            self.im.set_visible(True)
             self.draw_colorbar()
-            
-        self.ax.relim()
+            self.ax.relim()
+
+        self.update_axis_labels()
         self.canvas.draw()
         self.corner_message_text.set("")
         
