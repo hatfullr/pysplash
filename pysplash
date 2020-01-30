@@ -329,26 +329,35 @@ class main():
             style.map('TCombobox', selectbackground=[('readonly', 'white')])
             style.map('TCombobox', selectforeground=[('readonly', 'black')])
             style.map('TCombobox', fieldbackground=[('disabled',self.root["bg"])])
-
-            self.haxis_frame = tk.Frame(self.axes_frame)
-            self.vaxis_frame = tk.Frame(self.axes_frame)
-            self.caxis_frame = tk.Frame(self.axes_frame)
             
-            self.axish_label = tk.Label(self.axes_frame,text="Horizontal Axis").grid(row=0,column=0,sticky='w')
-            self.axisv_label = tk.Label(self.axes_frame,text="Vertical Axis").grid(row=1,column=0,sticky='w')
-            self.axisc_label = tk.Label(self.axes_frame,text="Colorbar").grid(row=2,column=0,sticky='w')
+            self.axish_frame = tk.Frame(self.axes_frame)
+            self.axisv_frame = tk.Frame(self.axes_frame)
+            self.axisc_frame = tk.Frame(self.axes_frame)
 
-            self.axish_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axish_var)
-            self.axisv_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axisv_var)
-            self.axisc_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.color_variables,textvariable=self.axisc_var)
+            # Each of the elements in this list are a row
+            self.axish_frames = []
+            self.axisv_frames = []
+            self.axisc_frames = []
+            for i in range(0,5):
+                self.axish_frames.append(tk.Frame(self.axish_frame))
+                self.axisv_frames.append(tk.Frame(self.axisv_frame))
+                self.axisc_frames.append(tk.Frame(self.axisc_frame))
+
+            tk.Label(self.axish_frames[0],text="Horizontal Axis").grid(row=0,column=0)
+            tk.Label(self.axisv_frames[0],text="Vertical Axis").grid(row=0,column=0)
+            tk.Label(self.axisc_frames[0],text="Colorbar").grid(row=0,column=0)
+            
+            self.axish_combobox = ttk.Combobox(self.axish_frames[1], state='readonly', values=self.variables,textvariable=self.axish_var)
+            self.axisv_combobox = ttk.Combobox(self.axisv_frames[1], state='readonly', values=self.variables,textvariable=self.axisv_var)
+            self.axisc_combobox = ttk.Combobox(self.axisc_frames[1], state='readonly', values=self.color_variables,textvariable=self.axisc_var)
 
             self.axish_combobox.bind("<FocusIn>", lambda x: self.axish_combobox.selection_clear())
             self.axisv_combobox.bind("<FocusIn>", lambda x: self.axisv_combobox.selection_clear())
             self.axisc_combobox.bind("<FocusIn>", lambda x: self.axisc_combobox.selection_clear())
 
-            self.axish_combobox.grid(row=0,column=1)
-            self.axisv_combobox.grid(row=1,column=1)
-            self.axisc_combobox.grid(row=2,column=1)
+            self.axish_combobox.grid(row=0,column=0)
+            self.axisv_combobox.grid(row=0,column=0)
+            self.axisc_combobox.grid(row=0,column=0)
 
 
 
@@ -365,41 +374,47 @@ class main():
             self.axisv_is10.set(0)
             self.axisc_is10.set(0)
 
-            smallframeh = tk.Frame(self.axes_frame)
-            self.axish_log_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_islog)
-            self.axish_10_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_is10)
-            tk.Label(smallframeh,text="log").grid(row=0,column=1)
-            tk.Label(smallframeh,text="10^").grid(row=0,column=3)
+            #smallframeh = tk.Frame(self.axes_frame)
+            log_10_frame = tk.Frame(self.axish_frames[2])
+            self.axish_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axish_islog)
+            self.axish_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axish_is10)
+            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
+            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
             self.axish_log_button.grid(row=0,column=0)
             self.axish_10_button.grid(row=0,column=2)
+            log_10_frame.grid(row=0,column=0)
 
-            smallframeh.grid(row=0,column=2)
+            #smallframeh.grid(row=0,column=2)
 
-            smallframev = tk.Frame(self.axes_frame)
-            self.axisv_log_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_islog)
-            self.axisv_10_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_is10)
-            tk.Label(smallframev,text="log").grid(row=0,column=1)
-            tk.Label(smallframev,text="10^").grid(row=0,column=3)
+            #smallframev = tk.Frame(self.axes_frame)
+            log_10_frame = tk.Frame(self.axisv_frames[2])
+            self.axisv_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisv_islog)
+            self.axisv_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisv_is10)
+            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
+            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
             self.axisv_log_button.grid(row=0,column=0)
             self.axisv_10_button.grid(row=0,column=2)
+            log_10_frame.grid(row=0,column=0)
 
-            smallframev.grid(row=1,column=2)
+            #smallframev.grid(row=1,column=2)
 
-            smallframec = tk.Frame(self.axes_frame)
-            self.axisc_log_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_islog)
-            self.axisc_10_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_is10)
-            tk.Label(smallframec,text="log").grid(row=0,column=1)
-            tk.Label(smallframec,text="10^").grid(row=0,column=3)
+            #smallframec = tk.Frame(self.axes_frame)
+            log_10_frame = tk.Frame(self.axisc_frames[2])
+            self.axisc_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisc_islog)
+            self.axisc_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisc_is10)
+            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
+            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
             self.axisc_log_button.grid(row=0,column=0)
             self.axisc_10_button.grid(row=0,column=2)
-
-            smallframec.grid(row=2,column=2)
+            log_10_frame.grid(row=0,column=0)
+            #smallframec.grid(row=2,column=2)
 
 
             # Divide by 10 initially because full resolution takes a long time to compute
             fig_pix = np.asarray(self.fig.get_size_inches() * self.fig.dpi / 10.,dtype=int) # figure size in pixels
         
-            smallframers = tk.Frame(self.axes_frame)
+            #smallframers = tk.Frame(self.axes_frame)
+            resolution_frame = tk.Frame(self.axisc_frames[3])
             self.resolution_scale_x = tk.IntVar()
             self.resolution_scale_y = tk.IntVar()
             self.resolution_scale_z = tk.IntVar()
@@ -407,7 +422,7 @@ class main():
             self.resolution_scale_y.set(fig_pix[1])
             self.resolution_scale_z.set(min(fig_pix))
 
-            smallerframers = tk.Frame(smallframers)
+            smallerframers = tk.Frame(resolution_frame)
 
             tk.Label(smallerframers,text="Resolution (px)").grid(row=0,column=0)
             self.resolution_draw_button = tk.Button(smallerframers,text="Draw",command=self.draw_plot,width=5,height=1,padx=0,pady=0)
@@ -415,17 +430,28 @@ class main():
 
             smallerframers.grid(row=0,column=0,columnspan=6)
 
-            self.resolution_scale_x_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_x,width=4)
-            self.resolution_scale_y_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_y,width=4)
-            self.resolution_scale_z_entry = tk.Entry(smallframers,textvariable=self.resolution_scale_z,width=4)
+            self.resolution_scale_x_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_x,width=4)
+            self.resolution_scale_y_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_y,width=4)
+            self.resolution_scale_z_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_z,width=4)
             self.resolution_scale_x_entry.grid(row=1,column=0)
-            tk.Label(smallframers,text="x").grid(row=1,column=1)
+            tk.Label(resolution_frame,text="x").grid(row=1,column=1)
             self.resolution_scale_y_entry.grid(row=1,column=2)
-            tk.Label(smallframers,text="y").grid(row=1,column=3)
+            tk.Label(resolution_frame,text="y").grid(row=1,column=3)
             self.resolution_scale_z_entry.grid(row=1,column=4)
-            tk.Label(smallframers,text="z").grid(row=1,column=5)
+            tk.Label(resolution_frame,text="z").grid(row=1,column=5)
 
-            smallframers.grid(row=2,column=3)
+            resolution_frame.grid(row=0,column=0)
+
+            for i in range(0,len(self.axish_frames)):
+                self.axish_frames[i].grid(row=i,column=0)
+            for i in range(0,len(self.axisv_frames)):
+                self.axisv_frames[i].grid(row=i,column=0)
+            for i in range(0,len(self.axisc_frames)):
+                self.axisc_frames[i].grid(row=i,column=0)
+                
+            self.axish_frame.grid(row=0,column=0,sticky='N')
+            self.axisv_frame.grid(row=0,column=1,sticky='N')
+            self.axisc_frame.grid(row=0,column=2,sticky='N')
 
 
         def init_files_prompt():
