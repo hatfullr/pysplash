@@ -291,6 +291,9 @@ class main():
             self.hlabel = self.fig.text((2.*self.x0.get()+self.w.get())/2.,self.y0.get()-self.hlabel_buff.get(),"",ha='center')
             self.vlabel = self.fig.text(self.x0.get()-self.vlabel_buff.get(),(2.*self.y0.get() + self.h.get())/2.,"",va='center',rotation='vertical')
 
+            self.aspect = tk.StringVar()
+            self.aspect.set('auto')
+            
         def init_color_controls():
             # Setup the color controls
             self.particle_color = tk.StringVar()
@@ -468,7 +471,9 @@ class main():
             tk.Button(self.files_frame,text="Load",command=self.load_files,width=5,height=1,padx=0,pady=0).grid(row=0,column=2)
             tk.Button(self.files_frame,text="Clear",command=self.clear_files,width=5,height=1,padx=0,pady=0).grid(row=0,column=3)
             self.current_file = tk.StringVar()
+            self.last_file = tk.StringVar()
             self.current_file.set(self.files_var.get().split(" ")[0])
+            self.last_file.set("")
             self.current_file_idx = tk.IntVar()
             self.current_file_idx.set(0)
 
@@ -560,11 +565,13 @@ class main():
         if self.data is None:
             print("No data to plot")
             return
+
+        message = ""
         
         # Update the data in the plot
         self.clear_plot()
 
-        self.update_log_10_buttons()
+        
 
         xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
         yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
@@ -576,15 +583,60 @@ class main():
 
         x = self.data[:,xidx]
         y = self.data[:,yidx]
-        
-        if self.axish_islog.get() == 1:
-            x = np.log10(x)
-        if self.axisv_islog.get() == 1:
-            y = np.log10(y)
-        if self.axish_is10.get() == 1:
+
+        axish_canlog = np.all(x > 0)
+        axisv_canlog = np.all(y > 0)
+
+        if axish_canlog or self.axish_is10.get() == 1:
+            self.axish_log_button.config(state='normal')
+        else:
+            self.axish_log_button.config(state='disabled')
+        if axisv_canlog or self.axisv_is10.get() == 1:
+            self.axisv_log_button.config(state='normal')
+        else:
+            self.axisv_log_button.config(state='disabled')
+            
+        # Do nothing if both buttons are selected
+        if self.axish_islog.get() != self.axish_is10.get():
+            if self.axish_islog.get() == 1:
+                if axish_canlog:
+                    x = np.log10(x)
+                else:
+                    message = "Cannot log Horizontal Axis, some values are <= 0"
+                    self.axish_islog.set(0)
+            elif self.axish_is10.get() == 1:
+                x = 10.**x
+                
+        if self.axisv_islog.get() != self.axisv_is10.get():
+            if self.axisv_islog.get() == 1:
+                if axisv_canlog:
+                    y = np.log10(y)
+                else:
+                    message = "Cannot log Vertical Axis, some values are <= 0"
+                    self.axisv_islog.set(0)
+            elif self.axisv_is10.get() == 1:
+                y = 10.**y
+                    
+        """
+        if self.axish_islog.get() == 1 and self.axish_is10.get() == 0:
+            if not np.all(x > 0):
+                message = "Cannot log Horizontal Axis, some values are <= 0"
+                self.axish_islog.set(0)
+            else:
+                message = "Logged"
+                x = np.log10(x)
+        if self.axish_islog.get() == 0 and self.axish_is10.get() == 1:
             x = 10.**x
-        if self.axisv_is10.get() == 1:
+        if self.axisv_islog.get() == 1 and self.axisv_is10.get() == 0:
+            if not np.all(y > 0):
+                message = "Cannot log Vertical Axis, some values are <= 0"
+            else:
+                y = np.log10(y)
+        if self.axisv_islog.get() == 0 and self.axisv_is10.get() == 1:
             y = 10.**y
+        """
+        
+        #self.update_log_10_buttons(x,y)
 
         # Don't worry about aspect ratios yet, this stuff is a bit complicated.
         #if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
@@ -595,16 +647,7 @@ class main():
         if self.axisc_var.get() == "":
             self.plot_particles(x,y)
 
-            # Need to manually scale the axis because .relim() is not yet supported for scatter plots
-            margin = self.ax.margins()
-            xmin = np.amin(x)
-            xmax = np.amax(x)
-            ymin = np.amin(y)
-            ymax = np.amax(y)
-            dx = xmax-xmin
-            dy = ymax-ymin
-            self.ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
-            self.ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
+            
             self.hide_colorbar()
             
         elif self.axisc_var.get() == "column density":
@@ -613,11 +656,24 @@ class main():
             self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
             self.im.set_visible(True)
             self.show_colorbar()
-            self.ax.relim()
+            #self.ax.relim()
 
+        # Need to manually scale the axis because .relim() is not yet supported for scatter plots
+        margin = self.ax.margins()
+        xmin = np.amin(x)
+        xmax = np.amax(x)
+        ymin = np.amin(y)
+        ymax = np.amax(y)
+        dx = xmax-xmin
+        dy = ymax-ymin
+        self.ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
+        self.ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
+            
         self.update_axis_labels()
         self.canvas.draw()
-        self.corner_message_text.set("")
+        
+        # The code is left to hang after this point. Waiting for user input...
+        self.corner_message_text.set(message)
 
 ###
 
@@ -697,7 +753,7 @@ class main():
             grid = np.log10(grid)
 
         print(time.time()-start)
-        self.im = self.ax.imshow(grid,extent=(xmin,xmax,ymin,ymax),cmap=self.cmap.get())
+        self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get())
         self.corner_message_text.set("")
 
 ###
@@ -822,29 +878,18 @@ class main():
         self.axisv_combobox.config(values=list(self.variables))
         self.axisc_combobox.config(values=list(self.color_variables))
 
-    def update_log_10_buttons(self,*args):
-        xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
-        yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
-        cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
-        
-        if type(xidx).__name__ == 'list': xidx = xidx[0]
-        if type(yidx).__name__ == 'list': yidx = yidx[0]
-        if type(cidx).__name__ == 'list': cidx = cidx[0]
-
-        x = self.data[:,xidx]
-        y = self.data[:,yidx]
-
+    def update_log_10_buttons(self,x,y,*args):
         if np.all(x > 0):
             # The horizontal axis is able to be in log space
             self.axish_log_button.config(state='normal')
-        else:
+        elif self.axish_is10.get() == 0: #10^ button is not selected
             self.axish_islog.set(0)
             self.axish_log_button.config(state='disabled')
  
         if np.all(y > 0):
             # The vertical axis is able to be in log space
             self.axisv_log_button.config(state='normal')
-        else:
+        elif self.axisv_is10.get() == 0: #10^ button is not selected
             self.axisv_islog.set(0)
             self.axisv_log_button.config(state='disabled')
 
@@ -982,6 +1027,27 @@ class main():
     def read_file(self,*args):
         # Start the "Loading..." message when we start to read the data, and get rid of the message
         # after we have plotted the data (in draw_plot())
+
+        # Return the following error code:
+        # 0 = Successful
+        # 1 = The file does not exist
+        # 2 = The file is the same as the previous one read in
+        # 3 = Unrecognized file type
+
+        # First check to see if the file actually exists
+        if not os.path.isfile(self.current_file.get()):
+            if len(self.current_file.get()) > 20:
+                self.corner_message_text.set("Could not find file ..."+self.current_file.get())
+            else:
+                self.corner_message_text.set("Could not find file "+self.current_file.get())
+            self.corner_message_label.update_idletasks()
+            return 1
+        
+        # First check to see if we have changed files since the last time we read data
+        if self.current_file.get() == self.last_file.get():
+            # If so, we don't need to do anything
+            return 2
+        
         self.corner_message_text.set("Loading...")
         self.corner_message_label.update_idletasks()
         self.data, self.header = read_sph(self.current_file.get())
@@ -1044,31 +1110,36 @@ class main():
                 self.sph_mode = False
                 self.MESA_mode = False
                 
-                return False
-        
+                return 3
+
+        self.last_file.set(self.current_file.get())
+            
         self.change_axis_state("axish","normal")
         self.change_axis_state("axisv","normal")
         
         self.update_axes_menu()
         
-        return True
+        return 0
 
     def next_file(self,*args):
         nxt_idx = self.current_file_idx.get() + self.skip_magnitude.get()
+        currentfile = self.current_file.get()
+        currentfileidx = self.current_file_idx.get()
         if nxt_idx >= len(self.files)-1:
             # Reached end of file list
             if self.current_file_idx.get() != len(self.files)-1:
                 self.current_file_idx.set(len(self.files)-1)
                 self.current_file.set(self.files[-1])
                 isread = self.read_file()
-                if isread: self.draw_plot()
-
+                if isread == 0: # Successfully read the last file in the list
+                    self.draw_plot()
+                return
+            
             self.corner_message_text.set("End of file list")
             self.corner_message_label.update_idletasks()
             self.skip_magnitude_entry.delete(0,'end')
             self.skip_magnitude_entry.insert(0,'1')
             self.skip_magnitude.set(1)
-                
             return
 
         self.current_file_idx.set(nxt_idx)
@@ -1078,20 +1149,23 @@ class main():
         
     def previous_file(self,*args):
         prev_idx = self.current_file_idx.get() - self.skip_magnitude.get()
+        currentfile = self.current_file.get()
+        currentfileidx = self.current_file_idx.get()
         if prev_idx <= 0:
             # Reached beginning of file list
             if self.current_file_idx.get() != 0:
                 self.current_file_idx.set(0)
                 self.current_file.set(self.files[0])
                 isread = self.read_file()
-                if isread: self.draw_plot()
-                
+                if isread:
+                    self.draw_plot()
+                return
+                    
             self.corner_message_text.set("Start of file list")
             self.corner_message_label.update_idletasks()
             self.skip_magnitude_entry.delete(0,'end')
             self.skip_magnitude_entry.insert(0,'1')
             self.skip_magnitude.set(1)
-            
             return
 
         self.current_file_idx.set(prev_idx)
