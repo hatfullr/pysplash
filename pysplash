@@ -10,6 +10,7 @@
 #    from Tkinter.colorchooser import askcolor
 
 import tkinter as tk # Python 3 only for now
+import tkinter.ttk as ttk
 from tkinter import colorchooser
 
 from matplotlib.backends.backend_tkagg import (
@@ -24,7 +25,15 @@ import sys
 import numpy as np
 import time
 import multiprocessing as mp
+import os
+import signal
 
+import struct
+import numpy as np
+from numpy.lib.recfunctions import repack_fields
+
+from scipy.spatial.distance import cdist
+from scipy.integrate import simps
 
 
 units = [ "6.9599e10",
@@ -69,10 +78,7 @@ def read_sph(filename,
          size_dataline=156,
          size_extra=0,
          lines=0):
-    import struct
-    import numpy as np
-    import sys
-    from numpy.lib.recfunctions import repack_fields
+    
 
     if fmt_extra != '': fmt_extra = ','+fmt_extra
     dsize = size_dataline+size_extra+8
@@ -185,6 +191,7 @@ class CustomToolbar(NavigationToolbar2Tk):
 class main():
     
     def __init__(self,root):
+        
         self.root = root
 
         # Init kernels for SPH code
@@ -296,9 +303,7 @@ class main():
         self.axish_var = tk.StringVar()
         self.axisv_var = tk.StringVar()
         self.axisc_var = tk.StringVar()
-        self.axish_var.set(self.variables[0]) # x by default
-        self.axisv_var.set(self.variables[1]) # y by default
-        self.axisc_var.set(self.color_variables[0]) # Nothing by default
+        
 
         self.axis_menu_width = tk.IntVar()
         self.axis_menu_width.set(20)
@@ -306,16 +311,25 @@ class main():
         self.axish_label = tk.Label(self.axes_frame,text="Horizontal Axis").grid(row=0,column=0,sticky='w')
         self.axisv_label = tk.Label(self.axes_frame,text="Vertical Axis").grid(row=1,column=0,sticky='w')
         self.axisc_label = tk.Label(self.axes_frame,text="Colorbar").grid(row=2,column=0,sticky='w')
+
+
+        style = ttk.Style()
+        style.map('TCombobox', fieldbackground=[('readonly','white')])
+        style.map('TCombobox', selectbackground=[('readonly', 'white')])
+        style.map('TCombobox', selectforeground=[('readonly', 'black')])
+        style.map('TCombobox', fieldbackground=[('disabled',self.root["bg"])])
+
+        self.axish_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axish_var)
+        self.axisv_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axisv_var)
+        self.axisc_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.color_variables,textvariable=self.axisc_var)
+
+        self.axish_combobox.bind("<FocusIn>", lambda x: self.axish_combobox.selection_clear())
         
-        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.draw_plot)
-        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.draw_plot)
-        self.axisc_menu = tk.OptionMenu(self.axes_frame,self.axisc_var,*self.color_variables,command=self.draw_plot)
-        self.axish_menu.config(width=self.axis_menu_width.get())
-        self.axisv_menu.config(width=self.axis_menu_width.get())
-        self.axisc_menu.config(width=self.axis_menu_width.get())
-        self.axish_menu.grid(row=0,column=1)
-        self.axisv_menu.grid(row=1,column=1)
-        self.axisc_menu.grid(row=2,column=1)
+        self.axish_combobox.grid(row=0,column=1)
+        self.axisv_combobox.grid(row=1,column=1)
+        self.axisc_combobox.grid(row=2,column=1)
+
+        
 
         self.axish_islog = tk.IntVar()
         self.axisv_islog = tk.IntVar()
@@ -337,9 +351,9 @@ class main():
         #self.axish_log_button.config(state='disabled')
         #self.axish_10_button.config(state='disabled')
         tk.Label(smallframeh,text="log").grid(row=0,column=1)
-        tk.Label(smallframeh,text="10^").grid(row=1,column=1)
+        tk.Label(smallframeh,text="10^").grid(row=0,column=3)
         self.axish_log_button.grid(row=0,column=0)
-        self.axish_10_button.grid(row=1,column=0)
+        self.axish_10_button.grid(row=0,column=2)
 
         smallframeh.grid(row=0,column=2)
         
@@ -350,9 +364,9 @@ class main():
         #self.axisv_log_button.config(state='disabled')
         #self.axisv_10_button.config(state='disabled')
         tk.Label(smallframev,text="log").grid(row=0,column=1)
-        tk.Label(smallframev,text="10^").grid(row=1,column=1)
+        tk.Label(smallframev,text="10^").grid(row=0,column=3)
         self.axisv_log_button.grid(row=0,column=0)
-        self.axisv_10_button.grid(row=1,column=0)
+        self.axisv_10_button.grid(row=0,column=2)
 
         smallframev.grid(row=1,column=2)
         
@@ -363,9 +377,9 @@ class main():
         #self.axisc_log_button.config(state='disabled')
         #self.axisc_10_button.config(state='disabled')
         tk.Label(smallframec,text="log").grid(row=0,column=1)
-        tk.Label(smallframec,text="10^").grid(row=1,column=1)
+        tk.Label(smallframec,text="10^").grid(row=0,column=3)
         self.axisc_log_button.grid(row=0,column=0)
-        self.axisc_10_button.grid(row=1,column=0)
+        self.axisc_10_button.grid(row=0,column=2)
 
         smallframec.grid(row=2,column=2)
 
@@ -384,7 +398,8 @@ class main():
         smallerframers = tk.Frame(smallframers)
         
         tk.Label(smallerframers,text="Resolution (px)").grid(row=0,column=0)
-        tk.Button(smallerframers,text="Draw",command=self.draw_plot,width=5,height=1,padx=0,pady=0).grid(row=0,column=1)
+        self.resolution_draw_button = tk.Button(smallerframers,text="Draw",command=self.draw_plot,width=5,height=1,padx=0,pady=0)
+        self.resolution_draw_button.grid(row=0,column=1)
 
         smallerframers.grid(row=0,column=0,columnspan=6)
         
@@ -449,10 +464,11 @@ class main():
         self.back_button = tk.Button(self.graph_controls_frame,command=self.previous_file,text="<<",width=2,height=1,padx=5,pady=5).grid(row=0,column=1)
         self.next_button = tk.Button(self.graph_controls_frame,command=self.next_file,text=">>",width=2,height=1,padx=5,pady=5).grid(row=0,column=3)
         self.current_file_label = tk.Label(self.graph_controls_frame,textvariable=self.current_file,padx=10).grid(row=0,column=0)
-        
+
+
         
         # Draw the frames
-
+        start = time.time()
         # Right side
         self.files_frame.grid(row=0,column=0)
         self.axes_frame.grid(row=1,column=0)
@@ -466,9 +482,21 @@ class main():
         self.left_frame.grid(row=0,column=0,columnspan=2)
         self.right_frame.grid(row=0,column=2)
 
-
         # Draw the first file
         self.read_file()
+
+        # Set the axes to be the first 2 variables by default.
+        self.axish_var.set(self.variables[0]) # x by default
+        self.axisv_var.set(self.variables[1]) # y by default
+        self.axisc_var.set(self.color_variables[0]) # Nothing by default
+
+        # When the axis variable changes from selecting the combobox, update the plot
+        self.axish_var.trace('w',self.draw_plot)
+        self.axisv_var.trace('w',self.draw_plot)
+        self.axisc_var.trace('w',self.draw_plot)
+        
+        print(time.time()-start)
+        
         self.draw_plot()
 
 
@@ -479,9 +507,7 @@ class main():
         except ValueError:
             # The user did not use an integer value
             return
-
         self.im.set_cmap(self.cmap.get())
-
         self.canvas.draw()
 
         
@@ -499,18 +525,17 @@ class main():
 
             if self.colorbar is None:
                 self.colorbar = self.fig.colorbar(self.im,cax=self.cax)
-        #print(self.colorbar)
 
     def hide_colorbar(self,*args):
         if self.cax.get_visible() and self.axisc_var.get() == "":
-            #if self.colorbar is not None:
-            #    self.colorbar.set_visible(False)
             self.cax.set_visible(False)
             self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get() + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), self.h.get()])
 
     def choose_particle_color(self,*args):
-        self.particle_color.set(colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1])
-        self.particle_color_button.config(bg=self.particle_color.get())
+        color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1]
+        if color is not None:
+            self.particle_color.set(color)
+            self.particle_color_button.config(bg=self.particle_color.get())
 
         for particles in self.particles:
             particles.set_color(self.particle_color.get())
@@ -518,8 +543,10 @@ class main():
         self.canvas.draw()
         
     def choose_particle_core_color(self,*args):
-        self.particle_core_color.set(colorchooser.askcolor(parent=self.root,initialcolor=self.particle_core_color.get())[1])
-        self.particle_core_color_button.config(bg=self.particle_core_color.get())
+        color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1]
+        if color is not None:
+            self.particle_core_color.set(color)
+            self.particle_core_color_button.config(bg=self.particle_core_color.get())
 
         for core_particles in self.core_particles:
             core_particles.set_color(self.particle_core_color.get())
@@ -542,31 +569,37 @@ class main():
             self.vlabel.set_text("10^ "+self.axisv_var.get())
         elif self.axisv_islog.get() == self.axisv_is10.get(): # Both or neither
             self.vlabel.set_text(self.axisv_var.get())
-
-        #self.hlabel = self.fig.text((pos.x1+pos.x0)/2.,0.01,self.axish_var.get(),ha='center')
-        #self.vlabel = self.fig.text(0.01,(pos.y1+pos.y0)/2.,self.axisv_var.get(),va='center',rotation='vertical')
             
         # Reposition the labels
-        #pos = self.ax.get_position()
         self.hlabel.set_position(((self.x0.get()+self.w.get()+self.x0.get())/2.,self.y0.get() - self.hlabel_buff.get()))
             
     def update_axes_menu(self,*args):
-        # We have to completely re-make the optionmenu lists because tkinter sucks with these.
-        self.axish_menu.destroy()
-        self.axisv_menu.destroy()
-        self.axisc_menu.destroy()
-        self.axish_menu = tk.OptionMenu(self.axes_frame,self.axish_var,*self.variables,command=self.draw_plot)
-        self.axisv_menu = tk.OptionMenu(self.axes_frame,self.axisv_var,*self.variables,command=self.draw_plot)
-        self.axisc_menu = tk.OptionMenu(self.axes_frame,self.axisc_var,*self.color_variables,command=self.draw_plot)
-        self.axish_menu.config(width=self.axis_menu_width.get())
-        self.axisv_menu.config(width=self.axis_menu_width.get())
-        self.axisc_menu.config(width=self.axis_menu_width.get())
-        self.axish_menu.grid(row=0,column=1)
-        self.axisv_menu.grid(row=1,column=1)
-        self.axisc_menu.grid(row=2,column=1)
+        self.axish_combobox.config(values=list(self.variables))
+        self.axisv_combobox.config(values=list(self.variables))
+        self.axisc_combobox.config(values=list(self.color_variables))
         
+    def change_axis_state(self,axis,state,*args):
+        # Disables/enables everything related to the input axis
+        # axis = str
+        # state = str
         
-       
+        if axis == "axish":
+            self.axish_combobox.config(state=state)
+            self.axish_log_button.config(state=state)
+            self.axish_10_button.config(state=state)
+        elif axis == "axisv":
+            self.axisv_combobox.config(state=state)
+            self.axisv_log_button.config(state=state)
+            self.axisv_10_button.config(state=state)
+        elif axis == "axisc":
+            self.axisc_combobox.config(state=state)
+            self.axisc_log_button.config(state=state)
+            self.axisc_10_button.config(state=state)
+            self.resolution_scale_x_entry.config(state=state)
+            self.resolution_scale_y_entry.config(state=state)
+            self.resolution_scale_z_entry.config(state=state)
+            self.resolution_draw_button.config(state=state)
+            self.cmap_entry.config(state=state)
         
     def load_files(self,*args):
         self.files = []
@@ -584,6 +617,7 @@ class main():
     def clear_files(self,*args):
         self.files = []
         self.files_var.set("")
+        
 
     def read_file(self,*args):
         # Start the "Loading..." message when we start to read the data, and get rid of the message
@@ -616,6 +650,10 @@ class main():
             self.color_variables = [ "",
                                      "column density",
                                    ]
+
+            # Enable the colorbar menu
+            self.change_axis_state("axisc",'normal')
+            
             self.sph_mode = True
             self.MESA_mode = False
         else:
@@ -626,19 +664,22 @@ class main():
             if header_attr is not None and cols is not None and data is not None:
                 keys = np.asarray(list(cols.items()))[:,0]
                 values = np.asarray(list(cols.items()))[:,1].astype(int)
-                self.variables = np.insert(keys[np.argsort(values)],0,"")
+                self.variables = keys[np.argsort(values)]
                 self.color_variables = [ "" ] # No colorbars for MESA files
                 self.data = data
                 self.MESA_mode = True
                 self.sph_mode = False
-            else:                
+
+                # Disable the colorbar menu
+                self.change_axis_state("axisc","disabled")
+            else:
                 # Unrecognized file format
                 self.corner_message_text.set("Unrecognized file type '"+self.current_file.get()+"'")
                 self.corner_message_label.update_idletasks()
         
                 # Disable the menu buttons
-                self.axish_menu.config(state='disabled')
-                self.axisv_menu.config(state='disabled')
+                self.change_axis_state("axish","disabled")
+                self.change_axis_state("axisv","disabled")
 
                 self.sph_mode = False
                 self.MESA_mode = False
@@ -646,8 +687,8 @@ class main():
                 return False
         
 
-        self.axish_menu.config(state='normal')
-        self.axisv_menu.config(state='normal')
+        self.change_axis_state("axish","normal")
+        self.change_axis_state("axisv","normal")
         
         self.update_axes_menu()
         
@@ -676,35 +717,16 @@ class main():
         
         
     def plot_column_density(self,x,y,z,m,hp,*args):
-        #from scipy.spatial.distance import cdist
-        #from scipy.integrate import simps
         # Plot data with a colorbar
         
         # First, figure out how many pixels are on the screen
-        #dimens = np.asarray(self.fig.get_size_inches() * self.fig.dpi,dtype=int) # in pixels
-        #dimens = dimens/10.
-        #xpix = int(dimens[0])
-        #ypix = int(dimens[1])
-        #zpix = min(xpix,ypix)
-        #zpix = 10
         xpix = self.resolution_scale_x.get()
         ypix = self.resolution_scale_y.get()
         zpix = self.resolution_scale_z.get()
-
-        # Gather necessary particle data
-        #x = data[:,0]
-        #y = data[:,1]
-        #z = data[:,2]
-        #hp = data[:,4]
+        
         hp2 = np.multiply(hp,2.)
         
         # Determine the physical bounds of the grid
-        #xlim = self.ax.get_xlim()
-        #ylim = self.ax.get_ylim()
-        #xmin = xlim[0]
-        #xmax = xlim[1]
-        #ymin = ylim[0]
-        #ymax = ylim[1]
         xmin = np.amin(x-hp2)
         xmax = np.amax(x+hp2)
         ymin = np.amin(y-hp2)
@@ -763,16 +785,8 @@ class main():
         # Returns an array of shape (len(xpos), len(ypos)). Each element of the
         # array is the column density at that (xpos, ypos).
 
-        from scipy.spatial.distance import cdist
-        from scipy.integrate import simps
-
-        #xy = data[:,0:2]
-        #xyz = data[:,0:3]
         xy = np.column_stack((x,y))
         xyz = np.column_stack((x,y,z))
-        #z = data[:,2]
-        #m = data[:,3]
-        #hp = data[:,4]
         hp2 = np.multiply(hp,2.)
         hp22 = np.power(hp2,2.)
         hp2p = np.power(hp,2.)
@@ -790,10 +804,6 @@ class main():
         xyzpos[:,0] = np.repeat(xpos,ypix*zpix)
         xyzpos[:,1] = np.tile(np.repeat(ypos,zpix),xpix)
         xyzpos[:,2] = np.tile(zpos,xpix*ypix)
-
-
-        #dr = cdist(xyzpos,xyz)
-        
         
         drp_arr2 = cdist(xypos,xy,'sqeuclidean')
         
@@ -817,11 +827,7 @@ class main():
                     dens[k] = np.sum(m[idx_xy][idx] * wpc)
                 thisgrid[i][j] = simps(dens,x=zpos)
                 
-        queue.put([xpos_idx_proc,thisgrid])
-
-    
-        
-        
+        queue.put([xpos_idx_proc,thisgrid])    
         
         
     def plot_particles(self,x,y,*args):    
@@ -986,10 +992,15 @@ class main():
         if isread: self.draw_plot()
 
 
+# If this isn't here, tkinter will keep slowing down every time it is reopened...
+def close(*args):
+    root.destroy()
 
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.wm_title("PySplash")
+    root.protocol("WM_DELETE_WINDOW",close)
+    signal.signal(signal.SIGINT, close)
     main(root)
     root.mainloop()
