@@ -321,14 +321,8 @@ class main():
             self.axisv_var = tk.StringVar()
             self.axisc_var = tk.StringVar()
 
-
             self.axis_menu_width = tk.IntVar()
             self.axis_menu_width.set(20)
-
-            self.axish_label = tk.Label(self.axes_frame,text="Horizontal Axis").grid(row=0,column=0,sticky='w')
-            self.axisv_label = tk.Label(self.axes_frame,text="Vertical Axis").grid(row=1,column=0,sticky='w')
-            self.axisc_label = tk.Label(self.axes_frame,text="Colorbar").grid(row=2,column=0,sticky='w')
-
 
             style = ttk.Style()
             style.map('TCombobox', fieldbackground=[('readonly','white')])
@@ -336,11 +330,21 @@ class main():
             style.map('TCombobox', selectforeground=[('readonly', 'black')])
             style.map('TCombobox', fieldbackground=[('disabled',self.root["bg"])])
 
+            self.haxis_frame = tk.Frame(self.axes_frame)
+            self.vaxis_frame = tk.Frame(self.axes_frame)
+            self.caxis_frame = tk.Frame(self.axes_frame)
+            
+            self.axish_label = tk.Label(self.axes_frame,text="Horizontal Axis").grid(row=0,column=0,sticky='w')
+            self.axisv_label = tk.Label(self.axes_frame,text="Vertical Axis").grid(row=1,column=0,sticky='w')
+            self.axisc_label = tk.Label(self.axes_frame,text="Colorbar").grid(row=2,column=0,sticky='w')
+
             self.axish_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axish_var)
             self.axisv_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.variables,textvariable=self.axisv_var)
             self.axisc_combobox = ttk.Combobox(self.axes_frame, state='readonly', values=self.color_variables,textvariable=self.axisc_var)
 
             self.axish_combobox.bind("<FocusIn>", lambda x: self.axish_combobox.selection_clear())
+            self.axisv_combobox.bind("<FocusIn>", lambda x: self.axisv_combobox.selection_clear())
+            self.axisc_combobox.bind("<FocusIn>", lambda x: self.axisc_combobox.selection_clear())
 
             self.axish_combobox.grid(row=0,column=1)
             self.axisv_combobox.grid(row=1,column=1)
@@ -364,9 +368,6 @@ class main():
             smallframeh = tk.Frame(self.axes_frame)
             self.axish_log_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_islog)
             self.axish_10_button = tk.Checkbutton(smallframeh,command=self.draw_plot,variable=self.axish_is10)
-            # Disable the buttons initially
-            #self.axish_log_button.config(state='disabled')
-            #self.axish_10_button.config(state='disabled')
             tk.Label(smallframeh,text="log").grid(row=0,column=1)
             tk.Label(smallframeh,text="10^").grid(row=0,column=3)
             self.axish_log_button.grid(row=0,column=0)
@@ -377,9 +378,6 @@ class main():
             smallframev = tk.Frame(self.axes_frame)
             self.axisv_log_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_islog)
             self.axisv_10_button = tk.Checkbutton(smallframev,command=self.draw_plot,variable=self.axisv_is10)
-            # Disable the buttons initially
-            #self.axisv_log_button.config(state='disabled')
-            #self.axisv_10_button.config(state='disabled')
             tk.Label(smallframev,text="log").grid(row=0,column=1)
             tk.Label(smallframev,text="10^").grid(row=0,column=3)
             self.axisv_log_button.grid(row=0,column=0)
@@ -390,9 +388,6 @@ class main():
             smallframec = tk.Frame(self.axes_frame)
             self.axisc_log_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_islog)
             self.axisc_10_button = tk.Checkbutton(smallframec,command=self.draw_plot,variable=self.axisc_is10)
-            # Disable the buttons initially
-            #self.axisc_log_button.config(state='disabled')
-            #self.axisc_10_button.config(state='disabled')
             tk.Label(smallframec,text="log").grid(row=0,column=1)
             tk.Label(smallframec,text="10^").grid(row=0,column=3)
             self.axisc_log_button.grid(row=0,column=0)
@@ -565,13 +560,11 @@ class main():
         if self.axisv_is10.get() == 1:
             y = 10.**y
 
-        
         # Don't worry about aspect ratios yet, this stuff is a bit complicated.
         #if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
         #    self.ax.set_aspect('equal')
         #else:
         #    self.ax.set_aspect('auto')
-
 
         if self.axisc_var.get() == "":
             self.plot_particles(x,y)
@@ -885,11 +878,17 @@ class main():
         # state = str
         
         if axis == "axish":
-            self.axish_combobox.config(state=state)
+            if state == 'normal':
+                self.axish_combobox.config(state='readonly')
+            else:
+                self.axish_combobox.config(state=state)
             self.axish_log_button.config(state=state)
             self.axish_10_button.config(state=state)
         elif axis == "axisv":
-            self.axisv_combobox.config(state=state)
+            if state == 'normal':
+                self.axisv_combobox.config(state='readonly')
+            else:
+                self.axisv_combobox.config(state=state)
             self.axisv_log_button.config(state=state)
             self.axisv_10_button.config(state=state)
         elif axis == "axisc":
@@ -897,7 +896,6 @@ class main():
                 self.axisc_combobox.config(state='readonly')
             else:
                 self.axisc_combobox.config(state=state)
-                
             self.axisc_log_button.config(state=state)
             self.axisc_10_button.config(state=state)
             self.resolution_scale_x_entry.config(state=state)
