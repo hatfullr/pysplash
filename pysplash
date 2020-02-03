@@ -419,8 +419,8 @@ class main():
 
             #smallframec = tk.Frame(self.axes_frame)
             log_10_frame = tk.Frame(self.axisc_frames[2])
-            self.axisc_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisc_islog)
-            self.axisc_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisc_is10)
+            self.axisc_log_button = tk.Checkbutton(log_10_frame,command=self.convert_log_axisc,variable=self.axisc_islog)
+            self.axisc_10_button = tk.Checkbutton(log_10_frame,command=self.convert_10_axisc,variable=self.axisc_is10)
             tk.Label(log_10_frame,text="log").grid(row=0,column=1)
             tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
             self.axisc_log_button.grid(row=0,column=0)
@@ -638,7 +638,7 @@ class main():
             self.axisv_log_button.config(state='normal')
         else:
             self.axisv_log_button.config(state='disabled')
-            
+        
         # Do nothing if both buttons are selected
         if self.axish_islog.get() != self.axish_is10.get():
             if self.axish_islog.get() == 1:
@@ -674,18 +674,29 @@ class main():
             self.cmap_previous_button.config(state='disabled')
             self.cmap_entry.config(state='disabled')
             self.resolution_draw_button.config(state='disabled')
+            self.axisc_log_button.config(state='disabled')
         else:
             # Re-enable the buttons
             self.cmap_next_button.config(state='normal')
             self.cmap_previous_button.config(state='normal')
             self.cmap_entry.config(state='normal')
             self.resolution_draw_button.config(state='normal')
-            if self.axisc_var.get() == "column density":
+
+            if self.axisc_var.get() == self.sph_color_variables[1]: # column density
                 # Figure out the z axis from the given x and y axes
                 zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
                 self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
                 self.im.set_visible(True)
                 self.show_colorbar()
+                # Handle cases where the log button is already pressed
+                if self.axisc_islog.get() == 1:
+                    self.convert_log_axisc()
+                if self.axisc_is10.get() == 1:
+                # Handle cases where the 10^ button is already pressed
+                    self.convert_10_axisc()
+                
+                # Should always be able to take the log of the column density (no negative values)
+                self.axisc_log_button.config(state='normal')
 
         # Need to manually scale the axis
         margin = self.ax.margins()
@@ -778,8 +789,14 @@ class main():
             grid_proc = grids[n]
             grid[xpos_idx_proc_calculated[n]] = grid_proc
 
-        if self.axisc_islog.get() == 1:
-            grid = np.log10(grid)
+        #if self.axisc_islog.get() != self.axisc_is10.get():
+        #    if self.axisc_islog.get() == 1:
+        #        idx = grid == 0
+        #        idx_invert = 
+        #        grid[idx] = np.nan
+        #        grid = np.log10(grid)
+        #    if self.axisc_is10.get() == 1:
+        #        grid = 10.**grid
 
         print(time.time()-start)
         self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get())
@@ -881,8 +898,7 @@ class main():
         except ValueError:
             # The user did not use an integer value
             return
-        self.im.set_cmap(self.cmap.get())
-        self.colorbar.set_cmap(self.cmap.get())
+        self.colorbar.mappable.set_cmap(self.cmap.get())
         self.canvas.draw()
 
     def update_axis_labels(self,*args):
@@ -1048,7 +1064,73 @@ class main():
         if nxt < 0: nxt = len(self.cmap_names)-1
         self.cmap_idx.set(nxt)
         self.update_cmap()
-            
+
+    def convert_log_axisc(self,*args):
+        # Convert the color axis to log
+        if self.im is not None:
+            arr = self.im.get_array()
+            if self.axisc_islog.get() != 0: # Log the data
+                idx = arr == 0
+                idx_invert = np.logical_not(idx)
+                arr[idx] = np.nan
+                arr[idx_invert] = np.log10(arr[idx_invert])
+            else: # Unlog the data
+                idx = np.isnan(arr)
+                idx_invert = np.logical_not(idx)
+                arr[idx] = 0.
+                arr[idx_invert] = 10.**arr[idx_invert]
+
+            self.im.set_array(arr)
+
+            # Reset the limits on the colorbar
+            margin = self.cax.margins()
+            vmin = np.amin(arr[np.isfinite(arr)])
+            vmax = np.amax(arr[np.isfinite(arr)])
+            dv = vmax-vmin
+            vmin_new = vmin - dv*margin[1]
+            vmax_new = vmax + dv*margin[1]
+            if self.axisc_var.get() == self.sph_color_variables[1]: # column density
+                if self.axisc_islog.get() == 0 or self.axisc_islog.get() == self.axisc_is10.get(): # Not logged
+                    # Can't have any values less than zero
+                    if vmin_new < 0: vmin_new = 0
+                    if vmax_new < 0: vmax_new = 0
+            self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+            self.canvas.draw()
+        
+    def convert_10_axisc(self,*args):
+        # Convert the color axis to 10^
+        if self.im is not None:
+            arr = self.im.get_array()
+            if self.axisc_is10.get() == 0: # Log the data
+                print("Log the data")
+                idx = arr == 0
+                idx_invert = np.logical_not(idx)
+                arr[idx] = np.nan
+                arr[idx_invert] = np.log10(arr[idx_invert])
+            else: # Unlog the data
+                print("Unlog the data")
+                idx = np.isnan(arr)
+                idx_invert = np.logical_not(idx)
+                arr[idx] = 0.
+                arr[idx_invert] = 10.**arr[idx_invert]
+
+            self.im.set_array(arr)
+
+            # Reset the limits on the colorbar
+            margin = self.cax.margins()
+            vmin = np.amin(arr[np.isfinite(arr)])
+            vmax = np.amax(arr[np.isfinite(arr)])
+            dv = vmax-vmin
+            vmin_new = vmin - dv*margin[1]
+            vmax_new = vmax + dv*margin[1]
+            if self.axisc_var.get() == self.sph_color_variables[1]: # column density
+                if self.axisc_islog.get() == 0 or self.axisc_islog.get() == self.axisc_is10.get(): # Not logged
+                    # Can't have any values less than zero
+                    if vmin_new < 0: vmin_new = 0
+                    if vmax_new < 0: vmax_new = 0
+            self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+            self.canvas.draw()
+                
 ###
 
 
