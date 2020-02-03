@@ -206,26 +206,29 @@ class main():
         self.header = None
 
         # Assume an SPH data file by default
-        self.variables = [ "x",
-                           "y",
-                           "z",
-                           "m",
-                           "h",
-                           "rho",
-                           "vx",
-                           "vy",
-                           "vz",
-                           "vxdot",
-                           "vydot",
-                           "vzdot",
-                           "u",
-                           "udot",
-                           "grpot",
-                           "meanmolecular",
-                           "cc",
-                           "divv",
-                         ]
-        self.color_variables = [ "",
+        self.sph_variables = [ "x",
+                               "y",
+                               "z",
+                               "m",
+                               "h",
+                               "rho",
+                               "vx",
+                               "vy",
+                               "vz",
+                               "vxdot",
+                               "vydot",
+                               "vzdot",
+                               "u",
+                               "udot",
+                               "grpot",
+                               "meanmolecular",
+                               "cc",
+                               "divv",
+                               "----",
+                               "r",
+                               "mencl",
+                              ]
+        self.sph_color_variables = [ "",
                                  "column density",
                                ]
         self.cmap_names = [ 'nipy_spectral','viridis', 'plasma', 'inferno', 'magma', 'cividis',
@@ -234,8 +237,11 @@ class main():
                             'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu','RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic',
                             'twilight', 'twilight_shifted', 'hsv',
                             'Pastel1', 'Pastel2', 'Paired', 'Accent','Dark2', 'Set1', 'Set2', 'Set3','tab10', 'tab20', 'tab20b', 'tab20c',
-                            'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern','gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg','gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'
+                            'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern','gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg','gist_rainbow', 'rainbow', 'jet', 'gist_ncar'
                           ]
+
+        self.variables = []
+        self.color_variables = []
 
         self.sph_mode = False
         self.MESA_mode = False
@@ -312,9 +318,19 @@ class main():
             self.cmap = tk.StringVar()
             self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
             self.cmap_idx.trace('w',self.update_cmap)
-            tk.Label(self.color_frame,text="cmap").grid(row=0,column=2)
-            self.cmap_entry = tk.Entry(self.color_frame,textvariable=self.cmap_idx,width=2)
-            self.cmap_entry.grid(row=0,column=3)
+
+            cmap_frame = tk.Frame(self.color_frame)
+            
+            tk.Label(cmap_frame,text="cmap").grid(row=0,column=0)
+            self.cmap_entry = tk.Entry(cmap_frame,textvariable=self.cmap_idx,width=2)
+            self.cmap_entry.grid(row=0,column=2)
+
+            self.cmap_next_button = tk.Button(cmap_frame,text=">",command=self.next_cmap,height=1,width=1,padx=0,pady=0)
+            self.cmap_previous_button = tk.Button(cmap_frame,text="<",command=self.previous_cmap,height=1,width=1,padx=0,pady=0)
+            self.cmap_next_button.grid(row=0,column=3)
+            self.cmap_previous_button.grid(row=0,column=1)
+
+            cmap_frame.grid(row=0,column=2)
 
         
 
@@ -462,9 +478,9 @@ class main():
             self.files_var = tk.StringVar()
             if len(sys.argv) > 1:
                 self.files_var.set(" ".join(sys.argv[1:]))
-
+            
             self.files = sys.argv[1:]
-            self.files_label = tk.Label(self.files_frame,text="File list").grid(row=0,column=0)
+            tk.Label(self.files_frame,text="File list").grid(row=0,column=0)
             self.files_text = tk.Entry(self.files_frame,textvariable=self.files_var,width=50)
             self.files_text.bind('<Return>',self.load_files)
             self.files_text.grid(row=0,column=1,padx=(0,3))
@@ -531,6 +547,10 @@ class main():
         # Draw the first file
         self.read_file()
 
+        if self.sph_mode:
+            self.variables = self.sph_variables
+            self.color_variables = self.sph_color_variables
+        
         # Set the axes to be the first 2 variables by default.
         self.axish_var.set(self.variables[0]) # x by default
         self.axisv_var.set(self.variables[1]) # y by default
@@ -571,8 +591,6 @@ class main():
         # Update the data in the plot
         self.clear_plot()
 
-        
-
         xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
         yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
         cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
@@ -581,8 +599,33 @@ class main():
         if type(yidx).__name__ == 'list': yidx = yidx[0]
         if type(cidx).__name__ == 'list': cidx = cidx[0]
 
-        x = self.data[:,xidx]
-        y = self.data[:,yidx]
+        if self.sph_mode:
+            if xidx == 18: # This is the divider
+                return
+            elif xidx == 19: # r
+                x = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+            elif xidx == 20: # mencl
+                r = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+                idx = np.argsort(r)
+                x = np.cumsum(self.data[idx][:,3])
+                x = x[np.argsort(idx)]
+            else:
+                x = self.data[:,xidx]
+
+            if yidx == 18: # This is the divider
+                return
+            elif yidx == 19: # r
+                y = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+            elif yidx == 20: # mencl
+                r = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+                idx = np.argsort(self.data,r)
+                y = np.cumsum(self.data[idx][:,3])
+                y = np.argsort(mencl,idx)
+            else:
+                y = self.data[:,yidx]
+        else:
+            x = self.data[:,xidx]
+            y = self.data[:,yidx]
 
         axish_canlog = np.all(x > 0)
         axisv_canlog = np.all(y > 0)
@@ -616,27 +659,6 @@ class main():
                     self.axisv_islog.set(0)
             elif self.axisv_is10.get() == 1:
                 y = 10.**y
-                    
-        """
-        if self.axish_islog.get() == 1 and self.axish_is10.get() == 0:
-            if not np.all(x > 0):
-                message = "Cannot log Horizontal Axis, some values are <= 0"
-                self.axish_islog.set(0)
-            else:
-                message = "Logged"
-                x = np.log10(x)
-        if self.axish_islog.get() == 0 and self.axish_is10.get() == 1:
-            x = 10.**x
-        if self.axisv_islog.get() == 1 and self.axisv_is10.get() == 0:
-            if not np.all(y > 0):
-                message = "Cannot log Vertical Axis, some values are <= 0"
-            else:
-                y = np.log10(y)
-        if self.axisv_islog.get() == 0 and self.axisv_is10.get() == 1:
-            y = 10.**y
-        """
-        
-        #self.update_log_10_buttons(x,y)
 
         # Don't worry about aspect ratios yet, this stuff is a bit complicated.
         #if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
@@ -646,19 +668,26 @@ class main():
 
         if self.axisc_var.get() == "":
             self.plot_particles(x,y)
-
-            
             self.hide_colorbar()
-            
-        elif self.axisc_var.get() == "column density":
-            # Figure out the z axis from the given x and y axes
-            zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
-            self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
-            self.im.set_visible(True)
-            self.show_colorbar()
-            #self.ax.relim()
+            # Also disable the cmap controls and the "Draw" button for Resolution
+            self.cmap_next_button.config(state='disabled')
+            self.cmap_previous_button.config(state='disabled')
+            self.cmap_entry.config(state='disabled')
+            self.resolution_draw_button.config(state='disabled')
+        else:
+            # Re-enable the buttons
+            self.cmap_next_button.config(state='normal')
+            self.cmap_previous_button.config(state='normal')
+            self.cmap_entry.config(state='normal')
+            self.resolution_draw_button.config(state='normal')
+            if self.axisc_var.get() == "column density":
+                # Figure out the z axis from the given x and y axes
+                zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
+                self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
+                self.im.set_visible(True)
+                self.show_colorbar()
 
-        # Need to manually scale the axis because .relim() is not yet supported for scatter plots
+        # Need to manually scale the axis
         margin = self.ax.margins()
         xmin = np.amin(x)
         xmax = np.amax(x)
@@ -853,6 +882,7 @@ class main():
             # The user did not use an integer value
             return
         self.im.set_cmap(self.cmap.get())
+        self.colorbar.set_cmap(self.cmap.get())
         self.canvas.draw()
 
     def update_axis_labels(self,*args):
@@ -999,6 +1029,26 @@ class main():
             self.cax.set_visible(False)
             self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get() + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), self.h.get()])
 
+    def next_cmap(self,*args):
+        # Go to the next colormap
+        try:
+            nxt = int(self.cmap_idx.get())+1
+        except ValueError: # If we can't convert to an int, just do nothing
+            return
+        if nxt > len(self.cmap_names)-1: nxt = 0
+        self.cmap_idx.set(nxt)
+        self.update_cmap()
+        
+    def previous_cmap(self,*args):
+        # Go to the previous colormap
+        try:
+            nxt = int(self.cmap_idx.get())-1
+        except ValueError: # If we can't convert to an int, just do nothing
+            return
+        if nxt < 0: nxt = len(self.cmap_names)-1
+        self.cmap_idx.set(nxt)
+        self.update_cmap()
+            
 ###
 
 
@@ -1054,28 +1104,8 @@ class main():
 
         if self.data is not None and self.header is not None:
             # This is an SPH file
-            self.variables = [ "x",
-                               "y",
-                               "z",
-                               "m",
-                               "h",
-                               "rho",
-                               "vx",
-                               "vy",
-                               "vz",
-                               "vxdot",
-                               "vydot",
-                               "vzdot",
-                               "u",
-                               "udot",
-                               "grpot",
-                               "meanmolecular",
-                               "cc",
-                               "divv",
-                             ]
-            self.color_variables = [ "",
-                                     "column density",
-                                   ]
+            self.variables = self.sph_variables
+            self.color_variables = self.sph_color_variables
 
             # Enable the colorbar menu
             self.change_axis_state("axisc",'normal')
@@ -1123,8 +1153,8 @@ class main():
 
     def next_file(self,*args):
         nxt_idx = self.current_file_idx.get() + self.skip_magnitude.get()
-        currentfile = self.current_file.get()
-        currentfileidx = self.current_file_idx.get()
+        #currentfile = self.current_file.get()
+        #currentfileidx = self.current_file_idx.get()
         if nxt_idx >= len(self.files)-1:
             # Reached end of file list
             if self.current_file_idx.get() != len(self.files)-1:
@@ -1145,7 +1175,7 @@ class main():
         self.current_file_idx.set(nxt_idx)
         self.current_file.set(self.files[self.current_file_idx.get()])
         isread = self.read_file()
-        if isread: self.draw_plot()
+        if isread == 0: self.draw_plot()
         
     def previous_file(self,*args):
         prev_idx = self.current_file_idx.get() - self.skip_magnitude.get()
@@ -1157,7 +1187,7 @@ class main():
                 self.current_file_idx.set(0)
                 self.current_file.set(self.files[0])
                 isread = self.read_file()
-                if isread:
+                if isread == 0:
                     self.draw_plot()
                 return
                     
@@ -1171,7 +1201,7 @@ class main():
         self.current_file_idx.set(prev_idx)
         self.current_file.set(self.files[self.current_file_idx.get()])
         isread = self.read_file()
-        if isread: self.draw_plot()
+        if isread == 0: self.draw_plot()
 
 ###
 
