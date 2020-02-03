@@ -960,7 +960,7 @@ class main():
         self.canvas.draw()
         
     def choose_particle_core_color(self,*args):
-        color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_color.get())[1]
+        color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_core_color.get())[1]
         if color is not None:
             self.particle_core_color.set(color)
             self.particle_core_color_button.config(bg=self.particle_core_color.get())
