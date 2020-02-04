@@ -3,6 +3,7 @@ PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher
 
 # Future feature wishlist
 * Create a system that allows the user to specify their files' data type, so that any file can be read in
+* Change aspect ratio from 'auto' to 'equal'
 * Automatic adjustment of limits on/off
 * Change particle marker type and size
 * Adjust the plotting space
