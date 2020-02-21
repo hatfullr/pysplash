@@ -1,6 +1,9 @@
 # pysplash
 PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher and MESA data
 
+# Things to Fix
+* After using the log or 10^ buttons, hovering the mouse over the plot no longer gives proper (x,y) positions. It seems the position is relative to the old data still. We must have to update the toolbar or something when replotting.
+
 # Future feature wishlist
 * Create a system that allows the user to specify their files' data type, so that any file can be read in
 * Change aspect ratio from 'auto' to 'equal'
