@@ -13,6 +13,7 @@ import tkinter as tk # Python 3 only for now
 import tkinter.ttk as ttk
 from tkinter import colorchooser
 
+import matplotlib
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
@@ -43,7 +44,7 @@ units = [ "6.9599e10",
           "1.9891e33",
         ]
 
-def read_sph(filename,
+def read_binary(filename,
          return_header=True,
          return_data=True,
          fmt_header= '2i'+    # ntot, nnopt (2*4=8)
@@ -240,6 +241,8 @@ class main():
                             'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern','gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg','gist_rainbow', 'rainbow', 'jet', 'gist_ncar'
                           ]
 
+        self.markers = list(matplotlib.markers.MarkerStyle.markers.keys())
+
         self.variables = []
         self.color_variables = []
 
@@ -264,7 +267,7 @@ class main():
         self.graph_toolbar_frame = tk.Frame()
         self.axes_frame = tk.Frame(self.right_frame)
         self.files_frame = tk.Frame(self.right_frame)
-        self.color_frame = tk.Frame(self.right_frame)
+        self.particle_opts_frame = tk.Frame(self.right_frame)
 
 
         def init_graph():
@@ -300,38 +303,45 @@ class main():
             self.aspect = tk.StringVar()
             self.aspect.set('auto')
             
-        def init_color_controls():
+        def init_particle_controls():
             # Setup the color controls
             self.particle_color = tk.StringVar()
             self.particle_core_color = tk.StringVar()
+            self.particle_size = tk.StringVar()
+            self.particle_core_size = tk.StringVar()
+            self.particle_marker = tk.StringVar()
+            self.particle_core_marker = tk.StringVar()
             self.particle_color.set("#000000")
             self.particle_core_color.set("#000000")
-            tk.Label(self.color_frame,text="Particles").grid(row=0,column=0,sticky='W')
-            tk.Label(self.color_frame,text="Core particles").grid(row=1,column=0,sticky='W')
-            self.particle_color_button = tk.Button(self.color_frame,command=self.choose_particle_color,height=1,width=2,padx=0,pady=0,bg=self.particle_color.get())
-            self.particle_core_color_button = tk.Button(self.color_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
-            self.particle_color_button.grid(row=0,column=1)
-            self.particle_core_color_button.grid(row=1,column=1)
-
-            self.cmap_idx = tk.StringVar()
-            self.cmap_idx.set("0")
-            self.cmap = tk.StringVar()
-            self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
-            self.cmap_idx.trace('w',self.update_cmap)
-
-            cmap_frame = tk.Frame(self.color_frame)
+            self.particle_size.set("1")
+            self.particle_core_size.set("1")
+            self.particle_marker.set(self.markers[0])
+            self.particle_core_marker.set(self.markers[0])
+            tk.Label(self.particle_opts_frame,text="Particles").grid(row=1,column=0,sticky='W')
+            tk.Label(self.particle_opts_frame,text="Core particles").grid(row=2,column=0,sticky='W')
+            tk.Label(self.particle_opts_frame,text="Color").grid(row=0,column=1)
+            tk.Label(self.particle_opts_frame,text="Size").grid(row=0,column=2)
+            tk.Label(self.particle_opts_frame,text="Marker").grid(row=0,column=3)
             
-            tk.Label(cmap_frame,text="cmap").grid(row=0,column=0)
-            self.cmap_entry = tk.Entry(cmap_frame,textvariable=self.cmap_idx,width=2)
-            self.cmap_entry.grid(row=0,column=2)
+            self.particle_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_color,height=1,width=2,padx=0,pady=0,bg=self.particle_color.get())
+            self.particle_core_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
+            self.particle_size_entry = tk.Entry(self.particle_opts_frame,textvariable=self.particle_size,width=3)
+            self.particle_core_size_entry = tk.Entry(self.particle_opts_frame,textvariable=self.particle_core_size,width=3)
+            self.particle_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_marker,width=5)
+            self.particle_core_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_core_marker,width=5)
+            
+            self.particle_color_button.grid(row=1,column=1)
+            self.particle_core_color_button.grid(row=2,column=1)
+            self.particle_size_entry.grid(row=1,column=2)
+            self.particle_core_size_entry.grid(row=2,column=2)
+            self.particle_marker_combobox.grid(row=1,column=3)
+            self.particle_core_marker_combobox.grid(row=2,column=3)
 
-            self.cmap_next_button = tk.Button(cmap_frame,text=">",command=self.next_cmap,height=1,width=1,padx=0,pady=0)
-            self.cmap_previous_button = tk.Button(cmap_frame,text="<",command=self.previous_cmap,height=1,width=1,padx=0,pady=0)
-            self.cmap_next_button.grid(row=0,column=3)
-            self.cmap_previous_button.grid(row=0,column=1)
-
-            cmap_frame.grid(row=0,column=2)
-
+            self.particle_size.trace('w',self.update_particle_size)
+            self.particle_core_size.trace('w',self.update_particle_core_size)
+            self.particle_marker.trace('w',self.update_particle_marker)
+            self.particle_core_marker.trace('w',self.update_particle_core_marker)
+            
         
 
         def init_axes_options():
@@ -461,6 +471,25 @@ class main():
 
             resolution_frame.grid(row=0,column=0)
 
+            self.cmap_idx = tk.StringVar()
+            self.cmap_idx.set("0")
+            self.cmap = tk.StringVar()
+            self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
+            self.cmap_idx.trace('w',self.update_cmap)
+
+            cmap_frame = tk.Frame(self.axisc_frames[4])
+            
+            tk.Label(cmap_frame,text="cmap").grid(row=0,column=0)
+            self.cmap_entry = tk.Entry(cmap_frame,textvariable=self.cmap_idx,width=2)
+            self.cmap_entry.grid(row=0,column=2)
+
+            self.cmap_next_button = tk.Button(cmap_frame,text=">",command=self.next_cmap,height=1,width=1,padx=0,pady=0)
+            self.cmap_previous_button = tk.Button(cmap_frame,text="<",command=self.previous_cmap,height=1,width=1,padx=0,pady=0)
+            self.cmap_next_button.grid(row=0,column=3)
+            self.cmap_previous_button.grid(row=0,column=1)
+
+            cmap_frame.grid(row=0,column=2)
+
             for i in range(0,len(self.axish_frames)):
                 self.axish_frames[i].grid(row=i,column=0)
             for i in range(0,len(self.axisv_frames)):
@@ -523,7 +552,7 @@ class main():
 
         # Perform initialization
         init_graph()
-        init_color_controls()
+        init_particle_controls()
         init_axes_options()
         init_files_prompt()
         init_colorbar()
@@ -534,7 +563,7 @@ class main():
         # Right side
         self.files_frame.grid(row=0,column=0)
         self.axes_frame.grid(row=1,column=0)
-        self.color_frame.grid(row=2,column=0)
+        self.particle_opts_frame.grid(row=2,column=0)
 
         # Left side
         self.graph_frame.grid(row=0,column=0)
@@ -726,12 +755,15 @@ class main():
 
     def plot_particles(self,x,y,*args):    
         if self.sph_mode and not self.MESA_mode: # If we are in SPH mode,
-            self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
+            self.particles.append(self.ax.scatter(x,y,marker=self.particle_marker.get(),color=self.particle_color.get()))
             core_idx = np.where(self.data[:,12] == 0)[0] # True only in StarSmasher
             if len(core_idx) > 0:
-                self.core_particles.append(self.ax.scatter(x[core_idx],y[core_idx],s=1,marker='.',color=self.particle_core_color.get()))
+                self.core_particles.append(self.ax.scatter(x[core_idx],y[core_idx],s=1,marker=self.particle_core_marker.get(),color=self.particle_core_color.get()))
         elif not self.sph_mode and self.MESA_mode: # If we are in MESA mode
-            self.particles.append(self.ax.scatter(x,y,s=1,marker='.',color=self.particle_color.get()))
+            self.particles.append(self.ax.scatter(x,y,marker=self.particle_marker.get(),color=self.particle_color.get()))
+
+        self.update_particle_size()
+        self.update_particle_core_size()
         
     def plot_column_density(self,x,y,z,m,hp,*args):
         # Plot data with a colorbar
@@ -954,10 +986,12 @@ class main():
             self.particle_color.set(color)
             self.particle_color_button.config(bg=self.particle_color.get())
 
-        for particles in self.particles:
-            particles.set_color(self.particle_color.get())
-
-        self.canvas.draw()
+        self.update_particle_color()
+            
+        #for particles in self.particles:
+        #    particles.set_color(self.particle_color.get())
+        #
+        #self.canvas.draw()
         
     def choose_particle_core_color(self,*args):
         color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_core_color.get())[1]
@@ -965,10 +999,12 @@ class main():
             self.particle_core_color.set(color)
             self.particle_core_color_button.config(bg=self.particle_core_color.get())
 
-        for core_particles in self.core_particles:
-            core_particles.set_color(self.particle_core_color.get())
-
-        self.canvas.draw()
+        self.update_particle_core_color()
+            
+        #for core_particles in self.core_particles:
+        #    core_particles.set_color(self.particle_core_color.get())
+        #
+        #self.canvas.draw()
 
 ###
 
@@ -976,8 +1012,47 @@ class main():
 
 
 
+
 ### Plot controls
 ##################
+
+    def update_particle_color(self,*args):
+        for particles in self.particles:
+            particles.set_color(self.particle_color.get())
+        self.canvas.draw()
+
+    def update_particle_core_color(self,*args):
+        for core_particles in self.core_particles:
+            core_particles.set_color(self.particle_core_color.get())
+        self.canvas.draw()
+
+    def update_particle_size(self,*args):
+        try:
+            psize = float(self.particle_size.get())
+        except ValueError:
+            return
+        
+        for particles in self.particles:
+            particles.set_sizes([psize])
+        self.canvas.draw()
+        
+    def update_particle_core_size(self,*args):
+        try:
+            psize = float(self.particle_core_size.get())
+        except ValueError:
+            return
+        
+        for core_particles in self.core_particles:
+            core_particles.set_sizes([psize])
+        self.canvas.draw()
+
+    def update_particle_marker(self,*args):
+        # Matplotlib has no functionality for cleanly updating the markers, very unfortunate...
+        self.draw_plot()
+
+    def update_particle_core_marker(self,*args):
+        # Matplotlib has no functionality for cleanly updating the markers, very unfortunate...
+        self.draw_plot()
 
     def clear_plot(self,*args):
         for particles in self.particles:
@@ -1182,7 +1257,7 @@ class main():
         
         self.corner_message_text.set("Loading...")
         self.corner_message_label.update_idletasks()
-        self.data, self.header = read_sph(self.current_file.get())
+        self.data, self.header = read_binary(self.current_file.get())
 
         if self.data is not None and self.header is not None:
             # This is an SPH file
