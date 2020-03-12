@@ -190,8 +190,46 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
             (u'Save', u'Save the figure', u'filesave', u'save_figure'),
             )
-        NavigationToolbar2Tk.__init__(self,canvas_,parent_)
+        self.canvas = canvas_
+        self.toolbar = NavigationToolbar2Tk
+        self.toolbar.__init__(self,canvas_,parent_)
+        self.toolbar.home = self.new_home
 
+    def new_home(self,*args):
+        # The original "home" function looks like this:
+        #"""Restore the original view."""
+        #self.toolbar._nav_stack.home()
+        #self.toolbar.set_history_buttons(self.toolbar)
+        #self.toolbar._update_view(self.toolbar)
+
+        self.toolbar.home(self.toolbar)
+
+        # We want to do everything the original home function does,
+        # but this time correctly set the plotting limits.
+        
+        # ax[0] is the axis we can see. Not sure what ax[1] is.
+        ax = self.canvas.figure.axes[0]
+        margin = ax.margins()
+        xmin = np.inf
+        xmax = -np.inf
+        ymin = np.inf
+        ymax = -np.inf
+        
+        # This will work only for scatter plots. Revise in the future if needed.
+        for child in ax.get_children():
+            if type(child).__name__ == "PathCollection":
+                xy = child.get_offsets()
+                xmin = min(xmin,np.nanmin(xy[:,0]))
+                xmax = max(xmax,np.nanmax(xy[:,0]))
+                ymin = min(ymin,np.nanmin(xy[:,1]))
+                ymax = max(ymax,np.nanmax(xy[:,1]))
+
+        dx = xmax-xmin
+        dy = ymax-ymin
+        ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
+        ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
+        self.canvas.draw()
+        
 class main():
     
     def __init__(self,root):
@@ -696,8 +734,8 @@ class main():
         #    self.ax.set_aspect('auto')
 
         if self.axisc_var.get() == "":
-            self.plot_particles(x,y)
             self.hide_colorbar()
+            self.plot_particles(x,y)
             # Also disable the cmap controls and the "Draw" button for Resolution
             self.cmap_next_button.config(state='disabled')
             self.cmap_previous_button.config(state='disabled')
@@ -727,17 +765,6 @@ class main():
                 # Should always be able to take the log of the column density (no negative values)
                 self.axisc_log_button.config(state='normal')
 
-        # Need to manually scale the axis
-        margin = self.ax.margins()
-        xmin = np.amin(x)
-        xmax = np.amax(x)
-        ymin = np.amin(y)
-        ymax = np.amax(y)
-        dx = xmax-xmin
-        dy = ymax-ymin
-        self.ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
-        self.ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
-            
         self.update_axis_labels()
         self.canvas.draw()
         
