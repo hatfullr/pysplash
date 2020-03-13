@@ -358,7 +358,7 @@ class main():
             self.h.set(0.825)
             self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get(),self.h.get()])
 
-            # Setup axis labels
+            # Setup horizontal and vertical axis labels
             self.hlabel_buff = tk.DoubleVar()
             self.vlabel_buff = tk.DoubleVar()
             self.hlabel_buff.set(0.1)
@@ -603,7 +603,13 @@ class main():
             self.cax = self.fig.add_axes([self.x0.get()+self.w.get()+self.cax_xbuff.get(),self.y0.get(),self.cax_width.get(),self.h.get()]) # Right side by default
             self.cax.xaxis.set_visible(False)
             self.cax.yaxis.tick_right()
-            #self.cax.set_visible(False)
+
+            # Setup colorbar label
+            self.clabel_buff = tk.DoubleVar()
+            self.clabel_buff.set(0.1)
+            # The labels are initially blank
+            self.clabel = self.fig.text(self.x0.get()+self.w.get()+self.cax_xbuff.get()+self.clabel_buff.get(),
+                                        (2.*self.y0.get() + self.h.get())/2.,"",va='center',rotation='vertical')
 
 
         def init_user_plot_controls():
@@ -1063,6 +1069,14 @@ class main():
             self.vlabel.set_text("10^ "+self.axisv_var.get())
         elif self.axisv_islog.get() == self.axisv_is10.get(): # Both or neither
             self.vlabel.set_text(self.axisv_var.get())
+
+        if self.cax.get_visible():
+            if self.axisc_islog.get() == 1 and self.axisc_is10.get() == 0: # Only log10
+                self.clabel.set_text("log "+self.axisc_var.get())
+            elif self.axisc_islog.get() == 0 and self.axisc_is10.get() == 1: # Only 10^
+                self.clabel.set_text("10^ "+self.axisc_var.get())
+            elif self.axisc_islog.get() == self.axisc_is10.get(): # Both or neither
+                self.clabel.set_text(self.axisc_var.get())
             
         # Reposition the labels
         self.hlabel.set_position(((self.x0.get()+self.w.get()+self.x0.get())/2.,self.y0.get() - self.hlabel_buff.get()))
@@ -1301,6 +1315,10 @@ class main():
                     if vmin_new < 0: vmin_new = 0
                     if vmax_new < 0: vmax_new = 0
             self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+
+            # Update the axis labels
+            self.update_axis_labels()
+            
             self.canvas.draw()
         
     def convert_10_axisc(self,*args):
@@ -1308,13 +1326,11 @@ class main():
         if self.im is not None:
             arr = self.im.get_array()
             if self.axisc_is10.get() == 0: # Log the data
-                print("Log the data")
                 idx = arr == 0
                 idx_invert = np.logical_not(idx)
                 arr[idx] = np.nan
                 arr[idx_invert] = np.log10(arr[idx_invert])
             else: # Unlog the data
-                print("Unlog the data")
                 idx = np.isnan(arr)
                 idx_invert = np.logical_not(idx)
                 arr[idx] = 0.
@@ -1335,6 +1351,10 @@ class main():
                     if vmin_new < 0: vmin_new = 0
                     if vmax_new < 0: vmax_new = 0
             self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+
+            # Update the axis labels
+            self.update_axis_labels()
+            
             self.canvas.draw()
                 
 ###
