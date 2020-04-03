@@ -5,12 +5,14 @@
 try:
     import tkinter as tk # Python 3
     import tkinter.ttk as ttk
+    from tkinter import font as tkFont
     #from tkinter.colorchooser import askcolor
     from tkinter import colorchooser
     python2 = False
 except ImportError:
     import Tkinter as tk # Python 2
     import ttk
+    from Tkinter import font as tkFont
     from tkColorChooser import askcolor
     python2 = True
 
@@ -24,7 +26,7 @@ from matplotlib.backends.backend_tkagg import (
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
-    
+import matplotlib.collections
 import matplotlib.pyplot as plt
 from glob import glob
 import numpy as np
@@ -184,19 +186,33 @@ def rgb2tk(rgb):
     return "#%02x%02x%02x" % rgb
 
 class CustomToolbar(NavigationToolbar2Tk):
-    def __init__(self,canvas_,parent_):
+    def __init__(self,canvas_,parent_,dpi):
         self.toolitems = (
-            (u'Home', u'Reset original view', u'home', u'home'),
-            (u'Pan', u'Pan axes with left mouse, zoom with right', u'move', u'pan'),
-            (u'Zoom', u'Zoom to rectangle', u'zoom_to_rect', u'zoom'),
-            (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
-            (u'Save', u'Save the figure', u'filesave', u'save_figure'),
+            (u'Home', u'', u'home', u'home'),
+            (u'Pan', u'', u'move', u'pan'),
+            (u'Zoom', u'', u'zoom_to_rect', u'zoom'),
+            (u'Subplots', u'', u'subplots', u'configure_subplots'),
+            (u'Save', u'', u'filesave', u'save_figure'),
             )
+        self.dpi = dpi
         self.canvas = canvas_
         self.toolbar = NavigationToolbar2Tk
+        self.toolbar._old_Button = self.toolbar._Button
+        self.toolbar._Button = self._new_Button
         self.toolbar.__init__(self,canvas_,parent_)
         self.toolbar.home = self.new_home
-
+        
+    def _new_Button(self, *args, **kwargs):
+        b = self._old_Button(*args, **kwargs)
+        # It expects dpi=100, but we have a different dpi. Because shit is
+        # stupid, we have to first increase the image size then decrease it
+        # using integers.
+        b._ntimage = b._ntimage.zoom(self.dpi,self.dpi)
+        b._ntimage = b._ntimage.subsample(100,100)
+        self.height = b._ntimage.height()
+        b.config(height=self.height,image=b._ntimage)
+        return b
+        
     def new_home(self,*args):
         # The original "home" function looks like this:
         #"""Restore the original view."""
@@ -318,7 +334,9 @@ class main():
 
         # Lists that hold plotted matplotlib objects
         self.particles = []
+        self.particle_kernels = []
         self.core_particles = []
+        self.core_particle_kernels = []
         self.im = None
         
         self.corner_message_text = tk.StringVar()
@@ -336,16 +354,28 @@ class main():
         self.files_frame = tk.Frame(self.right_frame)
         self.particle_opts_frame = tk.Frame(self.right_frame)
 
+        # Detect proper dpi scaling
+        default_font = tkFont.nametofont("TkDefaultFont")
+        fontsize_pt = default_font.actual()['size']
+        fontsize_px = default_font.metrics()['ascent'] + \
+                      default_font.metrics()['descent']
+        self.dpi = int(float(fontsize_px)/(fontsize_pt/72.))
+        self.widget_height = fontsize_px
 
         def init_graph():
             # Setup the graph
-            self.fig = Figure(figsize=(7,7),dpi=100)
+            self.fig = Figure(figsize=(7,7),dpi=self.dpi)
             self.ax = self.fig.add_subplot(111)
 
+            
             self.canvas = FigureCanvasTkAgg(self.fig,master=self.graph_frame)
             self.canvas.get_tk_widget().grid(row=0,column=0)
-            self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame)
+            self.canvas.draw()
+            self.renderer = self.canvas.get_renderer()
+            self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame,self.dpi)
             self.toolbar.update()
+            
+
 
             # Set the initial position of the axis
             self.x0 = tk.DoubleVar()
@@ -369,6 +399,10 @@ class main():
 
             self.aspect = tk.StringVar()
             self.aspect.set('auto')
+
+            
+
+            
             
         def init_particle_controls():
             # Setup the color controls
@@ -378,17 +412,22 @@ class main():
             self.particle_core_size = tk.StringVar()
             self.particle_marker = tk.StringVar()
             self.particle_core_marker = tk.StringVar()
+            self.particle_kernel = tk.StringVar()
+            self.particle_core_kernel = tk.StringVar()
             self.particle_color.set("#000000")
             self.particle_core_color.set("#000000")
             self.particle_size.set("1")
             self.particle_core_size.set("1")
             self.particle_marker.set(self.markers[0])
             self.particle_core_marker.set(self.markers[0])
+            self.particle_kernel.set("0")
+            self.particle_core_kernel.set("0")
             tk.Label(self.particle_opts_frame,text="Particles").grid(row=1,column=0,sticky='W')
             tk.Label(self.particle_opts_frame,text="Core particles").grid(row=2,column=0,sticky='W')
             tk.Label(self.particle_opts_frame,text="Color").grid(row=0,column=1)
             tk.Label(self.particle_opts_frame,text="Size").grid(row=0,column=2)
             tk.Label(self.particle_opts_frame,text="Marker").grid(row=0,column=3)
+            #tk.Label(self.particle_opts_frame,text="Kernels").grid(row=0,column=4)
             
             self.particle_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_color,height=1,width=2,padx=0,pady=0,bg=self.particle_color.get())
             self.particle_core_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
@@ -396,6 +435,9 @@ class main():
             self.particle_core_size_entry = tk.Entry(self.particle_opts_frame,textvariable=self.particle_core_size,width=3)
             self.particle_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_marker,width=5)
             self.particle_core_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_core_marker,width=5)
+
+            self.particle_kernel_button = tk.Button(self.particle_opts_frame,text="Kernels",command=self.update_particle_kernel_button)
+            self.particle_core_kernel_button = tk.Button(self.particle_opts_frame,text="Kernels",command=self.update_particle_core_kernel_button)
             
             self.particle_color_button.grid(row=1,column=1)
             self.particle_core_color_button.grid(row=2,column=1)
@@ -403,11 +445,14 @@ class main():
             self.particle_core_size_entry.grid(row=2,column=2)
             self.particle_marker_combobox.grid(row=1,column=3)
             self.particle_core_marker_combobox.grid(row=2,column=3)
+            self.particle_kernel_button.grid(row=1,column=4)
+            self.particle_core_kernel_button.grid(row=2,column=4)
 
             self.particle_size.trace('w',self.update_particle_size)
             self.particle_core_size.trace('w',self.update_particle_core_size)
             self.particle_marker.trace('w',self.update_particle_marker)
             self.particle_core_marker.trace('w',self.update_particle_core_marker)
+
             
         
 
@@ -470,44 +515,32 @@ class main():
             self.axisv_is10.set(0)
             self.axisc_is10.set(0)
 
-            #smallframeh = tk.Frame(self.axes_frame)
             log_10_frame = tk.Frame(self.axish_frames[2])
-            self.axish_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axish_islog)
-            self.axish_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axish_is10)
-            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
-            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
+            self.axish_log_button = tk.Button(log_10_frame,text="log",command=self.update_axish_log_button,relief='raised',state='normal')
+            self.axish_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axish_10_button,relief='raised',state='normal')
             self.axish_log_button.grid(row=0,column=0)
-            self.axish_10_button.grid(row=0,column=2)
+            self.axish_10_button.grid(row=0,column=1)
             log_10_frame.grid(row=0,column=0)
 
-            #smallframeh.grid(row=0,column=2)
-
-            #smallframev = tk.Frame(self.axes_frame)
             log_10_frame = tk.Frame(self.axisv_frames[2])
-            self.axisv_log_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisv_islog)
-            self.axisv_10_button = tk.Checkbutton(log_10_frame,command=self.draw_plot,variable=self.axisv_is10)
-            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
-            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
+            self.axisv_log_button = tk.Button(log_10_frame,text="log",command=self.update_axisv_log_button,relief='raised',state='normal')
+            self.axisv_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axisv_10_button,relief='raised',state='normal')
             self.axisv_log_button.grid(row=0,column=0)
-            self.axisv_10_button.grid(row=0,column=2)
+            self.axisv_10_button.grid(row=0,column=1)
             log_10_frame.grid(row=0,column=0)
 
-            #smallframev.grid(row=1,column=2)
-
-            #smallframec = tk.Frame(self.axes_frame)
             log_10_frame = tk.Frame(self.axisc_frames[2])
-            self.axisc_log_button = tk.Checkbutton(log_10_frame,command=self.convert_log_axisc,variable=self.axisc_islog)
-            self.axisc_10_button = tk.Checkbutton(log_10_frame,command=self.convert_10_axisc,variable=self.axisc_is10)
-            tk.Label(log_10_frame,text="log").grid(row=0,column=1)
-            tk.Label(log_10_frame,text="10^").grid(row=0,column=3)
+            self.axisc_log_button = tk.Button(log_10_frame,text="log",command=self.update_axisc_log_button,relief='raised',state='normal')
+            self.axisc_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axisc_10_button,relief='raised',state='normal')
             self.axisc_log_button.grid(row=0,column=0)
-            self.axisc_10_button.grid(row=0,column=2)
+            self.axisc_10_button.grid(row=0,column=1)
             log_10_frame.grid(row=0,column=0)
-            #smallframec.grid(row=2,column=2)
 
 
             # Divide by 10 initially because full resolution takes a long time to compute
-            fig_pix = np.asarray(self.fig.get_size_inches() * self.fig.dpi / 10.,dtype=int) # figure size in pixels
+            #fig_pix = np.asarray(self.fig.get_size_inches() * self.fig.dpi / 10.,dtype=int) # figure size in pixels
+            # 20 doesn't take too long to compute
+            fig_pix = np.asarray([20,20],dtype=int)
         
             #smallframers = tk.Frame(self.axes_frame)
             resolution_frame = tk.Frame(self.axisc_frames[3])
@@ -646,6 +679,7 @@ class main():
         self.left_frame.grid(row=0,column=0,columnspan=2)
         self.right_frame.grid(row=0,column=2)
 
+
         # Draw the first file
         self.read_file()
 
@@ -779,26 +813,14 @@ class main():
                     message = str(e)
                 else:
                     raise ValueError(e)
-                
-            # Also disable the cmap controls and the "Draw" button for Resolution
-            #self.cmap_next_button.config(state='disabled')
-            #self.cmap_previous_button.config(state='disabled')
-            #self.cmap_entry.config(state='disabled')
-            #self.resolution_draw_button.config(state='disabled')
-            #self.axisc_log_button.config(state='disabled')
         else:
             self.particle_controls(False) # Hide the particle plot controls
             self.colorbar_controls(True)  # Show the colorbar controls
-            # Re-enable the buttons
-            #self.cmap_next_button.config(state='normal')
-            #self.cmap_previous_button.config(state='normal')
-            #self.cmap_entry.config(state='normal')
-            #self.resolution_draw_button.config(state='normal')
 
             if self.axisc_var.get() == self.sph_color_variables[1]: # column density
                 # Figure out the z axis from the given x and y axes
                 zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
-                self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,4])
+                self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,hpidx])
                 self.im.set_visible(True)
                 self.show_colorbar()
                 # Handle cases where the log button is already pressed
@@ -826,6 +848,53 @@ class main():
 ### Plotting routines
 ######################
 
+    def plot_particle_kernels(self,*args):
+        if not self.sph_mode: return # If we are in SPH mode,
+        # Check to make sure the plot has x, y, or z on both x and y axes
+        if (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
+           (self.axish_var.get() is not self.axisv_var.get()):
+            if self.particle_kernel.get() == "1":
+                self.corner_message_text.set("Plotting particle kernels...")
+                self.corner_message_label.update_idletasks()
+                if len(self.particle_kernels) == 0:
+                    for particle in self.particles:
+                        patches = [plt.Circle(center,size,fill=False,facecolor=None,edgecolor=self.particle_core_color.get()) for center, size in zip(particle.get_offsets(),2.*self.data[:,4])]
+                        self.particle_kernels.append(self.ax.add_collection(matplotlib.collections.PatchCollection(patches,match_original=True)))
+                else:
+                    for particle_kernel in self.particle_kernels:
+                        particle_kernel.set_visible(True)
+            else:
+                for particle_kernel in self.particle_kernels:
+                    particle_kernel.set_visible(False)
+            self.canvas.draw()
+            self.corner_message_text.set("")
+            self.corner_message_label.update_idletasks()
+            
+                        
+    def plot_core_particle_kernels(self,*args):
+        if not self.sph_mode: return # If we are in SPH mode,
+        # Check to make sure the plot has x, y, or z on both x and y axes
+        if (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
+           (self.axish_var.get() is not self.axisv_var.get()):
+            if self.particle_core_kernel.get() == "1":
+                self.corner_message_text.set("Plotting core particle kernels...")
+                self.corner_message_label.update_idletasks()
+                if len(self.core_particle_kernels) == 0:
+                    for core_particle in self.core_particles:
+                        core_idx = np.where(self.data[:,12] == 0)[0] # True only in StarSmasher
+                        if len(core_idx) > 0:
+                            patches = [plt.Circle(center,size,fill=False,facecolor=None,edgecolor=self.particle_core_color.get()) for center, size in zip(core_particle.get_offsets(),2.*self.data[:,4][core_idx])]
+                            self.core_particle_kernels.append(self.ax.add_collection(matplotlib.collections.PatchCollection(patches,match_original=True)))
+                else:
+                    for core_particle_kernel in self.core_particle_kernels:
+                        core_particle_kernel.set_visible(True)
+            else:
+                for core_particle_kernel in self.core_particle_kernels:
+                    core_particle_kernel.set_visible(False)
+            self.canvas.draw()
+            self.corner_message_text.set("")
+            self.corner_message_label.update_idletasks()
+                
     def plot_particles(self,x,y,*args):    
         if self.sph_mode and not self.MESA_mode: # If we are in SPH mode,
             self.particles.append(self.ax.scatter(x,y,marker=self.particle_marker.get(),color=self.particle_color.get()))
@@ -1045,6 +1114,78 @@ class main():
 ### Updating functions
 #######################
 
+    def update_particle_core_kernel_button(self,*args):
+        if self.particle_core_kernel_button['relief'] == 'raised':
+            self.particle_core_kernel.set("1")
+            self.particle_core_kernel_button.config(relief='sunken')
+        elif self.particle_core_kernel_button['relief'] == 'sunken':
+            self.particle_core_kernel.set("0")
+            self.particle_core_kernel_button.config(relief='raised')
+        self.plot_core_particle_kernels()
+
+    def update_particle_kernel_button(self,*args):
+        if self.particle_kernel_button['relief'] == 'raised':
+            self.particle_kernel.set("1")
+            self.particle_kernel_button.config(relief='sunken')
+        elif self.particle_kernel_button['relief'] == 'sunken':
+            self.particle_kernel.set("0")
+            self.particle_kernel_button.config(relief='raised')
+        self.plot_particle_kernels()
+
+    def update_axisc_10_button(self,*args):
+        if self.axisc_10_button['relief'] == 'raised':
+            self.axisc_is10.set(1)
+            self.axisc_10_button.config(relief='sunken')
+        elif self.axisc_10_button['relief'] == 'sunken':
+            self.axisc_is10.set(0)
+            self.axisc_10_button.config(relief='raised')
+        self.convert_10_axisc()
+
+    def update_axisc_log_button(self,*args):
+        if self.axisc_log_button['relief'] == 'raised':
+            self.axisc_islog.set(1)
+            self.axisc_log_button.config(relief='sunken')
+        elif self.axisc_log_button['relief'] == 'sunken':
+            self.axisc_islog.set(0)
+            self.axisc_log_button.config(relief='raised')
+        self.convert_log_axisc()
+
+    def update_axisv_10_button(self,*args):
+        if self.axisv_10_button['relief'] == 'raised':
+            self.axisv_is10.set(1)
+            self.axisv_10_button.config(relief='sunken')
+        elif self.axisv_10_button['relief'] == 'sunken':
+            self.axisv_is10.set(0)
+            self.axisv_10_button.config(relief='raised')
+        self.draw_plot()
+
+    def update_axisv_log_button(self,*args):
+        if self.axisv_log_button['relief'] == 'raised':
+            self.axisv_islog.set(1)
+            self.axisv_log_button.config(relief='sunken')
+        elif self.axisv_log_button['relief'] == 'sunken':
+            self.axisv_islog.set(0)
+            self.axisv_log_button.config(relief='raised')
+        self.draw_plot()
+
+    def update_axish_10_button(self,*args):
+        if self.axish_10_button['relief'] == 'raised':
+            self.axish_is10.set(1)
+            self.axish_10_button.config(relief='sunken')
+        elif self.axish_10_button['relief'] == 'sunken':
+            self.axish_is10.set(0)
+            self.axish_10_button.config(relief='raised')
+        self.draw_plot()
+
+    def update_axish_log_button(self,*args):
+        if self.axish_log_button['relief'] == 'raised':
+            self.axish_islog.set(1)
+            self.axish_log_button.config(relief='sunken')
+        elif self.axish_log_button['relief'] == 'sunken':
+            self.axish_islog.set(0)
+            self.axish_log_button.config(relief='raised')
+        self.draw_plot()
+
     def update_cmap(self,*args):
         try:
             if int(self.cmap_idx.get()) in np.arange(len(self.cmap_names)):
@@ -1147,7 +1288,32 @@ class main():
 ##################
 
     def particle_controls(self,show,*args):
-        1+1
+        if show:
+            self.particle_color_button.config(state='normal')
+            self.particle_core_color_button.config(state='normal')
+            self.particle_size_entry.config(state='normal')
+            self.particle_core_size_entry.config(state='normal')
+            self.particle_marker_combobox.config(state='normal')
+            self.particle_core_marker_combobox.config(state='normal')
+            if (self.axish_islog.get() == self.axisv_islog.get()) and \
+               (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
+               (self.axish_var.get() is not self.axisv_var.get()):
+                self.particle_kernel_button.config(state='normal')
+                self.particle_core_kernel_button.config(state='normal')
+        else:
+            self.particle_color_button.config(state='disabled')
+            self.particle_core_color_button.config(state='disabled')
+            self.particle_size_entry.config(state='disabled')
+            self.particle_core_size_entry.config(state='disabled')
+            self.particle_marker_combobox.config(state='disabled')
+            self.particle_core_marker_combobox.config(state='disabled')
+            if not ((self.axish_islog.get() == self.axisv_islog.get()) and \
+                    (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
+                    (self.axish_var.get() is not self.axisv_var.get())):
+                self.particle_kernel_button.config(state='disabled')
+                self.particle_core_kernel_button.config(state='disabled')
+            
+            
     def colorbar_controls(self,show,*args):
         if show:
             self.cmap_next_button.config(state='normal')
@@ -1164,11 +1330,15 @@ class main():
     def update_particle_color(self,*args):
         for particles in self.particles:
             particles.set_color(self.particle_color.get())
+        for kernels in self.particle_kernels:
+            kernels.set_edgecolor(self.particle_color.get())
         self.canvas.draw()
 
     def update_particle_core_color(self,*args):
         for core_particles in self.core_particles:
             core_particles.set_color(self.particle_core_color.get())
+        for core_kernels in self.core_particle_kernels:
+            core_kernels.set_edgecolor(self.particle_core_color.get())
         self.canvas.draw()
 
     def update_particle_size(self,*args):
@@ -1206,6 +1376,12 @@ class main():
         for core_particles in self.core_particles:
             core_particles.remove()
             self.core_particles.remove(core_particles)
+        for kernels in self.particle_kernels:
+            kernels.remove()
+            self.particle_kernels.remove(kernels)
+        for core_kernels in self.core_particle_kernels:
+            core_kernels.remove()
+            self.core_particle_kernels.remove(core_kernels)
         if self.im is not None:
             self.im.set_visible(False)
 
