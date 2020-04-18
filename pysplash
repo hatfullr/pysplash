@@ -338,6 +338,10 @@ class main():
         self.core_particles = []
         self.core_particle_kernels = []
         self.im = None
+
+        self.xlim = [None,None]
+        self.ylim = [None,None]
+        self.clim = [None,None]
         
         self.corner_message_text = tk.StringVar()
         self.corner_message_text.set("")
@@ -508,34 +512,76 @@ class main():
             self.axish_is10 = tk.IntVar()
             self.axisv_is10 = tk.IntVar()
             self.axisc_is10 = tk.IntVar()
+            self.axish_isadaptive = tk.IntVar()
+            self.axisv_isadaptive = tk.IntVar()
+            self.axisc_isadaptive = tk.IntVar()
             self.axish_islog.set(0)
             self.axisv_islog.set(0)
             self.axisc_islog.set(0)
             self.axish_is10.set(0)
             self.axisv_is10.set(0)
             self.axisc_is10.set(0)
+            self.axish_isadaptive.set(0)
+            self.axisv_isadaptive.set(0)
+            self.axisc_isadaptive.set(0)
+            
 
-            log_10_frame = tk.Frame(self.axish_frames[2])
-            self.axish_log_button = tk.Button(log_10_frame,text="log",command=self.update_axish_log_button,relief='raised',state='normal')
-            self.axish_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axish_10_button,relief='raised',state='normal')
+            axis_buttons_frame = tk.Frame(self.axish_frames[2])
+            log10_frame = tk.Frame(axis_buttons_frame)
+            limits_frame = tk.Frame(axis_buttons_frame)
+            self.axish_log_button = tk.Button(log10_frame,text="log",command=self.update_axish_log_button,relief='raised',state='normal')
+            self.axish_10_button = tk.Button(log10_frame,text="10^",command=self.update_axish_10_button,relief='raised',state='normal')
             self.axish_log_button.grid(row=0,column=0)
             self.axish_10_button.grid(row=0,column=1)
-            log_10_frame.grid(row=0,column=0)
+            log10_frame.grid(row=0,column=0)
 
-            log_10_frame = tk.Frame(self.axisv_frames[2])
-            self.axisv_log_button = tk.Button(log_10_frame,text="log",command=self.update_axisv_log_button,relief='raised',state='normal')
-            self.axisv_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axisv_10_button,relief='raised',state='normal')
+            tk.Label(limits_frame,text="Limits:").grid(row=0,column=0)
+            self.axish_adaptive_button = tk.Button(limits_frame,text="Adaptive",command=self.update_axish_adaptive_button,relief='raised',state='normal')
+            self.axish_save_limits_button = tk.Button(limits_frame,text="Save",command=self.save_axish_limits,relief='raised',state='normal')
+            self.axish_adaptive_button.grid(row=0,column=1)
+            self.axish_save_limits_button.grid(row=0,column=2)
+            limits_frame.grid(row=1,column=0)
+            axis_buttons_frame.grid(row=0,column=0)
+
+            
+            
+            axis_buttons_frame = tk.Frame(self.axisv_frames[2])
+            log10_frame = tk.Frame(axis_buttons_frame)
+            limits_frame = tk.Frame(axis_buttons_frame)
+            self.axisv_log_button = tk.Button(log10_frame,text="log",command=self.update_axisv_log_button,relief='raised',state='normal')
+            self.axisv_10_button = tk.Button(log10_frame,text="10^",command=self.update_axisv_10_button,relief='raised',state='normal')
             self.axisv_log_button.grid(row=0,column=0)
             self.axisv_10_button.grid(row=0,column=1)
-            log_10_frame.grid(row=0,column=0)
+            log10_frame.grid(row=0,column=0)
 
-            log_10_frame = tk.Frame(self.axisc_frames[2])
-            self.axisc_log_button = tk.Button(log_10_frame,text="log",command=self.update_axisc_log_button,relief='raised',state='normal')
-            self.axisc_10_button = tk.Button(log_10_frame,text="10^",command=self.update_axisc_10_button,relief='raised',state='normal')
+            tk.Label(limits_frame,text="Limits:").grid(row=0,column=0)
+            self.axisv_adaptive_button = tk.Button(limits_frame,text="Adaptive",command=self.update_axisv_adaptive_button,relief='raised',state='normal')
+            self.axisv_save_limits_button = tk.Button(limits_frame,text="Save",command=self.save_axisv_limits,relief='raised',state='normal')
+            self.axisv_adaptive_button.grid(row=0,column=1)
+            self.axisv_save_limits_button.grid(row=0,column=2)
+            limits_frame.grid(row=1,column=0)
+            axis_buttons_frame.grid(row=0,column=0)
+
+            
+            
+            axis_buttons_frame = tk.Frame(self.axisc_frames[2])
+            log10_frame = tk.Frame(axis_buttons_frame)
+            limits_frame = tk.Frame(axis_buttons_frame)
+            self.axisc_log_button = tk.Button(log10_frame,text="log",command=self.update_axisc_log_button,relief='raised',state='normal')
+            self.axisc_10_button = tk.Button(log10_frame,text="10^",command=self.update_axisc_10_button,relief='raised',state='normal')
             self.axisc_log_button.grid(row=0,column=0)
             self.axisc_10_button.grid(row=0,column=1)
-            log_10_frame.grid(row=0,column=0)
+            log10_frame.grid(row=0,column=0)
 
+            tk.Label(limits_frame,text="Limits:").grid(row=0,column=0)
+            self.axisc_adaptive_button = tk.Button(limits_frame,text="Adaptive",command=self.update_axisc_adaptive_button,relief='raised',state='normal')
+            self.axisc_save_limits_button = tk.Button(limits_frame,text="Save",command=self.save_axisc_limits,relief='raised',state='normal')
+            self.axisc_adaptive_button.grid(row=0,column=1)
+            self.axisc_save_limits_button.grid(row=0,column=2)
+            limits_frame.grid(row=1,column=0)
+            axis_buttons_frame.grid(row=0,column=0)
+
+            
 
             # Divide by 10 initially because full resolution takes a long time to compute
             #fig_pix = np.asarray(self.fig.get_size_inches() * self.fig.dpi / 10.,dtype=int) # figure size in pixels
@@ -729,10 +775,12 @@ class main():
 
         xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
         yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
+        hpidx = [i for i in range(0,len(self.variables)) if self.variables[i] == "h"]
         cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
         
         if type(xidx).__name__ == 'list': xidx = xidx[0]
         if type(yidx).__name__ == 'list': yidx = yidx[0]
+        if type(hpidx).__name__ == 'list': hpidx = hpidx[0]
         if type(cidx).__name__ == 'list': cidx = cidx[0]
 
         if self.sph_mode:
@@ -802,6 +850,8 @@ class main():
         #else:
         #    self.ax.set_aspect('auto')
 
+        
+        
         if self.axisc_var.get() == "":
             self.particle_controls(True)  # Show the particle plot controls
             self.colorbar_controls(False) # Hide the colorbar controls
@@ -813,6 +863,10 @@ class main():
                     message = str(e)
                 else:
                     raise ValueError(e)
+            self.set_axish_limits(draw=False)
+            self.set_axisv_limits(draw=False)
+            self.update_particle_size(draw=False)
+            self.update_particle_core_size(draw=False)
         else:
             self.particle_controls(False) # Hide the particle plot controls
             self.colorbar_controls(True)  # Show the colorbar controls
@@ -821,14 +875,15 @@ class main():
                 # Figure out the z axis from the given x and y axes
                 zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
                 self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,hpidx])
+                self.set_axisc_limits(draw=False)
                 self.im.set_visible(True)
                 self.show_colorbar()
                 # Handle cases where the log button is already pressed
                 if self.axisc_islog.get() == 1:
-                    self.convert_log_axisc()
+                    self.convert_log_axisc(draw=False)
                 if self.axisc_is10.get() == 1:
                 # Handle cases where the 10^ button is already pressed
-                    self.convert_10_axisc()
+                    self.convert_10_axisc(draw=False)
                 
                 # Should always be able to take the log of the column density (no negative values)
                 self.axisc_log_button.config(state='normal')
@@ -848,7 +903,7 @@ class main():
 ### Plotting routines
 ######################
 
-    def plot_particle_kernels(self,*args):
+    def plot_particle_kernels(self,draw=True,*args):
         if not self.sph_mode: return # If we are in SPH mode,
         # Check to make sure the plot has x, y, or z on both x and y axes
         if (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
@@ -866,12 +921,12 @@ class main():
             else:
                 for particle_kernel in self.particle_kernels:
                     particle_kernel.set_visible(False)
-            self.canvas.draw()
+            if draw: self.canvas.draw()
             self.corner_message_text.set("")
             self.corner_message_label.update_idletasks()
             
                         
-    def plot_core_particle_kernels(self,*args):
+    def plot_core_particle_kernels(self,draw=True,*args):
         if not self.sph_mode: return # If we are in SPH mode,
         # Check to make sure the plot has x, y, or z on both x and y axes
         if (self.axish_var.get() in ["x", "y", "z"] and self.axisv_var.get() in ["x", "y", "z"]) and \
@@ -891,7 +946,7 @@ class main():
             else:
                 for core_particle_kernel in self.core_particle_kernels:
                     core_particle_kernel.set_visible(False)
-            self.canvas.draw()
+            if draw: self.canvas.draw()
             self.corner_message_text.set("")
             self.corner_message_label.update_idletasks()
                 
@@ -904,12 +959,11 @@ class main():
         elif not self.sph_mode and self.MESA_mode: # If we are in MESA mode
             self.particles.append(self.ax.scatter(x,y,marker=self.particle_marker.get(),color=self.particle_color.get()))
 
-        self.update_particle_size()
-        self.update_particle_core_size()
+        
         
     def plot_column_density(self,x,y,z,m,hp,*args):
         # Plot data with a colorbar
-        
+
         # First, figure out how many pixels are on the screen
         xpix = self.resolution_scale_x.get()
         ypix = self.resolution_scale_y.get()
@@ -1150,6 +1204,15 @@ class main():
             self.axisc_log_button.config(relief='raised')
         self.convert_log_axisc()
 
+    def update_axisc_adaptive_button(self,*args):
+        if self.axisc_adaptive_button['relief'] == 'raised':
+            self.axisc_isadaptive.set(1)
+            self.axisc_adaptive_button.config(relief='sunken')
+        elif self.axisc_adaptive_button['relief'] == 'sunken':
+            self.axisc_isadaptive.set(0)
+            self.axisc_adaptive_button.config(relief='raised')
+        self.set_axisc_limits()
+
     def update_axisv_10_button(self,*args):
         if self.axisv_10_button['relief'] == 'raised':
             self.axisv_is10.set(1)
@@ -1167,6 +1230,15 @@ class main():
             self.axisv_islog.set(0)
             self.axisv_log_button.config(relief='raised')
         self.draw_plot()
+
+    def update_axisv_adaptive_button(self,*args):
+        if self.axisv_adaptive_button['relief'] == 'raised':
+            self.axisv_isadaptive.set(1)
+            self.axisv_adaptive_button.config(relief='sunken')
+        elif self.axisv_adaptive_button['relief'] == 'sunken':
+            self.axisv_isadaptive.set(0)
+            self.axisv_adaptive_button.config(relief='raised')
+        self.set_axisv_limits()
 
     def update_axish_10_button(self,*args):
         if self.axish_10_button['relief'] == 'raised':
@@ -1186,7 +1258,16 @@ class main():
             self.axish_log_button.config(relief='raised')
         self.draw_plot()
 
-    def update_cmap(self,*args):
+    def update_axish_adaptive_button(self,*args):
+        if self.axish_adaptive_button['relief'] == 'raised':
+            self.axish_isadaptive.set(1)
+            self.axish_adaptive_button.config(relief='sunken')
+        elif self.axish_adaptive_button['relief'] == 'sunken':
+            self.axish_isadaptive.set(0)
+            self.axish_adaptive_button.config(relief='raised')
+        self.set_axish_limits()
+
+    def update_cmap(self,draw=True,*args):
         try:
             if int(self.cmap_idx.get()) in np.arange(len(self.cmap_names)):
                 self.cmap.set(self.cmap_names[int(self.cmap_idx.get())])
@@ -1194,30 +1275,33 @@ class main():
             # The user did not use an integer value
             return
         self.colorbar.mappable.set_cmap(self.cmap.get())
-        self.canvas.draw()
+        if draw: self.canvas.draw()
 
     def update_axis_labels(self,*args):
+        label_log = "log "
+        label_10 = "10^ "
+        
+        hlabel_str = ""
         if self.axish_islog.get() == 1 and self.axish_is10.get() == 0: # Only log10
-            self.hlabel.set_text("log "+self.axish_var.get())
+            hlabel_str += label_log
         elif self.axish_islog.get() == 0 and self.axish_is10.get() == 1: # Only 10^
-            self.hlabel.set_text("10^ "+self.axish_var.get())
-        elif self.axish_islog.get() == self.axish_is10.get(): # Both or neither
-            self.hlabel.set_text(self.axish_var.get())
+            hlabel_str += label_10
+        self.hlabel.set_text(hlabel_str+self.axish_var.get())
 
+        vlabel_str = ""
         if self.axisv_islog.get() == 1 and self.axisv_is10.get() == 0: # Only log10
-            self.vlabel.set_text("log "+self.axisv_var.get())
+            vlabel_str += label_log
         elif self.axisv_islog.get() == 0 and self.axisv_is10.get() == 1: # Only 10^
-            self.vlabel.set_text("10^ "+self.axisv_var.get())
-        elif self.axisv_islog.get() == self.axisv_is10.get(): # Both or neither
-            self.vlabel.set_text(self.axisv_var.get())
+            vlabel_str += label_10
+        self.vlabel.set_text(vlabel_str+self.axisv_var.get())
 
+        clabel_str = ""
         if self.cax.get_visible():
             if self.axisc_islog.get() == 1 and self.axisc_is10.get() == 0: # Only log10
-                self.clabel.set_text("log "+self.axisc_var.get())
+                clabel_str += label_log
             elif self.axisc_islog.get() == 0 and self.axisc_is10.get() == 1: # Only 10^
-                self.clabel.set_text("10^ "+self.axisc_var.get())
-            elif self.axisc_islog.get() == self.axisc_is10.get(): # Both or neither
-                self.clabel.set_text(self.axisc_var.get())
+                clabel_str += label_10
+        self.clabel.set_text(clabel_str+self.axisc_var.get())
             
         # Reposition the labels
         self.hlabel.set_position(((self.x0.get()+self.w.get()+self.x0.get())/2.,self.y0.get() - self.hlabel_buff.get()))
@@ -1256,26 +1340,14 @@ class main():
         if color is not None:
             self.particle_color.set(color)
             self.particle_color_button.config(bg=self.particle_color.get())
-
         self.update_particle_color()
-            
-        #for particles in self.particles:
-        #    particles.set_color(self.particle_color.get())
-        #
-        #self.canvas.draw()
         
     def choose_particle_core_color(self,*args):
         color = colorchooser.askcolor(parent=self.root,initialcolor=self.particle_core_color.get())[1]
         if color is not None:
             self.particle_core_color.set(color)
             self.particle_core_color_button.config(bg=self.particle_core_color.get())
-
         self.update_particle_core_color()
-            
-        #for core_particles in self.core_particles:
-        #    core_particles.set_color(self.particle_core_color.get())
-        #
-        #self.canvas.draw()
 
 ###
 
@@ -1286,6 +1358,88 @@ class main():
 
 ### Plot controls
 ##################
+
+    def save_axish_limits(self,*args):
+        self.xlim = self.ax.get_xlim()
+        # Unset adaptive limits (assuming the user doesn't want to have adaptive limits now)
+        if self.axish_adaptive_button['relief'] == 'sunken':
+            self.axish_isadaptive.set(0)
+            self.axish_adaptive_button.config(relief='raised')
+        self.corner_message_text.set("Saved current horizontal axis limits")
+        self.corner_message_label.update_idletasks()
+
+    def save_axisv_limits(self,*args):
+        self.ylim = self.ax.get_ylim()
+        # Unset adaptive limits (assuming the user doesn't want to have adaptive limits now)
+        if self.axisv_adaptive_button['relief'] == 'sunken':
+            self.axisv_isadaptive.set(0)
+            self.axisv_adaptive_button.config(relief='raised')
+        self.corner_message_text.set("Saved current vertical axis limits")
+        self.corner_message_label.update_idletasks()
+
+    def save_axisc_limits(self,*args):
+        self.clim = self.colorbar.mappable.get_clim()
+        # Unset adaptive limits (assuming the user doesn't want to have adaptive limits now)
+        if self.axisc_adaptive_button['relief'] == 'sunken':
+            self.axisc_isadaptive.set(0)
+            self.axisc_adaptive_button.config(relief='raised')
+        self.corner_message_text.set("Saved current colorbar limits")
+        self.corner_message_label.update_idletasks()
+            
+
+    def set_axish_limits(self,draw=True,*args):
+        if self.axish_isadaptive.get() == 1:
+            xmin = np.inf
+            xmax = -np.inf
+            for child in self.ax.get_children():
+                if type(child).__name__ == 'PathCollection':
+                    xy = child.get_offsets()
+                    xmin = min(xmin,np.amin(xy[:,0]))
+                    xmax = max(xmax,np.amax(xy[:,0]))
+            dx = xmax-xmin
+            xmargin, ymargin = self.ax.margins()
+            self.ax.set_xlim(xmin-dx*xmargin,xmax+dx*xmargin)
+        else:
+            self.ax.set_xlim(self.xlim)
+        if draw: self.canvas.draw()
+
+    def set_axisv_limits(self,draw=True,*args):
+        if self.axisv_isadaptive.get() == 1:
+            ymin = np.inf
+            ymax = -np.inf
+            for child in self.ax.get_children():
+                if type(child).__name__ == 'PathCollection':
+                    xy = child.get_offsets()
+                    ymin = min(ymin,np.amin(xy[:,1]))
+                    ymax = max(ymax,np.amax(xy[:,1]))
+            dy = ymax-ymin
+            xmargin, ymargin = self.ax.margins()
+            self.ax.set_ylim(ymin-dy*ymargin,ymax+dy*ymargin)
+        else:
+            self.ax.set_ylim(self.ylim)
+        if draw: self.canvas.draw()
+
+    def set_axisc_limits(self,draw=True,*args):
+        if self.cax.get_visible() and self.im is not None:
+            if self.axisc_isadaptive.get() == 1:
+                arr = self.im.get_array()
+
+                # Reset the limits on the colorbar
+                margin = self.cax.margins()
+                vmin = np.amin(arr[np.isfinite(arr)])
+                vmax = np.amax(arr[np.isfinite(arr)])
+                dv = vmax-vmin
+                vmin_new = vmin - dv*margin[1]
+                vmax_new = vmax + dv*margin[1]
+                if self.axisc_var.get() == self.sph_color_variables[1]: # column density
+                    if self.axisc_islog.get() == 0 or self.axisc_islog.get() == self.axisc_is10.get(): # Not logged
+                        # Can't have any values less than zero
+                        if vmin_new < 0: vmin_new = 0
+                        if vmax_new < 0: vmax_new = 0
+                self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+            else:
+                self.colorbar.mappable.set_clim(self.clim)
+            if draw: self.canvas.draw()
 
     def particle_controls(self,show,*args):
         if show:
@@ -1320,28 +1474,30 @@ class main():
             self.cmap_previous_button.config(state='normal')
             self.cmap_entry.config(state='normal')
             self.resolution_draw_button.config(state='normal')
+            self.axisc_save_limits_button.config(state='normal')
         else:
             self.cmap_next_button.config(state='disabled')
             self.cmap_previous_button.config(state='disabled')
             self.cmap_entry.config(state='disabled')
             self.resolution_draw_button.config(state='disabled')
-            self.axisc_log_button.config(state='disabled')
+            #self.axisc_log_button.config(state='disabled')
+            self.axisc_save_limits_button.config(state='disabled')
 
-    def update_particle_color(self,*args):
+    def update_particle_color(self,draw=True,*args):
         for particles in self.particles:
             particles.set_color(self.particle_color.get())
         for kernels in self.particle_kernels:
             kernels.set_edgecolor(self.particle_color.get())
-        self.canvas.draw()
+        if draw: self.canvas.draw()
 
-    def update_particle_core_color(self,*args):
+    def update_particle_core_color(self,draw=True,*args):
         for core_particles in self.core_particles:
             core_particles.set_color(self.particle_core_color.get())
         for core_kernels in self.core_particle_kernels:
             core_kernels.set_edgecolor(self.particle_core_color.get())
-        self.canvas.draw()
+        if draw: self.canvas.draw()
 
-    def update_particle_size(self,*args):
+    def update_particle_size(self,draw=True,*args):
         try:
             psize = float(self.particle_size.get())
         except ValueError:
@@ -1349,9 +1505,9 @@ class main():
         
         for particles in self.particles:
             particles.set_sizes([psize])
-        self.canvas.draw()
+        if draw: self.canvas.draw()
         
-    def update_particle_core_size(self,*args):
+    def update_particle_core_size(self,draw=True,*args):
         try:
             psize = float(self.particle_core_size.get())
         except ValueError:
@@ -1359,7 +1515,7 @@ class main():
         
         for core_particles in self.core_particles:
             core_particles.set_sizes([psize])
-        self.canvas.draw()
+        if draw: self.canvas.draw()
 
     def update_particle_marker(self,*args):
         # Matplotlib has no functionality for cleanly updating the markers, very unfortunate...
@@ -1397,6 +1553,8 @@ class main():
                 self.axish_combobox.config(state=state)
             self.axish_log_button.config(state=state)
             self.axish_10_button.config(state=state)
+            self.axish_adaptive_button.config(state=state)
+            self.axish_save_limits_button.config(state=state)
         elif axis == "axisv":
             if state == 'normal':
                 self.axisv_combobox.config(state='readonly')
@@ -1404,6 +1562,8 @@ class main():
                 self.axisv_combobox.config(state=state)
             self.axisv_log_button.config(state=state)
             self.axisv_10_button.config(state=state)
+            self.axisv_adaptive_button.config(state=state)
+            self.axisv_save_limits_button.config(state=state)
         elif axis == "axisc":
             if state == 'normal':
                 self.axisc_combobox.config(state='readonly')
@@ -1411,6 +1571,8 @@ class main():
                 self.axisc_combobox.config(state=state)
             self.axisc_log_button.config(state=state)
             self.axisc_10_button.config(state=state)
+            self.axisc_adaptive_button.config(state=state)
+            self.axisc_save_limits_button.config(state=state)
             self.resolution_scale_x_entry.config(state=state)
             self.resolution_scale_y_entry.config(state=state)
             self.resolution_scale_z_entry.config(state=state)
@@ -1461,7 +1623,7 @@ class main():
         self.cmap_idx.set(nxt)
         self.update_cmap()
 
-    def convert_log_axisc(self,*args):
+    def convert_log_axisc(self,draw=True,*args):
         # Convert the color axis to log
         if self.im is not None:
             arr = self.im.get_array()
@@ -1495,9 +1657,9 @@ class main():
             # Update the axis labels
             self.update_axis_labels()
             
-            self.canvas.draw()
+            if draw: self.canvas.draw()
         
-    def convert_10_axisc(self,*args):
+    def convert_10_axisc(self,draw=True,*args):
         # Convert the color axis to 10^
         if self.im is not None:
             arr = self.im.get_array()
@@ -1531,7 +1693,9 @@ class main():
             # Update the axis labels
             self.update_axis_labels()
             
-            self.canvas.draw()
+            if draw: self.canvas.draw()
+
+    
                 
 ###
 
