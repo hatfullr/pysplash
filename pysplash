@@ -775,12 +775,10 @@ class main():
 
         xidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axish_var.get()]
         yidx = [i for i in range(0,len(self.variables)) if self.variables[i] == self.axisv_var.get()]
-        hpidx = [i for i in range(0,len(self.variables)) if self.variables[i] == "h"]
         cidx = [i for i in range(0,len(self.color_variables)) if self.color_variables[i] == self.axisc_var.get()]
-        
+
         if type(xidx).__name__ == 'list': xidx = xidx[0]
         if type(yidx).__name__ == 'list': yidx = yidx[0]
-        if type(hpidx).__name__ == 'list': hpidx = hpidx[0]
         if type(cidx).__name__ == 'list': cidx = cidx[0]
 
         if self.sph_mode:
@@ -874,6 +872,8 @@ class main():
             if self.axisc_var.get() == self.sph_color_variables[1]: # column density
                 # Figure out the z axis from the given x and y axes
                 zidx = list(set([0,1,2]).difference(set([xidx,yidx])))[0]
+                hpidx = [i for i in range(0,len(self.variables)) if self.variables[i] == "h"]
+                if type(hpidx).__name__ == 'list': hpidx = hpidx[0]
                 self.plot_column_density(x,y,self.data[:,zidx],self.data[:,3],self.data[:,hpidx])
                 self.set_axisc_limits(draw=False)
                 self.im.set_visible(True)
