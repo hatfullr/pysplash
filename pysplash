@@ -727,18 +727,18 @@ class main():
 
 
         # Draw the first file
-        self.read_file()
-
-        if self.sph_mode:
-            self.variables = self.sph_variables
-            self.color_variables = self.sph_color_variables
+        if self.read_file() == 0:
+            
+            if self.sph_mode:
+                self.variables = self.sph_variables
+                self.color_variables = self.sph_color_variables
         
-        # Set the axes to be the first 2 variables by default.
-        self.axish_var.set(self.variables[0]) # x by default
-        self.axisv_var.set(self.variables[1]) # y by default
-        self.axisc_var.set(self.color_variables[0]) # Nothing by default
+            # Set the axes to be the first 2 variables by default.
+            self.axish_var.set(self.variables[0]) # x by default
+            self.axisv_var.set(self.variables[1]) # y by default
+            self.axisc_var.set(self.color_variables[0]) # Nothing by default
 
-        # When the axis variable changes from selecting the combobox, update the plot
+            # When the axis variable changes from selecting the combobox, update the plot
         self.axish_var.trace('w',self.draw_plot)
         self.axisv_var.trace('w',self.draw_plot)
         self.axisc_var.trace('w',self.draw_plot)
@@ -811,7 +811,7 @@ class main():
 
         axish_canlog = np.all(x > 0)
         axisv_canlog = np.all(y > 0)
-
+        
         if axish_canlog or self.axish_is10.get() == 1:
             self.axish_log_button.config(state='normal')
         else:
@@ -1644,6 +1644,7 @@ class main():
             margin = self.cax.margins()
             vmin = np.amin(arr[np.isfinite(arr)])
             vmax = np.amax(arr[np.isfinite(arr)])
+#            print(vmin,vmax)
             dv = vmax-vmin
             vmin_new = vmin - dv*margin[1]
             vmax_new = vmax + dv*margin[1]
@@ -1652,8 +1653,10 @@ class main():
                     # Can't have any values less than zero
                     if vmin_new < 0: vmin_new = 0
                     if vmax_new < 0: vmax_new = 0
-            self.colorbar.mappable.set_clim(vmin_new, vmax_new)
 
+            self.im.set_clim(vmin=vmin_new,vmax=vmax_new)
+            self.colorbar.mappable.set_clim(vmin_new, vmax_new)
+            
             # Update the axis labels
             self.update_axis_labels()
             
@@ -1749,7 +1752,7 @@ class main():
         self.corner_message_text.set("Loading...")
         self.corner_message_label.update_idletasks()
         self.data, self.header = read_binary(self.current_file.get())
-
+        
         if self.data is not None and self.header is not None:
             # This is an SPH file
             self.variables = self.sph_variables
@@ -1811,7 +1814,6 @@ class main():
                 isread = self.read_file()
                 if isread == 0: # Successfully read the last file in the list
                     self.draw_plot()
-                return
             
             self.corner_message_text.set("End of file list")
             self.corner_message_label.update_idletasks()
