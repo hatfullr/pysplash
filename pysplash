@@ -141,7 +141,7 @@ def _read_mesafile(filename, data_rows=0, only='all'):
     header_attr = {}
     for a, b in zip(hlist, hval):
         header_attr[a] = float(b)
-    if only is 'header_attr':
+    if only == 'header_attr':
         return header_attr
 
     cols = {}
@@ -357,6 +357,7 @@ class main():
         self.axes_frame = tk.Frame(self.right_frame)
         self.files_frame = tk.Frame(self.right_frame)
         self.particle_opts_frame = tk.Frame(self.right_frame)
+        self.other_opts_frame = tk.Frame(self.right_frame)
 
         # Detect proper dpi scaling
         default_font = tkFont.nametofont("TkDefaultFont")
@@ -615,8 +616,6 @@ class main():
             self.resolution_scale_z_entry.grid(row=1,column=4)
             tk.Label(resolution_frame,text="z").grid(row=1,column=5)
 
-            resolution_frame.grid(row=0,column=0)
-
             self.cmap_idx = tk.StringVar()
             self.cmap_idx.set("0")
             self.cmap = tk.StringVar()
@@ -633,16 +632,18 @@ class main():
             self.cmap_previous_button = tk.Button(cmap_frame,text="<",command=self.previous_cmap,height=1,width=1,padx=0,pady=0)
             self.cmap_next_button.grid(row=0,column=3)
             self.cmap_previous_button.grid(row=0,column=1)
+            
 
-            cmap_frame.grid(row=0,column=2)
-
+            # Grid everything
             for i in range(0,len(self.axish_frames)):
                 self.axish_frames[i].grid(row=i,column=0)
             for i in range(0,len(self.axisv_frames)):
                 self.axisv_frames[i].grid(row=i,column=0)
             for i in range(0,len(self.axisc_frames)):
                 self.axisc_frames[i].grid(row=i,column=0)
-                
+
+            cmap_frame.grid(row=0,column=2)
+            resolution_frame.grid(row=0,column=0)
             self.axish_frame.grid(row=0,column=0,sticky='N')
             self.axisv_frame.grid(row=0,column=1,sticky='N')
             self.axisc_frame.grid(row=0,column=2,sticky='N')
@@ -701,21 +702,29 @@ class main():
             self.next_button = tk.Button(self.graph_controls_frame,command=self.next_file,text=">>",width=2,height=1,padx=5,pady=5).grid(row=0,column=3)
             self.current_file_label = tk.Label(self.graph_controls_frame,textvariable=self.current_file,padx=10).grid(row=0,column=0)
 
+        def init_other_controls(): # Initialize some other controls for the user
+            # Showing Roche lobes
+            self.equalize_aspect_button = tk.Button(self.other_opts_frame,text="Equalize aspect ratio",command=self.equalize_aspect)
+            self.equalize_aspect_button.grid(row=0,column=0)
+            
 
         # Perform initialization
         init_graph()
         init_particle_controls()
+        init_other_controls()
         init_axes_options()
         init_files_prompt()
         init_colorbar()
         init_user_plot_controls()
         
+        
         # Draw the frames
         start = time.time()
         # Right side
-        self.files_frame.grid(row=0,column=0)
-        self.axes_frame.grid(row=1,column=0)
+        self.files_frame.grid(row=0,column=0,columnspan=2)
+        self.axes_frame.grid(row=1,column=0,columnspan=2)
         self.particle_opts_frame.grid(row=2,column=0)
+        self.other_opts_frame.grid(row=2,column=1)
 
         # Left side
         self.graph_frame.grid(row=0,column=0)
@@ -901,7 +910,20 @@ class main():
 
 
 ### Plotting routines
-######################
+###################### 
+    def equalize_aspect(self,*args):
+        # Get the x and y limits of the plot
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+        # If the aspect is already equal, then don't do anything
+        if (xlim[1]-xlim[0]) == (ylim[1]-ylim[0]): return
+        minlim = min(min(xlim),min(ylim))
+        maxlim = max(max(xlim),max(ylim))
+        current_center = [0.5*(xlim[1]+xlim[0]),0.5*(ylim[1]+ylim[0])]
+        new_spacing = maxlim-minlim
+        self.ax.set_xlim(current_center[0]-0.5*new_spacing,current_center[0]+0.5*new_spacing)
+        self.ax.set_ylim(current_center[1]-0.5*new_spacing,current_center[1]+0.5*new_spacing)
+        self.fig.canvas.draw()
 
     def plot_particle_kernels(self,draw=True,*args):
         if not self.sph_mode: return # If we are in SPH mode,
