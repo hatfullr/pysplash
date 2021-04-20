@@ -283,6 +283,7 @@ class main():
                                "divv",
                                "----",
                                "r",
+                               "r from particle 0",
                                "mencl",
                               ]
         self.sph_color_variables = [ "",
@@ -794,9 +795,11 @@ class main():
             if xidx == 18: # This is the divider
                 return
             elif xidx == 19: # r
-                x = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
-            elif xidx == 20: # mencl
-                r = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+                x = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
+            elif xidx == 20: # r from particle 0
+                x = np.sqrt(np.sum((self.data[:,:3]-self.data[0][:3])**2.,axis=1))
+            elif xidx == 21: # mencl
+                r = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
                 idx = np.argsort(r)
                 x = np.cumsum(self.data[idx][:,3])
                 x = x[np.argsort(idx)]
@@ -806,9 +809,11 @@ class main():
             if yidx == 18: # This is the divider
                 return
             elif yidx == 19: # r
-                y = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
-            elif yidx == 20: # mencl
-                r = np.sqrt(self.data[:,0]**2. + self.data[:,1]**2. + self.data[:,2]**2.)
+                y = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
+            elif yidx == 20: # r from particle 0
+                y = np.sqrt(np.sum((self.data[:,:3]-self.data[0][:3])**2.,axis=1))
+            elif yidx == 21: # mencl
+                r = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
                 idx = np.argsort(self.data,r)
                 y = np.cumsum(self.data[idx][:,3])
                 y = np.argsort(mencl,idx)
