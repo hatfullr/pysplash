@@ -362,7 +362,7 @@ class main():
 
         # Detect proper dpi scaling
         default_font = tkFont.nametofont("TkDefaultFont")
-        fontsize_pt = default_font.actual()['size']
+        fontsize_pt = abs(default_font.actual()['size'])
         fontsize_px = default_font.metrics()['ascent'] + \
                       default_font.metrics()['descent']
         self.dpi = int(float(fontsize_px)/(fontsize_pt/72.))
