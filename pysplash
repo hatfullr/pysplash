@@ -1,52 +1,29 @@
 #!/usr/bin/env python3
+import tkinter as tk
+import tkinter.ttk as ttk
+from tkinter import font as tkFont
+from tkinter import colorchooser
 
-#from __future__ import print_function # Allows python2 and python3 functionality
-
-try:
-    import tkinter as tk # Python 3
-    import tkinter.ttk as ttk
-    from tkinter import font as tkFont
-    #from tkinter.colorchooser import askcolor
-    from tkinter import colorchooser
-    python2 = False
-except ImportError:
-    import Tkinter as tk # Python 2
-    import ttk
-    from Tkinter import font as tkFont
-    from tkColorChooser import askcolor
-    python2 = True
-
-#import tkinter as tk # Python 3 only for now
-#import tkinter.ttk as ttk
-#from tkinter import colorchooser
-
-import matplotlib
+from matplotlib.collections import PatchCollection
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
-import matplotlib.collections
 import matplotlib.pyplot as plt
 from glob import glob
 import numpy as np
-import sys
-import time
-import os
-import signal
-
-import struct
-import numpy as np
+from sys import argv, excepthook
+from time import time
+from os.path import isfile
+from os import nice
+from signal import signal,SIGINT
+from struct import unpack
 from numpy.lib.recfunctions import repack_fields
-
 from scipy.spatial.distance import cdist
 from scipy.integrate import simps
 
-os.nice(5)
-
-units = [ "6.9599e10",
-          "1.9891e33",
-        ]
+nice(5)
 
 def read_binary(filename,
          return_header=True,
@@ -92,7 +69,7 @@ def read_binary(filename,
     dsize = size_dataline+size_extra+8
     
     with open(filename,'rb') as f:
-        header = np.asarray(struct.unpack('<i'+fmt_header+'d', f.read(4+size_header+8)))[1:-1]
+        header = np.asarray(unpack('<i'+fmt_header+'d', f.read(4+size_header+8)))[1:-1]
         if lines == 0: lines = int(header[0])
 
         if int(header[19]) != 0: #if ncooling =/= 0
@@ -116,7 +93,6 @@ def read_binary(filename,
             except:
                 data = None
                 header = None
-            
 
             if return_header: return data,header
             else: return data
@@ -653,10 +629,10 @@ class main():
         def init_files_prompt():
             # Setup the files prompt
             self.files_var = tk.StringVar()
-            if len(sys.argv) > 1:
-                self.files_var.set(" ".join(sys.argv[1:]))
+            if len(argv) > 1:
+                self.files_var.set(" ".join(argv[1:]))
             
-            self.files = sys.argv[1:]
+            self.files = argv[1:]
             tk.Label(self.files_frame,text="File list").grid(row=0,column=0)
             self.files_text = tk.Entry(self.files_frame,textvariable=self.files_var,width=50)
             self.files_text.bind('<Return>',self.load_files)
@@ -720,7 +696,7 @@ class main():
         
         
         # Draw the frames
-        start = time.time()
+        start = time()
         # Right side
         self.files_frame.grid(row=0,column=0,columnspan=2)
         self.axes_frame.grid(row=1,column=0,columnspan=2)
@@ -753,7 +729,7 @@ class main():
         self.axisv_var.trace('w',self.draw_plot)
         self.axisc_var.trace('w',self.draw_plot)
         
-        print(time.time()-start)
+        print(time()-start)
         
         self.draw_plot()
 
@@ -941,7 +917,7 @@ class main():
                 if len(self.particle_kernels) == 0:
                     for particle in self.particles:
                         patches = [plt.Circle(center,size,fill=False,facecolor=None,edgecolor=self.particle_core_color.get()) for center, size in zip(particle.get_offsets(),2.*self.data[:,4])]
-                        self.particle_kernels.append(self.ax.add_collection(matplotlib.collections.PatchCollection(patches,match_original=True)))
+                        self.particle_kernels.append(self.ax.add_collection(PatchCollection(patches,match_original=True)))
                 else:
                     for particle_kernel in self.particle_kernels:
                         particle_kernel.set_visible(True)
@@ -966,7 +942,7 @@ class main():
                         core_idx = np.where(self.data[:,12] == 0)[0] # True only in StarSmasher
                         if len(core_idx) > 0:
                             patches = [plt.Circle(center,size,fill=False,facecolor=None,edgecolor=self.particle_core_color.get()) for center, size in zip(core_particle.get_offsets(),2.*self.data[:,4][core_idx])]
-                            self.core_particle_kernels.append(self.ax.add_collection(matplotlib.collections.PatchCollection(patches,match_original=True)))
+                            self.core_particle_kernels.append(self.ax.add_collection(PatchCollection(patches,match_original=True)))
                 else:
                     for core_particle_kernel in self.core_particle_kernels:
                         core_particle_kernel.set_visible(True)
@@ -1026,7 +1002,7 @@ class main():
             self.corner_message_text.set("Calculating column density in parallel...")
             self.corner_message_label.update_idletasks()
             
-            start = time.time()
+            start = time()
             q = mp.Queue()
             process = [None]*nproc
             for n in range(0,nproc):
@@ -1053,9 +1029,9 @@ class main():
             print("Failed to calculate column density in parallel.")
             self.corner_message_text.set("Calculating column density in serial...")
             self.corner_message_label.update_idletasks()
-            start = time.time()
+            start = time()
             grid = self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos,zpos)
-        print(time.time()-start)
+        print(time()-start)
         self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get())
         self.corner_message_text.set("")
 
@@ -1763,7 +1739,7 @@ class main():
         # 3 = Unrecognized file type
 
         # First check to see if the file actually exists
-        if not os.path.isfile(self.current_file.get()):
+        if not isfile(self.current_file.get()):
             if len(self.current_file.get()) > 20:
                 self.corner_message_text.set("Could not find file ..."+self.current_file.get())
             else:
@@ -1900,12 +1876,12 @@ def handleException(excType, excValue, trace):
     original_excepthook(excType,excValue,trace)
     
 if __name__ == '__main__':
-    original_excepthook = sys.excepthook
-    sys.excepthook = handleException
+    original_excepthook = excepthook
+    excepthook = handleException
     root = tk.Tk()
     root.wm_title("PySplash")
     root.protocol("WM_DELETE_WINDOW",close)
-    signal.signal(signal.SIGINT, close)
+    signal(SIGINT, close)
     main(root)
     root.mainloop()
 
