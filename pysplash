@@ -225,23 +225,23 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.canvas.draw()
         
 class main():
-
-    ### Helpers
-    ###########
-    
-    def Entry(self,*args,**kwargs):
-        if 'font' not in kwargs.keys(): kwargs['font'] = tk.font.nametofont("TkDefaultFont")
-        return tk.Entry(*args,**kwargs)
-
-    def Combobox(self,*args,**kwargs):
-        if 'font' not in kwargs.keys(): kwargs['font'] = tk.font.nametofont("TkDefaultFont")
-        return ttk.Combobox(*args,**kwargs)
-
-    
-    
     def __init__(self,root):
 
         self.root = root
+
+        # Set the default font and default font size
+        default_font = tk.font.nametofont("TkDefaultFont")
+        fontsize_pt = 12
+        # Make sure the font is at least size fontsize_pt
+        if abs(default_font.actual()['size']) < fontsize_pt: default_font.configure(size=fontsize_pt)
+        # Set the size of the default font immediately, and for all widgets
+        self.root.option_add("*Font",default_font)
+        
+        # Detect proper dpi scaling
+        fontsize_px = default_font.metrics()['ascent'] + default_font.metrics()['descent']
+        self.dpi = int(float(fontsize_px)/(fontsize_pt/72.))
+        
+        
 
         # Init kernels for SPH code
         self.ntab = 100000 # ntab = 100000 from StarSmasher
@@ -350,19 +350,7 @@ class main():
         self.particle_opts_frame = tk.Frame(self.right_frame)
         self.other_opts_frame = tk.Frame(self.right_frame)
         
-        # Detect proper dpi scaling
-        self.default_font = tk.font.nametofont("TkDefaultFont")
-        # Make sure the font is at least size 12
-        fontsize_pt = 12
-        if abs(self.default_font.actual()['size']) < fontsize_pt:
-            self.default_font.configure(size=fontsize_pt)
-        fontsize_px = self.default_font.metrics()['ascent'] + \
-                      self.default_font.metrics()['descent']
-        self.dpi = int(float(fontsize_px)/(fontsize_pt/72.))
-        self.widget_height = fontsize_px
-
-        # We will need to scale the text so that the dpi on the text
-        # matches what we expect it to be, I think.
+        
         
         def init_graph():
             # Setup the graph
@@ -433,10 +421,10 @@ class main():
             
             self.particle_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_color,height=1,width=2,padx=0,pady=0,bg=self.particle_color.get())
             self.particle_core_color_button = tk.Button(self.particle_opts_frame,command=self.choose_particle_core_color,height=1,width=2,padx=0,pady=0,bg=self.particle_core_color.get())
-            self.particle_size_entry = self.Entry(self.particle_opts_frame,textvariable=self.particle_size,width=3)
-            self.particle_core_size_entry = self.Entry(self.particle_opts_frame,textvariable=self.particle_core_size,width=3)
-            self.particle_marker_combobox = self.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_marker,width=5)
-            self.particle_core_marker_combobox = self.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_core_marker,width=5)
+            self.particle_size_entry = tk.Entry(self.particle_opts_frame,textvariable=self.particle_size,width=3)
+            self.particle_core_size_entry = tk.Entry(self.particle_opts_frame,textvariable=self.particle_core_size,width=3)
+            self.particle_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_marker,width=5)
+            self.particle_core_marker_combobox = ttk.Combobox(self.particle_opts_frame, values=self.markers,textvariable=self.particle_core_marker,width=5)
 
             self.particle_kernel_button = tk.Button(self.particle_opts_frame,text="Kernels",command=self.update_particle_kernel_button)
             self.particle_core_kernel_button = tk.Button(self.particle_opts_frame,text="Kernels",command=self.update_particle_core_kernel_button)
@@ -493,9 +481,9 @@ class main():
             tk.Label(self.axisv_frames[0],text="Vertical Axis").grid(row=0,column=0)
             tk.Label(self.axisc_frames[0],text="Colorbar").grid(row=0,column=0)
             
-            self.axish_combobox = self.Combobox(self.axish_frames[1], state='readonly', values=self.variables,textvariable=self.axish_var)
-            self.axisv_combobox = self.Combobox(self.axisv_frames[1], state='readonly', values=self.variables,textvariable=self.axisv_var)
-            self.axisc_combobox = self.Combobox(self.axisc_frames[1], state='readonly', values=self.color_variables,textvariable=self.axisc_var)
+            self.axish_combobox = ttk.Combobox(self.axish_frames[1], state='readonly', values=self.variables,textvariable=self.axish_var)
+            self.axisv_combobox = ttk.Combobox(self.axisv_frames[1], state='readonly', values=self.variables,textvariable=self.axisv_var)
+            self.axisc_combobox = ttk.Combobox(self.axisc_frames[1], state='readonly', values=self.color_variables,textvariable=self.axisc_var)
 
             self.axish_combobox.bind("<FocusIn>", lambda x: self.axish_combobox.selection_clear())
             self.axisv_combobox.bind("<FocusIn>", lambda x: self.axisv_combobox.selection_clear())
@@ -606,9 +594,9 @@ class main():
 
             smallerframers.grid(row=0,column=0,columnspan=6)
 
-            self.resolution_scale_x_entry = self.Entry(resolution_frame,textvariable=self.resolution_scale_x,width=4)
-            self.resolution_scale_y_entry = self.Entry(resolution_frame,textvariable=self.resolution_scale_y,width=4)
-            self.resolution_scale_z_entry = self.Entry(resolution_frame,textvariable=self.resolution_scale_z,width=4)
+            self.resolution_scale_x_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_x,width=4)
+            self.resolution_scale_y_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_y,width=4)
+            self.resolution_scale_z_entry = tk.Entry(resolution_frame,textvariable=self.resolution_scale_z,width=4)
             self.resolution_scale_x_entry.grid(row=1,column=0)
             tk.Label(resolution_frame,text="x").grid(row=1,column=1)
             self.resolution_scale_y_entry.grid(row=1,column=2)
@@ -625,7 +613,7 @@ class main():
             cmap_frame = tk.Frame(self.axisc_frames[4])
             
             tk.Label(cmap_frame,text="cmap").grid(row=0,column=0)
-            self.cmap_entry = self.Entry(cmap_frame,textvariable=self.cmap_idx,width=2)
+            self.cmap_entry = tk.Entry(cmap_frame,textvariable=self.cmap_idx,width=2)
             self.cmap_entry.grid(row=0,column=2)
 
             self.cmap_next_button = tk.Button(cmap_frame,text=">",command=self.next_cmap,height=1,width=1,padx=0,pady=0)
@@ -657,7 +645,7 @@ class main():
             
             self.files = argv[1:]
             tk.Label(self.files_frame,text="File list").grid(row=0,column=0)
-            self.files_text = self.Entry(self.files_frame,textvariable=self.files_var,width=50)
+            self.files_text = tk.Entry(self.files_frame,textvariable=self.files_var,width=50)
             self.files_text.bind('<Return>',self.load_files)
             self.files_text.grid(row=0,column=1,padx=(0,3))
             tk.Button(self.files_frame,text="Load",command=self.load_files,width=5,height=1,padx=0,pady=0).grid(row=0,column=2)
@@ -696,7 +684,7 @@ class main():
             # Beneath the graph, give user some controls
             self.skip_magnitude = tk.IntVar()
             self.skip_magnitude.set(1)
-            self.skip_magnitude_entry = self.Entry(self.graph_controls_frame,textvariable=self.skip_magnitude,width=5)
+            self.skip_magnitude_entry = tk.Entry(self.graph_controls_frame,textvariable=self.skip_magnitude,width=5)
             self.skip_magnitude_entry.grid(row=0,column=2)
             self.back_button = tk.Button(self.graph_controls_frame,command=self.previous_file,text="<<",width=2,height=1,padx=5,pady=5).grid(row=0,column=1)
             self.next_button = tk.Button(self.graph_controls_frame,command=self.next_file,text=">>",width=2,height=1,padx=5,pady=5).grid(row=0,column=3)
