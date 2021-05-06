@@ -274,6 +274,7 @@ class main():
                                "r",
                                "r from particle 0",
                                "mencl",
+                               "E",
                               ]
         self.sph_color_variables = [ "",
                                  "column density",
@@ -462,6 +463,9 @@ class main():
             self.axish_var = tk.StringVar()
             self.axisv_var = tk.StringVar()
             self.axisc_var = tk.StringVar()
+            self.axish_var_prev = tk.StringVar()
+            self.axisv_var_prev = tk.StringVar()
+            self.axisc_var_prev = tk.StringVar()
 
             self.axis_menu_width = tk.IntVar()
             self.axis_menu_width.set(20)
@@ -742,6 +746,9 @@ class main():
             self.axish_var.set(self.variables[0]) # x by default
             self.axisv_var.set(self.variables[1]) # y by default
             self.axisc_var.set(self.color_variables[0]) # Nothing by default
+            self.axish_var_prev.set(self.axish_var.get())
+            self.axisv_var_prev.set(self.axisv_var.get())
+            self.axisc_var_prev.set(self.axisc_var.get())
 
             # When the axis variable changes from selecting the combobox, update the plot
         self.axish_var.trace('w',self.draw_plot)
@@ -769,9 +776,7 @@ class main():
 
     def draw_plot(self,*args):
         # For now, return if there is no data to plot
-        if self.data is None:
-            print("No data to plot")
-            return
+        if self.data is None: return
 
         message = ""
         
@@ -787,33 +792,27 @@ class main():
         if type(cidx).__name__ == 'list': cidx = cidx[0]
 
         if self.sph_mode:
-            if xidx == 18: # This is the divider
-                return
-            elif xidx == 19: # r
-                x = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
-            elif xidx == 20: # r from particle 0
-                x = np.sqrt(np.sum((self.data[:,:3]-self.data[0][:3])**2.,axis=1))
-            elif xidx == 21: # mencl
-                r = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
-                idx = np.argsort(r)
-                x = np.cumsum(self.data[idx][:,3])
-                x = x[np.argsort(idx)]
-            else:
-                x = self.data[:,xidx]
-
-            if yidx == 18: # This is the divider
-                return
-            elif yidx == 19: # r
-                y = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
-            elif yidx == 20: # r from particle 0
-                y = np.sqrt(np.sum((self.data[:,:3]-self.data[0][:3])**2.,axis=1))
-            elif yidx == 21: # mencl
-                r = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
-                idx = np.argsort(self.data,r)
-                y = np.cumsum(self.data[idx][:,3])
-                y = np.argsort(mencl,idx)
-            else:
-                y = self.data[:,yidx]
+            xyidxs = [xidx,yidx]
+            xy = [None,None]
+            for i,xyidx in enumerate(xyidxs):
+                if xyidx == 18: # This is the divider
+                    return
+                elif xyidx == 19: # r
+                    xy[i] = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
+                elif xyidx == 20: # r from particle 0
+                    xy[i] = np.sqrt(np.sum((self.data[:,:3]-self.data[0][:3])**2.,axis=1))
+                elif xyidx == 21: # mencl
+                    r = np.sqrt(np.sum(self.data[:,:3]**2.,axis=1))
+                    idx = np.argsort(r)
+                    xy[i] = np.cumsum(self.data[idx][:,3])[np.argsort(idx)]
+                elif xyidx == 22: # E = am*(grpot + 0.5*v^2 + u)
+                    xy[i] = self.data[:,3]*(self.data[:,14] + 0.5*np.sum(self.data[:,6:9]**2.,axis=1) + self.data[:,12])
+                else:
+                    xy[i] = self.data[:,xyidx]
+            if xy[0] is None or xy[1] is None:
+                print("ERROR: Found 'None' type as the x-axis or y-axis data. xy =",xy)
+                return # Just escape out if something bad is happening
+            x, y = xy
         else:
             x = self.data[:,xidx]
             y = self.data[:,yidx]
@@ -851,13 +850,6 @@ class main():
             elif self.axisv_is10.get() == 1:
                 y = 10.**y
 
-        # Don't worry about aspect ratios yet, this stuff is a bit complicated.
-        #if len([i for i in ["x","y","z"] if i == self.axish_var.get() or i == self.axisv_var.get()]) >= 2:
-        #    self.ax.set_aspect('equal')
-        #else:
-        #    self.ax.set_aspect('auto')
-
-        
         
         if self.axisc_var.get() == "":
             self.particle_controls(True)  # Show the particle plot controls
@@ -898,6 +890,15 @@ class main():
                 self.axisc_log_button.config(state='normal')
 
         self.update_axis_labels()
+        
+        axis_vars = [self.axish_var,self.axisv_var,self.axisc_var]
+        prev_axis_vars = [self.axish_var_prev,self.axisv_var_prev,self.axisc_var_prev]
+        methods = [self.set_axish_limits,self.set_axisv_limits,self.set_axisc_limits]
+        for i, (axis_var,prev_axis_var,method) in enumerate(zip(axis_vars,prev_axis_vars,methods)):
+            if axis_var.get() != prev_axis_var.get():
+                method(relim=True)
+                prev_axis_vars[i].set(axis_vars[i].get())
+        
         self.canvas.draw()
         
         # The code is left to hang after this point. Waiting for user input...
@@ -1409,8 +1410,8 @@ class main():
         self.corner_message_label.update_idletasks()
             
 
-    def set_axish_limits(self,draw=True,*args):
-        if self.axish_isadaptive.get() == 1:
+    def set_axish_limits(self,*args,draw=True,relim=False):
+        if self.axish_isadaptive.get() == 1 or relim:
             xmin = np.inf
             xmax = -np.inf
             for child in self.ax.get_children():
@@ -1425,8 +1426,8 @@ class main():
             self.ax.set_xlim(self.xlim)
         if draw: self.canvas.draw()
 
-    def set_axisv_limits(self,draw=True,*args):
-        if self.axisv_isadaptive.get() == 1:
+    def set_axisv_limits(self,*args,draw=True,relim=False):
+        if self.axisv_isadaptive.get() == 1 or relim:
             ymin = np.inf
             ymax = -np.inf
             for child in self.ax.get_children():
@@ -1441,9 +1442,9 @@ class main():
             self.ax.set_ylim(self.ylim)
         if draw: self.canvas.draw()
 
-    def set_axisc_limits(self,draw=True,*args):
+    def set_axisc_limits(self,*args,draw=True,relim=False):
         if self.cax.get_visible() and self.im is not None:
-            if self.axisc_isadaptive.get() == 1:
+            if self.axisc_isadaptive.get() == 1 or relim:
                 arr = self.im.get_array()
 
                 # Reset the limits on the colorbar
