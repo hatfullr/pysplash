@@ -707,7 +707,7 @@ class main():
         
         
         # Draw the frames
-        start = time()
+        #start = time()
         # Right side
         self.files_frame.grid(row=0,column=0,columnspan=2)
         self.axes_frame.grid(row=1,column=0,columnspan=2)
@@ -743,7 +743,7 @@ class main():
         self.axisv_var.trace('w',self.draw_plot)
         self.axisc_var.trace('w',self.draw_plot)
         
-        print(time()-start)
+        #print(time()-start)
         
         self.draw_plot()
 
@@ -978,7 +978,7 @@ class main():
         # First, figure out how many pixels are on the screen
         xpix = self.resolution_scale_x.get()
         ypix = self.resolution_scale_y.get()
-        zpix = self.resolution_scale_z.get()
+        #zpix = self.resolution_scale_z.get()
         
         hp2 = np.multiply(hp,2.)
         
@@ -987,12 +987,12 @@ class main():
         xmax = np.amax(x+hp2)
         ymin = np.amin(y-hp2)
         ymax = np.amax(y+hp2)
-        zmin = np.amin(z-hp2)
-        zmax = np.amax(z+hp2)
+        #zmin = np.amin(z-hp2)
+        #zmax = np.amax(z+hp2)
 
         xpos = np.linspace(xmin,xmax,xpix)
         ypos = np.linspace(ymin,ymax,ypix)
-        zpos = np.linspace(zmin,zmax,zpix)
+        #zpos = np.linspace(zmin,zmax,zpix)
 
         try:
             #raise("Skip")
@@ -1003,20 +1003,20 @@ class main():
             # We assume the image will never be too small (# x pixels < # processes)
             # Split the # of pixels in the x direction across all processes
             xpos_proc = np.array_split(xpos,nproc)
-
+            
             # Keep track of the xpos indices
             xpos_idx_proc = np.array_split(np.arange(len(xpos),dtype=int),nproc)
 
             self.corner_message_text.set("Calculating column density in parallel...")
             self.corner_message_label.update_idletasks()
             
-            start = time()
+            #start = time()
             q = mp.Queue()
             process = [None]*nproc
             for n in range(0,nproc):
-                process[n] = mp.Process(target=self.calculate_coldens_mp, args=(q,x,y,z,m,hp, xpos_idx_proc[n], xpos_proc[n], ypos, zpos))
+                process[n] = mp.Process(target=self.calculate_coldens_mp, args=(q,x,y,z,m,hp, xpos_idx_proc[n], xpos_proc[n], ypos))
                 process[n].start()
-
+                
             xpos_idx_proc_calculated = [None]*nproc
             grids = [None]*nproc
             for n in range(0,nproc):
@@ -1037,9 +1037,9 @@ class main():
             print("Failed to calculate column density in parallel.")
             self.corner_message_text.set("Calculating column density in serial...")
             self.corner_message_label.update_idletasks()
-            start = time()
-            grid = self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos,zpos)
-        print(time()-start)
+            #start = time()
+            grid = self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos)
+        #print(time()-start)
         self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get())
         self.corner_message_text.set("")
 
@@ -1073,102 +1073,87 @@ class main():
         u2 = 4.*np.arange(self.ntab-1) / float(self.ntab - 1)
         self.wtab = w(np.sqrt(u2))
 
-    def calculate_coldens_serial(self,x,y,z,m,hp,xpos,ypos,zpos,*args):
+    def calculate_coldens_serial(self,x,y,z,m,hp,xpos,ypos,*args):
         # Calculate the column density for this LOS (xpos,ypos)
         # Points along the LOS, zpos, are given and calculated outside this function
         # Returns an array of shape (len(xpos), len(ypos)). Each element of the
         # array is the column density at that (xpos, ypos).
         # We assume arrays x, y, z, m, and hp are all the same size
-
+        
         N = np.shape(x)[0]
         
-        hp2 = 2.*hp
-        hp2p = hp**2.
-        hp22 = 2.*hp2p
-        hp3p = hp2p*hp
-
+        twohp = 2.*hp
+        fourhp2 = twohp*twohp
+        hp2 = hp**2.
+        hp3 = hp2*hp
+        
         xpix = np.shape(xpos)[0]
         ypix = np.shape(ypos)[0]
-        zpix = np.shape(zpos)[0]
+        zpix = self.resolution_scale_z.get()
 
-        thisgrid = np.zeros(shape=(xpix,ypix))
-        
+        thisgrid = np.full((xpix,ypix),np.nan)
+
         # Filter first in the x direction
-        my_y = y[:,None]
-        my_z = z[:,None]
-        my_ypos = ypos[:,None]
-        my_zpos = zpos[:,None]
-        dx2 = cdist(xpos[:,None],x[:,None],'sqeuclidean')
-        idx_x = dx2 < hp22
+        for i,xp in enumerate(xpos):
+            dx = x - xp
+            idx_x = np.abs(dx) < twohp
+            if not any(idx_x): continue
 
-        dens = np.zeros(zpix)
-        
-        for i in range(0,len(idx_x)):
-            idx_xi = idx_x[i]
-            if not np.any(idx_xi): continue
-            
-            my_L1_dx2 = dx2[i,idx_xi]
-            my_L1_y = y[idx_xi]
-            my_L1_z = z[idx_xi]
-            my_L1_m = m[idx_xi]
-            my_L1_hp = hp[idx_xi]
-            my_L1_hp2 = hp2[idx_xi]
-            my_L1_hp2p = hp2p[idx_xi]
-            my_L1_hp22 = hp22[idx_xi]
-            my_L1_hp3p = hp3p[idx_xi]
+            x_x = x[idx_x]
+            x_y = y[idx_x]
+            x_z = z[idx_x]
+            x_dx = dx[idx_x]
+            x_twohp = twohp[idx_x]
+            x_fourhp2 = fourhp2[idx_x]
+            x_hp2 = hp2[idx_x]
+            x_hp3 = hp3[idx_x]
+            x_m = m[idx_x]
 
-            dy2 = cdist(my_ypos,my_L1_y[:,None],'sqeuclidean')
-            idx_y = dy2 < my_L1_hp22
-            lenidx_y = len(idx_y)
-            # Filter in the y direction
-            for j in range(0,lenidx_y):
-                idx_yj = idx_y[j]
-                if not np.any(idx_yj): continue
-                
-                my_L2_dx2 = my_L1_dx2[idx_yj]
-                my_L2_dy2 = dy2[j,idx_yj]
-                my_L2_z = my_L1_z[idx_yj]
-                my_L2_m = my_L1_m[idx_yj]
-                my_L2_hp = my_L1_hp[idx_yj]
-                my_L2_hp2 = my_L1_hp2[idx_yj]
-                my_L2_hp2p = my_L1_hp2p[idx_yj]
-                my_L2_hp22 = my_L1_hp22[idx_yj]
-                my_L2_hp3p = my_L1_hp3p[idx_yj]
+            # Filter now in the y direction
+            for j,yp in enumerate(ypos):
+                dy = x_y - yp
+                idx_y = np.abs(dy) < x_twohp
+                if not any(idx_y): continue
 
-                dz2 = cdist(my_zpos,my_L2_z[:,None],'sqeuclidean')
-                idx_z = dz2 < my_L2_hp22
-                lenidx_z = len(idx_z)
-                # Filter in the z direction
-                for k in range(0,lenidx_z):
-                    idx_zk = idx_z[k]
-                    if not np.any(idx_zk):
-                        dens[k] = 0.
-                        continue
-                    my_L3_dx2 = my_L2_dx2[idx_zk]
-                    my_L3_dy2 = my_L2_dy2[idx_zk]
-                    my_L3_dz2 = dz2[k,idx_zk]
-                    my_L3_m = my_L2_m[idx_zk]
-                    my_L3_hp = my_L2_hp[idx_zk]
-                    my_L3_hp2 = my_L2_hp2[idx_zk]
-                    my_L3_hp2p = my_L2_hp2p[idx_zk]
-                    my_L3_hp22 = my_L2_hp22[idx_zk]
-                    my_L3_hp3p = my_L2_hp3p[idx_zk]
+                y_x = x_x[idx_y]
+                y_y = x_y[idx_y]
+                y_z = x_z[idx_y]
+                y_dx = x_dx[idx_y]
+                y_dy = dy[idx_y]
+                y_twohp = x_twohp[idx_y]
+                y_fourhp2 = x_fourhp2[idx_y]
+                y_hp2 = x_hp2[idx_y]
+                y_hp3 = x_hp3[idx_y]
+                y_m = x_m[idx_y]
 
-                    dr2 = my_L3_dx2 + my_L3_dy2 + my_L3_dz2
+                # Calculate the integration positions
+                dxy2 = y_dx**2. + y_dy**2.
+                dz2 = y_fourhp2 - dxy2
+                dzidx = dz2 >= 0
+                if not any(dzidx): continue
+                dz = np.sqrt(dz2[dzidx])
+                z0 = y_z[dzidx] - dz
+                z1 = y_z[dzidx] + dz
+                zlim = [min(np.amin(z0),np.amin(z1)),max(np.amax(z0),np.amax(z1))]
+                zint = np.linspace(min(zlim),max(zlim),zpix)
+                dens = np.zeros(zpix)
 
-                    idx = dr2 < my_L3_hp22
-                    if not np.any(idx): continue
+                dr2s = dxy2 + (y_z-zint[:,None])**2.
+                myidxs = np.array([dr2 <= y_fourhp2 for dr2 in dr2s],dtype=bool)
+                valid_idxs = np.any(myidxs,axis=1)
 
-                    indices = (self.ctab * dr2[idx]/my_L3_hp2p[idx]).astype(np.int,copy=False)
-                    wpc = self.wtab[indices] / my_L3_hp3p[idx]
-                    dens[k] = (my_L3_m[idx] * wpc).sum()
-                thisgrid[i][j] = simps(dens,x=zpos)
-
+                valid_ids = np.arange(len(zint))[valid_idxs]
+                dr2s = dr2s[valid_idxs]
+                myidxs = myidxs[valid_idxs]
+                for k,dr2,myidx in zip(valid_ids,dr2s,myidxs):
+                    indices = (self.ctab * dr2[myidx]/y_hp2[myidx]).astype(np.int,copy=False)-1
+                    wpc = self.wtab[indices] / y_hp3[myidx]
+                    dens[k] = (y_m[myidx] * wpc).sum()
+                thisgrid[i][j] = simps(dens,x=zint)
         return thisgrid
-
-        
-    def calculate_coldens_mp(self,queue,x,y,z,m,hp,xpos_idx_proc,xpos,ypos,zpos,*args):
-        queue.put([xpos_idx_proc,self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos,zpos,*args)])
+    
+    def calculate_coldens_mp(self,queue,x,y,z,m,hp,xpos_idx_proc,xpos,ypos,*args):
+        queue.put([xpos_idx_proc,self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos,*args)])
 
 ###
 
@@ -1407,6 +1392,10 @@ class main():
                     xy = child.get_offsets()
                     xmin = min(xmin,np.amin(xy[:,0]))
                     xmax = max(xmax,np.amax(xy[:,0]))
+                if type(child).__name__ == 'AxesImage':
+                    extent = child.get_extent()
+                    xmin = min(xmin,extent[0])
+                    xmax = max(xmax,extent[1])
             dx = xmax-xmin
             xmargin, ymargin = self.ax.margins()
             self.ax.set_xlim(xmin-dx*xmargin,xmax+dx*xmargin)
@@ -1423,6 +1412,10 @@ class main():
                     xy = child.get_offsets()
                     ymin = min(ymin,np.amin(xy[:,1]))
                     ymax = max(ymax,np.amax(xy[:,1]))
+                if type(child).__name__ == 'AxesImage':
+                    extent = child.get_extent()
+                    ymin = min(ymin,extent[2])
+                    ymax = max(ymax,extent[3])
             dy = ymax-ymin
             xmargin, ymargin = self.ax.margins()
             self.ax.set_ylim(ymin-dy*ymargin,ymax+dy*ymargin)
@@ -1437,8 +1430,8 @@ class main():
 
                 # Reset the limits on the colorbar
                 margin = self.cax.margins()
-                vmin = np.amin(arr[np.isfinite(arr)])
-                vmax = np.amax(arr[np.isfinite(arr)])
+                vmin = np.nanmin(arr[np.isfinite(arr)])
+                vmax = np.nanmax(arr[np.isfinite(arr)])
                 dv = vmax-vmin
                 vmin_new = vmin - dv*margin[1]
                 vmax_new = vmax + dv*margin[1]
@@ -1653,8 +1646,8 @@ class main():
 
             # Reset the limits on the colorbar
             margin = self.cax.margins()
-            vmin = np.amin(arr[np.isfinite(arr)])
-            vmax = np.amax(arr[np.isfinite(arr)])
+            vmin = np.nanmin(arr[np.isfinite(arr)])
+            vmax = np.nanmax(arr[np.isfinite(arr)])
 #            print(vmin,vmax)
             dv = vmax-vmin
             vmin_new = vmin - dv*margin[1]
@@ -1692,8 +1685,8 @@ class main():
 
             # Reset the limits on the colorbar
             margin = self.cax.margins()
-            vmin = np.amin(arr[np.isfinite(arr)])
-            vmax = np.amax(arr[np.isfinite(arr)])
+            vmin = np.nanmin(arr[np.isfinite(arr)])
+            vmax = np.nanmax(arr[np.isfinite(arr)])
             dv = vmax-vmin
             vmin_new = vmin - dv*margin[1]
             vmax_new = vmax + dv*margin[1]
