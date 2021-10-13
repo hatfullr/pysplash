@@ -7,7 +7,7 @@ if version_info.major < 3:
     import tkColorChooser as colorchooser
 else:
     import tkinter as tk
-    import tkinter.font
+    import tkinter.font as tkFont
     import tkinter.ttk as ttk
     from tkinter import colorchooser
 
