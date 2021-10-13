@@ -1,8 +1,15 @@
-#!/usr/bin/env python3
-import tkinter as tk
-import tkinter.font
-import tkinter.ttk as ttk
-from tkinter import colorchooser
+#!/usr/bin/env python
+from sys import version_info
+if version_info.major < 3:
+    import Tkinter as tk
+    from tkFont import Font as tkFont
+    import ttk
+    import tkColorChooser as colorchooser
+else:
+    import tkinter as tk
+    import tkinter.font
+    import tkinter.ttk as ttk
+    from tkinter import colorchooser
 
 from matplotlib.collections import PatchCollection
 from matplotlib.backends.backend_tkagg import (
@@ -230,7 +237,10 @@ class main():
         self.root = root
 
         # Set the default font and default font size
-        default_font = tk.font.nametofont("TkDefaultFont")
+        if version_info.major < 3:
+            default_font = tkFont(name="TkDefaultFont",exists=True)
+        else:
+            default_font = tkFont.nametofont("TkDefaultFont")
         fontsize_pt = 12
         # Make sure the font is at least size fontsize_pt
         if abs(default_font.actual()['size']) < fontsize_pt: default_font.configure(size=fontsize_pt)
@@ -1383,7 +1393,7 @@ class main():
         self.corner_message_label.update_idletasks()
             
 
-    def set_axish_limits(self,*args,draw=True,relim=False):
+    def set_axish_limits(self,draw=True,relim=False,*args):
         if self.axish_isadaptive.get() == 1 or relim:
             xmin = np.inf
             xmax = -np.inf
@@ -1403,7 +1413,7 @@ class main():
             self.ax.set_xlim(self.xlim)
         if draw: self.canvas.draw()
 
-    def set_axisv_limits(self,*args,draw=True,relim=False):
+    def set_axisv_limits(self,draw=True,relim=False,*args):
         if self.axisv_isadaptive.get() == 1 or relim:
             ymin = np.inf
             ymax = -np.inf
@@ -1423,7 +1433,7 @@ class main():
             self.ax.set_ylim(self.ylim)
         if draw: self.canvas.draw()
 
-    def set_axisc_limits(self,*args,draw=True,relim=False):
+    def set_axisc_limits(self,draw=True,relim=False,*args):
         if self.cax.get_visible() and self.im is not None:
             if self.axisc_isadaptive.get() == 1 or relim:
                 arr = self.im.get_array()
