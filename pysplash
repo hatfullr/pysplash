@@ -17,6 +17,7 @@ from matplotlib.backends.backend_tkagg import (
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
+import matplotlib.cm
 import matplotlib.pyplot as plt
 from glob import glob
 import numpy as np
@@ -29,6 +30,14 @@ from struct import unpack
 from numpy.lib.recfunctions import repack_fields
 from scipy.spatial.distance import cdist
 from scipy.integrate import simps
+
+try:
+    from numba import cuda,float64
+    import math
+    has_jit = True
+except ImportError:
+    has_jit = False
+    
 
 nice(5)
 
@@ -169,7 +178,7 @@ def rgb2tk(rgb):
     return "#%02x%02x%02x" % rgb
 
 class CustomToolbar(NavigationToolbar2Tk):
-    def __init__(self,canvas_,parent_,dpi):
+    def __init__(self,canvas_,parent_,dpi,corner_message_text):
         self.toolitems = (
             (u'Home', u'', u'home', u'home'),
             (u'Pan', u'', u'move', u'pan'),
@@ -179,11 +188,24 @@ class CustomToolbar(NavigationToolbar2Tk):
             )
         self.dpi = dpi
         self.canvas = canvas_
+        self.corner_message_text = corner_message_text
         self.toolbar = NavigationToolbar2Tk
         self.toolbar._old_Button = self.toolbar._Button
         self.toolbar._Button = self._new_Button
         self.toolbar.__init__(self,canvas_,parent_)
         self.toolbar.home = self.new_home
+
+        # Remove the "x=... y=..." labels
+        self.children['!label'].pack_forget()
+        self.children['!label2'].pack_forget()
+        
+    # Display "x=... y=..." text in the corner message instead
+    def set_message(self,text):
+        self.corner_message_text.set(text)
+
+    # Disallow pack
+    def pack(self,*args,**kwargs):
+        pass
         
     def _new_Button(self, *args, **kwargs):
         b = self._old_Button(*args, **kwargs)
@@ -231,29 +253,36 @@ class CustomToolbar(NavigationToolbar2Tk):
         ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
         self.canvas.draw()
         
-class main():
-    def __init__(self,root):
+class main:
+    def __init__(self,root,fontname="TkDefaultFont",fontsize=12):
 
         self.root = root
+        self.fontname = fontname
+        self.fontsize = fontsize
 
-        # Set the default font and default font size
         if version_info.major < 3:
-            default_font = tkFont(name="TkDefaultFont",exists=True)
+            self.default_font = tkFont(name=self.fontname,exists=True)
         else:
-            default_font = tkFont.nametofont("TkDefaultFont")
-        fontsize_pt = 12
+            self.default_font = tkFont.nametofont(self.fontname)
         # Make sure the font is at least size fontsize_pt
-        if abs(default_font.actual()['size']) < fontsize_pt: default_font.configure(size=fontsize_pt)
+        if abs(self.default_font.actual()['size']) < self.fontsize: self.default_font.configure(size=self.fontsize)
+        self.fontsize_px = self.default_font.metrics()['ascent'] + self.default_font.metrics()['descent']
+        
         # Set the size of the default font immediately, and for all widgets
-        self.root.option_add("*Font",default_font)
+        self.root.option_add("*Font",self.default_font)
         
         # Detect proper dpi scaling
-        fontsize_px = default_font.metrics()['ascent'] + default_font.metrics()['descent']
-        self.dpi = int(float(fontsize_px)/(fontsize_pt/72.))
+        self.dpi = int(float(self.fontsize_px)/(self.fontsize/72.))
         
         
 
         # Init kernels for SPH code
+        self.kernel_functions = [
+            'Cubic spline', # Position 0 is always for Cubic spline
+            'Wendland C4', # Position 1 is always for Wendland C4
+        ]
+        self.kernel_function = tk.StringVar()
+        self.kernel_function.set(self.kernel_functions[0])
         self.ntab = 100000 # ntab = 100000 from StarSmasher
         self.ctab = float(self.ntab - 1)/4.
         self.init_kernels() # Cubic spline only for now
@@ -348,6 +377,10 @@ class main():
         self.corner_message_text.set("")
         self.corner_message_label = tk.Label(self.root,textvariable=self.corner_message_text)
         self.corner_message_label.place(rely=1.0,relx=1.0,x=0,y=0,anchor="se")
+
+        self.current_file = tk.StringVar()
+        self.last_file = tk.StringVar()
+        self.current_file_idx = tk.IntVar()
         
         self.right_frame = tk.Frame()
         self.left_frame = tk.Frame()
@@ -372,9 +405,8 @@ class main():
             self.canvas.get_tk_widget().grid(row=0,column=0)
             self.canvas.draw()
             self.renderer = self.canvas.get_renderer()
-            self.toolbar = CustomToolbar(self.canvas, self.graph_toolbar_frame,self.dpi)
-            self.toolbar.update()
-            
+            self.toolbar = CustomToolbar(self.canvas, self.graph_controls_frame,self.dpi,self.corner_message_text)
+            self.toolbar.grid(row=0,column=0,sticky='w')
 
 
             # Set the initial position of the axis
@@ -660,13 +692,6 @@ class main():
             self.files_text.grid(row=0,column=1,padx=(0,3))
             tk.Button(self.files_frame,text="Load",command=self.load_files,width=5,height=1,padx=0,pady=0).grid(row=0,column=2)
             tk.Button(self.files_frame,text="Clear",command=self.clear_files,width=5,height=1,padx=0,pady=0).grid(row=0,column=3)
-            self.current_file = tk.StringVar()
-            self.last_file = tk.StringVar()
-            self.current_file.set(self.files_var.get().split(" ")[0])
-            self.last_file.set("")
-            self.current_file_idx = tk.IntVar()
-            self.current_file_idx.set(0)
-
         
 
         def init_colorbar():
@@ -695,15 +720,26 @@ class main():
             self.skip_magnitude = tk.IntVar()
             self.skip_magnitude.set(1)
             self.skip_magnitude_entry = tk.Entry(self.graph_controls_frame,textvariable=self.skip_magnitude,width=5)
-            self.skip_magnitude_entry.grid(row=0,column=2)
-            self.back_button = tk.Button(self.graph_controls_frame,command=self.previous_file,text="<<",width=2,height=1,padx=5,pady=5).grid(row=0,column=1)
-            self.next_button = tk.Button(self.graph_controls_frame,command=self.next_file,text=">>",width=2,height=1,padx=5,pady=5).grid(row=0,column=3)
-            self.current_file_label = tk.Label(self.graph_controls_frame,textvariable=self.current_file,padx=10).grid(row=0,column=0)
+            self.back_button = tk.Button(self.graph_controls_frame,command=self.previous_file,text="<<",width=2,height=1,padx=5,pady=5)
+            self.next_button = tk.Button(self.graph_controls_frame,command=self.next_file,text=">>",width=2,height=1,padx=5,pady=5)
+            self.current_file_displayed = tk.StringVar()
+            self.current_file_label = tk.Label(self.graph_controls_frame,textvariable=self.current_file_displayed,padx=10)
+            self.current_file_label.grid(row=0,column=1,sticky='ew')
+            self.back_button.grid(row=0,column=2)
+            self.skip_magnitude_entry.grid(row=0,column=3)
+            self.next_button.grid(row=0,column=4)
+            self.graph_controls_frame.columnconfigure(1,weight=1)
+        
 
         def init_other_controls(): # Initialize some other controls for the user
-            # Showing Roche lobes
             self.equalize_aspect_button = tk.Button(self.other_opts_frame,text="Equalize aspect ratio",command=self.equalize_aspect)
+            kernel_function_frame = tk.Frame(self.other_opts_frame)
+            tk.Label(kernel_function_frame,text="Kernel function:").pack(side='left')
+            self.kernel_function_combobox = ttk.Combobox(kernel_function_frame,values=self.kernel_functions,textvariable=self.kernel_function,state='readonly')
+            self.kernel_function_combobox.bind("<<ComboboxSelected>>",self.update_kernel_function)
+            self.kernel_function_combobox.pack(side='right')
             self.equalize_aspect_button.grid(row=0,column=0)
+            kernel_function_frame.grid(row=1,column=0)
             
 
         # Perform initialization
@@ -715,23 +751,25 @@ class main():
         init_colorbar()
         init_user_plot_controls()
         
-        
         # Draw the frames
         #start = time()
+        # Left side
+        self.graph_frame.grid(row=0,column=0)
+        self.graph_controls_frame.grid(row=1,column=0,sticky='ew')
+        
         # Right side
         self.files_frame.grid(row=0,column=0,columnspan=2)
         self.axes_frame.grid(row=1,column=0,columnspan=2)
         self.particle_opts_frame.grid(row=2,column=0)
         self.other_opts_frame.grid(row=2,column=1)
-
-        # Left side
-        self.graph_frame.grid(row=0,column=0)
-        self.graph_controls_frame.grid(row=1,column=1,sticky='E')
-        self.graph_toolbar_frame.grid(row=1,column=0,sticky='W')
         
-        self.left_frame.grid(row=0,column=0,columnspan=2)
-        self.right_frame.grid(row=0,column=2)
+        self.left_frame.grid(row=0,column=0)
+        self.right_frame.grid(row=0,column=1)
 
+        # Update the file information
+        self.current_file.set(self.files_var.get().split(" ")[0])
+        self.last_file.set("")
+        self.current_file_idx.set(0)
 
         # Draw the first file
         if self.read_file() == 0:
@@ -748,7 +786,7 @@ class main():
             self.axisv_var_prev.set(self.axisv_var.get())
             self.axisc_var_prev.set(self.axisc_var.get())
 
-            # When the axis variable changes from selecting the combobox, update the plot
+        # When the axis variable changes from selecting the combobox, update the plot
         self.axish_var.trace('w',self.draw_plot)
         self.axisv_var.trace('w',self.draw_plot)
         self.axisc_var.trace('w',self.draw_plot)
@@ -757,6 +795,9 @@ class main():
         
         self.draw_plot()
 
+        # Now display the information about the current file
+        self.update_current_file_displayed()
+        self.current_file.trace('w',self.update_current_file_displayed)
 
 
 
@@ -988,69 +1029,83 @@ class main():
         # First, figure out how many pixels are on the screen
         xpix = self.resolution_scale_x.get()
         ypix = self.resolution_scale_y.get()
-        #zpix = self.resolution_scale_z.get()
         
-        hp2 = np.multiply(hp,2.)
+        #twohp = 2*hp
         
         # Determine the physical bounds of the grid
-        xmin = np.amin(x-hp2)
-        xmax = np.amax(x+hp2)
-        ymin = np.amin(y-hp2)
-        ymax = np.amax(y+hp2)
-        #zmin = np.amin(z-hp2)
-        #zmax = np.amax(z+hp2)
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
+        #xmin = np.amin(x-twohp)
+        #xmax = np.amax(x+twohp)
+        #ymin = np.amin(y-twohp)
+        #ymax = np.amax(y+twohp)
 
-        xpos = np.linspace(xmin,xmax,xpix)
-        ypos = np.linspace(ymin,ymax,ypix)
-        #zpos = np.linspace(zmin,zmax,zpix)
+        xpos = np.linspace(xmin,xmax,xpix+1)[:-1]
+        ypos = np.linspace(ymin,ymax,ypix+1)[:-1]
 
-        try:
-            #raise("Skip")
-            import multiprocessing as mp
-            
-            nproc = mp.cpu_count()
+        # Center the lines of sight to the middle of the grid cells
+        xpos += 0.5*(xmax-xmin)/float(xpix)
+        ypos += 0.5*(ymax-ymin)/float(ypix)
 
-            # We assume the image will never be too small (# x pixels < # processes)
-            # Split the # of pixels in the x direction across all processes
-            xpos_proc = np.array_split(xpos,nproc)
-            
-            # Keep track of the xpos indices
-            xpos_idx_proc = np.array_split(np.arange(len(xpos),dtype=int),nproc)
-
-            self.corner_message_text.set("Calculating column density in parallel...")
+        start = time()
+        
+        try: # Calculating column density on the GPU
+            self.corner_message_text.set("Calculating column density in parallel on the GPU...")
             self.corner_message_label.update_idletasks()
-            
-            #start = time()
-            q = mp.Queue()
-            process = [None]*nproc
-            for n in range(0,nproc):
-                process[n] = mp.Process(target=self.calculate_coldens_mp, args=(q,x,y,z,m,hp, xpos_idx_proc[n], xpos_proc[n], ypos))
-                process[n].start()
-                
-            xpos_idx_proc_calculated = [None]*nproc
-            grids = [None]*nproc
-            for n in range(0,nproc):
-                res = q.get()
-                xpos_idx_proc_calculated[n] = res[0]
-                grids[n] = res[1]
-
-            for proc in process:
-                proc.join()
-
-            grid = np.zeros((xpix,ypix))
-            for n in range(0,nproc):
-                grid_proc = grids[n]
-                grid[xpos_idx_proc_calculated[n]] = grid_proc
-
-        except Exception as e: # Multiprocessing failed, try doing it in serial
+            grid = self.calculate_coldens_gpu(x,y,z,m,hp,xpos,ypos)
+        except Exception as e:
             print(e)
-            print("Failed to calculate column density in parallel.")
-            self.corner_message_text.set("Calculating column density in serial...")
-            self.corner_message_label.update_idletasks()
-            #start = time()
-            grid = self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos)
-        #print(time()-start)
-        self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get())
+            print("Failed to calculate column density in parallel on the GPU.")
+            
+            try:
+                import multiprocessing as mp
+
+                nproc = mp.cpu_count()
+
+                # We assume the image will never be too small (# x pixels < # processes)
+                # Split the # of pixels in the x direction across all processes
+                xpos_proc = np.array_split(xpos,nproc)
+
+                # Keep track of the xpos indices
+                xpos_idx_proc = np.array_split(np.arange(len(xpos),dtype=int),nproc)
+
+                self.corner_message_text.set("Calculating column density in parallel on the CPU...")
+                self.corner_message_label.update_idletasks()
+
+                q = mp.Queue()
+                process = [None]*nproc
+                for n in range(0,nproc):
+                    process[n] = mp.Process(target=self.calculate_coldens_mp, args=(q,x,y,z,m,hp, xpos_idx_proc[n], xpos_proc[n], ypos))
+                    process[n].start()
+
+                xpos_idx_proc_calculated = [None]*nproc
+                grids = [None]*nproc
+                for n in range(0,nproc):
+                    res = q.get()
+                    xpos_idx_proc_calculated[n] = res[0]
+                    grids[n] = res[1]
+
+                for proc in process:
+                    proc.join()
+
+                grid = np.zeros((xpix,ypix))
+                for n in range(0,nproc):
+                    grid_proc = grids[n]
+                    grid[xpos_idx_proc_calculated[n]] = grid_proc
+
+            except Exception as e: # Multiprocessing failed, try doing it in serial
+                print(e)
+                print("Failed to calculate column density in parallel on the CPU.")
+                try:
+                    self.corner_message_text.set("Calculating column density in serial...")
+                    self.corner_message_label.update_idletasks()
+                    grid = self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos)
+                except:
+                    print("Failed to calculate the column density in serial.")
+                    raise
+                    
+        print(time()-start)
+        self.im = self.ax.imshow(grid.T,extent=(xmin,xmax,ymin,ymax),aspect=self.aspect.get(),cmap=self.cmap.get(),origin='lower')
         self.corner_message_text.set("")
 
 ###
@@ -1063,28 +1118,33 @@ class main():
 ###########################
 
     def init_kernels(self,*args):
-        # Compute kernel tables
-        def w(u):
-            # Inspired by StarSmasher. This is a cubic spline kernel
-            result = np.zeros(len(u))
-            idx1 = u < 0
-            idx2 = np.logical_and(u >= 0,u < 1)
-            idx3 = np.logical_and(u >= 1, u < 2)
-
-            result[idx1] = 1.
-            result[idx2] = 1.+u[idx2]**2.*(-1.5+0.75*u[idx2])
-            result[idx3] = 0.25*(2.-u[idx3])**3.
-            
-            result=result/np.pi
-
-            return result
-        
+        # Compute kernel tables, inspired by StarSmasher.
+        # All functions return W(u)*h^3
+        # If this routine is changed in the future to include additional
+        # kernel functions, be sure to also update calculate_coldens_gpu.
+        if self.kernel_function.get() == self.kernel_functions[0]:
+            def w(u): # Cubic spline
+                result = np.empty(len(u))
+                idx1 = u < 0
+                idx2 = np.logical_and(u >= 0,u < 1)
+                idx3 = np.logical_and(u >= 1,u < 2)
+                
+                result[idx1] = 1.
+                result[idx2] = 1.+u[idx2]**2.*(-1.5+0.75*u[idx2])
+                result[idx3] = 0.25*(2.-u[idx3])**3.
+                
+                return result/np.pi
+        elif self.kernel_function.get() == self.kernel_functions[1]:
+            def w(u): # Wendland C4
+                sigW = 495./(256.*np.pi)
+                q = 0.5*u
+                return sigW*(1-q)**6*(35./3.*q**2+6*q+1)
         
         u2 = 4.*np.arange(self.ntab-1) / float(self.ntab - 1)
         self.wtab = w(np.sqrt(u2))
 
     def calculate_coldens_serial(self,x,y,z,m,hp,xpos,ypos,*args):
-        # Calculate the column density for this LOS (xpos,ypos)
+        # Calculate the column density for this LOS (xpos,ypos).
         # Points along the LOS, zpos, are given and calculated outside this function
         # Returns an array of shape (len(xpos), len(ypos)). Each element of the
         # array is the column density at that (xpos, ypos).
@@ -1101,7 +1161,7 @@ class main():
         ypix = np.shape(ypos)[0]
         zpix = self.resolution_scale_z.get()
 
-        thisgrid = np.full((xpix,ypix),np.nan)
+        thisgrid = np.zeros((xpix,ypix))
 
         # Filter first in the x direction
         for i,xp in enumerate(xpos):
@@ -1156,7 +1216,7 @@ class main():
                 dr2s = dr2s[valid_idxs]
                 myidxs = myidxs[valid_idxs]
                 for k,dr2,myidx in zip(valid_ids,dr2s,myidxs):
-                    indices = (self.ctab * dr2[myidx]/y_hp2[myidx]).astype(np.int,copy=False)-1
+                    indices = (self.ctab * dr2[myidx]/y_hp2[myidx]).astype(int,copy=False)-1
                     wpc = self.wtab[indices] / y_hp3[myidx]
                     dens[k] = (y_m[myidx] * wpc).sum()
                 thisgrid[i][j] = simps(dens,x=zint)
@@ -1164,6 +1224,138 @@ class main():
     
     def calculate_coldens_mp(self,queue,x,y,z,m,hp,xpos_idx_proc,xpos,ypos,*args):
         queue.put([xpos_idx_proc,self.calculate_coldens_serial(x,y,z,m,hp,xpos,ypos,*args)])
+
+    if has_jit:
+        @staticmethod
+        @cuda.jit
+        def calculate_coldens_gpu_calc(coldens,xypos,x,y,z,m,h,nsteps,nkernel):
+            # Integrate the density using Simpson's rule
+            # We can reduce Simpson's rule since we are using a constant stepsize.
+            # Also, the density is always zero at the first and last integration
+            # positions, further simplifying things.
+            i = cuda.grid(1)
+            if i < coldens.size:
+                n = len(x)
+                
+                zmin = math.nan
+                zmax = math.nan
+                for p in range(n):
+                    hp = h[p]
+                    twohp = 2*hp
+                    dx = xypos[i][0]-x[p]
+                    if dx >= twohp: continue
+                    dy = xypos[i][1]-y[p]
+                    if dy >= twohp: continue
+                    dz2 = twohp*twohp - dx*dx - dy*dy
+                    if dz2 < 0: continue
+                    dz = math.sqrt(dz2)
+                    zmin = min(z[p]-dz,zmin)
+                    zmax = max(z[p]+dz,zmax)
+
+                if zmin+zmax != math.nan:
+                    stepsize = (zmax-zmin)/nsteps                    
+                    
+                    coldens[i] = 0
+                    if nkernel == 0:
+                        for p in range(n):
+                            twohp = 2*h[p]
+                            dx = xypos[i][0]-x[p]
+                            if dx >= twohp: continue
+                            dy = xypos[i][1]-y[p]
+                            if dy >= twohp: continue
+                            drprime2 = dx*dx + dy*dy
+                            fourhp2 = twohp*twohp
+                            if drprime2 >= fourhp2: continue
+                            zmaxminuszp = zmax-z[p]
+                            invhp = 1/h[p]
+                            mp_over_hp3_times_stepsize = m[p]*invhp*invhp*invhp*stepsize
+                            for k in range(1,nsteps-1):
+                                dr2 = drprime2 + (zmaxminuszp-k*stepsize)**2
+                                if dr2 <= fourhp2:
+                                    u = math.sqrt(dr2)*invhp
+                                    w=0
+                                    if u<0:
+                                        w=0.3183098861837907 #1/pi
+                                    elif u < 1:
+                                        w=0.3183098861837907*(1+u*u*(0.75*u-1.5)) # (1+u^2(3/4*u-3/2))/pi
+                                    elif u < 2:
+                                        twominusu = 2-u
+                                        w=0.0795774715459477*twominusu*twominusu*twominusu # (2-u)^3/(4pi)
+                                    coldens[i] += w * mp_over_hp3_times_stepsize
+                    
+                    elif nkernel == 1:
+                        for p in range(n):
+                            twohp = 2*h[p]
+                            dx = xypos[i][0]-x[p]
+                            if dx >= twohp: continue
+                            dy = xypos[i][1]-y[p]
+                            if dy >= twohp: continue
+                            drprime2 = dx*dx + dy*dy
+                            fourhp2 = twohp*twohp
+                            if drprime2 >= fourhp2: continue
+                            zmaxminuszp = zmax-z[p]
+                            invtwohp = 1/twohp
+                            invhp = 2*invtwohp
+                            mp_over_hp3_times_stepsize = m[p]*invhp*invhp*invhp*stepsize
+                            for k in range(1,nsteps-1):
+                                dr2 = drprime2 + (zmaxminuszp-k*stepsize)**2
+                                if dr2 <= fourhp2:
+                                    q = math.sqrt(dr2)*invtwohp
+                                    oneminusq = 1-q
+                                    w = 0.6167254044810944*oneminusq*oneminusq*oneminusq*oneminusq*oneminusq*oneminusq*(q*(11.6666666667*q+6)+1) # 495/(256pi) (1-q)^6 (35/3 q^2 + 6q + 1)
+                                    coldens[i] += w * mp_over_hp3_times_stepsize
+    
+    def calculate_coldens_gpu(self,x,y,z,m,hp,xpos,ypos,*args):
+        threadsperblock=512
+        N = np.shape(x)[0]
+
+        xpix = np.shape(xpos)[0]
+        ypix = np.shape(ypos)[0]
+        zpix = self.resolution_scale_z.get()
+        
+        xypos = np.column_stack((
+            np.repeat(xpos,ypix),
+            np.tile(ypos,xpix),
+        ))
+
+        # Determine the value of nkernel
+        nkernel = self.kernel_functions.index(self.kernel_function.get())
+
+        # Copy particle arrays to GPU global memory
+        device_x = cuda.to_device(np.ascontiguousarray(x))
+        device_y = cuda.to_device(np.ascontiguousarray(y))
+        device_z = cuda.to_device(np.ascontiguousarray(z))
+        device_m = cuda.to_device(np.ascontiguousarray(m))
+        device_hp = cuda.to_device(np.ascontiguousarray(hp))
+
+        # Copy grid array to GPU global memory
+        device_xypos = cuda.to_device(np.ascontiguousarray(xypos))
+
+        # Copy nkernel to GPU global memory
+        device_nkernel = cuda.to_device(nkernel)
+
+        # Allocate memory on the GPU for the result
+        device_coldens = cuda.device_array((len(xypos)))
+
+        # Configure the blocks
+        blockspergrid = len(xypos) // threadsperblock + 1
+
+        # Start the kernel
+        self.calculate_coldens_gpu_calc[blockspergrid,threadsperblock](
+            device_coldens,
+            device_xypos,
+            device_x,
+            device_y,
+            device_z,
+            device_m,
+            device_hp,
+            zpix,
+            nkernel,
+        )
+        cuda.synchronize()
+        grid = device_coldens.copy_to_host().reshape((xpix,ypix))
+        grid[~np.isfinite(grid)] = 0
+        return grid
 
 ###
 
@@ -1332,6 +1524,28 @@ class main():
             self.axisv_islog.set(0)
             self.axisv_log_button.config(state='disabled')
 
+    def update_kernel_function(self,*args,**kwargs):
+        self.init_kernels()
+        if self.sph_mode:
+            self.draw_plot()
+
+    def update_current_file_displayed(self,*args,**kwargs):
+        padx = self.current_file_label.cget('padx')
+        text = self.current_file.get()
+        allowed_width = self.current_file_label.winfo_width() - 2*padx
+        text_width = self.default_font.measure(text)
+        
+        if text_width > allowed_width:
+            annotation_width = self.default_font.measure('...')
+            desired_width = allowed_width - annotation_width
+            while self.default_font.measure(text) > desired_width:
+                text = text[1:]
+            text = '...'+text
+
+        self.current_file_displayed.set(text)
+            
+
+    
 ###
 
 
@@ -1610,12 +1824,15 @@ class main():
             pos = self.ax.get_position()
             # For now, draw colorbar to the right side only
             self.cax.set_position([self.x0.get()+new_width + self.cax_xbuff.get(),pos.y0,self.cax_width.get(),pos.height])
+            cmap = matplotlib.cm.get_cmap(self.cmap.get())
+            self.ax.set_facecolor(cmap(np.nanmin(self.im.get_array())))
             
     def hide_colorbar(self,*args):
         # Undo what happens in show_colorbar
         if self.cax.get_visible() and self.axisc_var.get() == "":
             self.cax.set_visible(False)
             self.ax.set_position([self.x0.get(),self.y0.get(),self.w.get() + (self.cax_xbuff.get() + self.cax_width.get() + self.cax_buff.get()), self.h.get()])
+            self.ax.set_facecolor('white')
 
     def next_cmap(self,*args):
         # Go to the next colormap
