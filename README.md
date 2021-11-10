@@ -1,19 +1,35 @@
 # pysplash
 PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher and MESA data
 
-# Things to Fix
-* After using the log or 10^ buttons, hovering the mouse over the plot no longer gives proper (x,y) positions. It seems the position is relative to the old data still. We must have to update the toolbar or something when replotting. This only seems to happen in certain locations in a dataset. Kinda weird.
+## Dependencies
+* ![Tkinter](https://tkdocs.com/tutorial/install.html) (pre-installed with most Python distributions)
+* ![Numpy](https://numpy.org/install/) (pre-installed with most Python distributions)
+* ![Matplotlib](https://matplotlib.org/stable/users/installing.html)
+It is strongly encouraged that you use Python3.6+ and install ![Numba](https://numba.pydata.org/numba-doc/latest/user/installing.html). Doing so will allow PySplash to access the GPU and run up to ~450x faster.
 
-# Future feature wishlist
-* Create a system that allows the user to specify their files' data type, so that any file can be read in
-* Change aspect ratio from 'auto' to 'equal'
-* Change particle marker type and size
-* Adjust the plotting space
-    * Change padding between axis and colorbar
-    * Change tick lengths and directions
-    * Add/remove minor ticks
-* Save/Load settings
-* Add total velocity calculations v = sqrt(vx^2 + vy^2 + vz^2)
-* Custom units adjustments for all axes
-* Custom axis labels
-* Add annotations to the plot window
+## Setup
+Link the executable `pysplash` to your user's bin directory after downloading. In the PySplash directory, run these command:
+```bash
+mkdir ~/bin
+ln -s pysplash ~/bin
+```
+Check if your bin directory is included in yur `PATH` variable,
+```bash
+echo $PATH | grep "$HOME/bin"
+```
+If you get no output, then run
+```bash
+export PATH=$PATH:$HOME/bin
+```
+and add that command to either your `.bashrc` or `.bash_profile` file in your `$HOME` directory.
+
+## How to use
+First, make sure you have data files to run with PySplash. You should edit the file `read_file.py` in the PySplash directory with a function for reading your data files. Additional instructions are included in `read_file.py`. Now, run PySplash from the terminal with the data files as input. For example,
+```bash
+pysplash out*.sph
+```
+
+If you happen to have Python2 installed as your default Python version and run into problems, try running pysplash explicitly with Python3,
+```bash
+python3 $HOME/bin/pysplash out*.sph
+```
