@@ -4,14 +4,13 @@ if sys.version_info.major < 3:
     from tkFont import Font as tkFont
     from interactiveplot import InteractivePlot
     from controls import Controls
-    from data import Data
 else:
     import tkinter as tk
     import tkinter.font as tkFont
     from gui.interactiveplot import InteractivePlot
     from gui.controls import Controls
-    from lib.data import Data
 
+from lib.data import Data
 from read_file import read_file
 from globals import compact_support
 from widgets.menubar import MenuBar

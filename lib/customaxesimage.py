@@ -135,10 +135,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
     def set_data(self,new_data):
         self._data = new_data
-        if (self._data.dtype != 'bool' and
-            self.physical_units is not None and
-            self.display_units is not None):
-            self._data *= self.display_units[2] / (self.display_units[0]*self.display_units[1])
+        #if (self._data.dtype != 'bool' and
+        #    self.physical_units is not None and
+        #    self.display_units is not None):
+        #    self._data *= self.display_units[2] / (self.display_units[0]*self.display_units[1])
             
         super(CustomAxesImage,self).set_data(new_data)
         self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")

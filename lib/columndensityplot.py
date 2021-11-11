@@ -29,18 +29,22 @@ class ColumnDensityPlot(CustomAxesImage,object):
         self.y = np.ascontiguousarray(y,dtype=np.double)
         self.m = np.ascontiguousarray(m,dtype=np.double)
         self.h = np.ascontiguousarray(h,dtype=np.double)
-        self.h2 = self.h**2
         self.u = np.ascontiguousarray(u,dtype=np.double)
         
         self.wint, self.ctab = setupintegratedkernel()
         self.wint = np.ascontiguousarray(self.wint,dtype=np.double)
+
+        # Make everything in physical units and then just set the
+        # extent to display units later
+        self.x *= kwargs['physical_units'][0]
+        self.y *= kwargs['physical_units'][1]
+        self.m *= kwargs['physical_units'][2]
+        self.h *= kwargs['physical_units'][3]
+        self.wint *= kwargs['physical_units'][3]**3
         
+        self.h2 = self.h**2
         self.ctabinvh2 = self.ctab/self.h2
-
-        if 'physical_units' in kwargs.keys() and 'display_units' in kwargs.keys():
-            if kwargs['physical_units'] is not None and kwargs['display_units'] is not None:
-                self.wint *= kwargs['physical_units'][3]**3
-
+        
         if has_jit:
             self.stream = cuda.stream()
             N = len(self.x)
@@ -121,24 +125,22 @@ class ColumnDensityPlot(CustomAxesImage,object):
         ypmin = self.y-self.h
         ypmax = self.y+self.h
 
-        if self.physical_units is not None and self.display_units is not None:
-            xpmin *= self.display_units[0]/self.physical_units[0]
-            xpmax *= self.display_units[0]/self.physical_units[0]
-            ypmin *= self.display_units[0]/self.physical_units[0]
-            ypmax *= self.display_units[0]/self.physical_units[0]
+        display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
         
         idx = np.logical_and(
             np.logical_and(
-                np.logical_and(xpmax > xmin, xpmin < xmax),
-                np.logical_and(ypmax > ymin, ypmin < ymax),
+                np.logical_and(xpmax > xmin*display_to_physical[0], xpmin < xmax*display_to_physical[0]),
+                np.logical_and(ypmax > ymin*display_to_physical[1], ypmin < ymax*display_to_physical[1]),
             ),
             self.u != 0,
         )
+
+        print(sum(idx))
         
         if any(idx):
             self._extent = [xmin,xmax,ymin,ymax]
-            self.dx = float(xmax-xmin)/float(self.xpixels)
-            self.dy = float(ymax-ymin)/float(self.ypixels)
+            self.dx = float(xmax-xmin)/float(self.xpixels) * display_to_physical[0]
+            self.dy = float(ymax-ymin)/float(self.ypixels) * display_to_physical[1]
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
 
             self.calculate_data(idx)
@@ -186,16 +188,11 @@ class ColumnDensityPlot(CustomAxesImage,object):
             device_idx = cuda.to_device(np.where(idx)[0])
             device_data = cuda.to_device(np.zeros(np.shape(self._data)))
 
-            xmin = self.ax.get_xlim()[0]
-            ymin = self.ax.get_ylim()[0]
-            dx = self.dx
-            dy = self.dy
-            if self.physical_units is not None and self.display_units is not None:
-                xmin *= self.physical_units[0]/self.display_units[0]
-                ymin *= self.physical_units[1]/self.display_units[1]
-                dx *= self.physical_units[0]/self.display_units[0]
-                dy *= self.physical_units[1]/self.display_units[1]
-                
+            display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
+            
+            xmin = self.ax.get_xlim()[0]*display_to_physical[0]
+            ymin = self.ax.get_ylim()[0]*display_to_physical[1]
+            
             threadsperblock = 512
             blockspergrid = len(idx) // threadsperblock + 1
             
@@ -207,8 +204,8 @@ class ColumnDensityPlot(CustomAxesImage,object):
                 self.device_m,
                 self.device_h,
                 self.device_h2,
-                dx,
-                dy,
+                self.dx,
+                self.dy,
                 xmin,
                 ymin,
                 self.xpixels,
@@ -225,22 +222,22 @@ class ColumnDensityPlot(CustomAxesImage,object):
             # Points along the LOS, zpos, are given and calculated outside this function
             # Returns an array of shape (len(xpos), len(ypos)). Each element of the
             # array is the column density at that (xpos, ypos).
+
+            self.xpixels = 20
+            self.ypixels = 20
             
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
+
+            display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
             
-            dx = self.dx
-            dy = self.dy
-            if self.physical_units is not None and self.display_units is not None:
-                xmin *= self.physical_units[0]/self.display_units[0]
-                xmax *= self.physical_units[0]/self.display_units[0]
-                ymin *= self.physical_units[1]/self.display_units[1]
-                ymax *= self.physical_units[1]/self.display_units[1]
-                dx *= self.physical_units[0]/self.display_units[0]
-                dy *= self.physical_units[1]/self.display_units[1]
+            xmin *= display_to_physical[0]
+            xmax *= display_to_physical[0]
+            ymin *= display_to_physical[1]
+            ymax *= display_to_physical[1]
             
-            xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*dx
-            ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*dy
+            xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*self.dx
+            ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*self.dy
             
             indexes = np.arange(len(self.x))[idx]
             x = self.x[idx]
@@ -249,7 +246,7 @@ class ColumnDensityPlot(CustomAxesImage,object):
             h2 = self.h2[idx]
             m = self.m[idx]
             ctabinvh2 = self.ctabinvh2[idx]
-            invh3 = 1./(self.h*self.h2)
+            invh3 = 1./(h*h2)
             
             dx = np.abs(xpos[:,None]-x)
             idx_xs = dx < h

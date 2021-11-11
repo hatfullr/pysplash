@@ -158,11 +158,11 @@ class InteractivePlot(tk.Frame,object):
             
             self.drawn_object = ColumnDensityPlot(
                 self.ax,
-                self.gui.get_physical_data(self.gui.controls.x.get()),
-                self.gui.get_physical_data(self.gui.controls.y.get()),
-                self.gui.get_physical_data('m'),
-                self.gui.get_physical_data('h'),
-                self.gui.get_physical_data('u'),
+                self.gui.get_data(self.gui.controls.x.get()),
+                self.gui.get_data(self.gui.controls.y.get()),
+                self.gui.get_data('m'),
+                self.gui.get_data('h'),
+                self.gui.get_data('u'),
                 cmap=self.colorbar.cmap,
                 scale=self.gui.controls.caxis_scale.get(),
                 physical_units = [
@@ -273,6 +273,7 @@ class InteractivePlot(tk.Frame,object):
         
         
     def update_colorbar_clim(self,*args,**kwargs):
+        if debug == 2: print("update_colorbar_clim")
         if self.clim_adaptive.get():
             if self.drawn_object is not None:
                 data = self.drawn_object._data
@@ -296,7 +297,8 @@ class InteractivePlot(tk.Frame,object):
                 self.colorbar.draw_all()
                 self.canvas.draw_idle()
     
-    def update_data_clim(self,*args,ylim=None):
+    def update_data_clim(self,axis,ylim=None):
+        if debug == 2: print("update_data_clim")
         if self.drawn_object is not None:
             if ylim is None: ylim = self.cax.get_ylim()
             self.drawn_object.set_clim(ylim)
@@ -308,6 +310,7 @@ class InteractivePlot(tk.Frame,object):
         self.cax_cid = self.cax.callbacks.connect('ylim_changed',self.update_data_clim)
         
     def toggle_clim_adaptive(self,*args,**kwargs):
+        if debug == 2: print("toggle_clim_adaptive")
         if self.clim_adaptive.get(): # Turn off adaptive limits
             self.clim_adaptive.set(False)
             self.disconnect_clim()
@@ -323,10 +326,12 @@ class InteractivePlot(tk.Frame,object):
                 self.canvas.draw_idle()
 
     def on_clim_entry_changed(self,*args,**kwargs):
+        if debug == 2: print("on_clim_entry_changed")
         if self.clim_entry_after_id is not None: self.after_cancel(self.clim_entry_after_id)
         self.clim_entry_after_id = self.after(1000,self.update_colorbar_clim)
 
     def on_data_changed(self,*args,**kwargs):
+        if debug == 2: print("on_data_changed")
         if isinstance(self.drawn_object,ColumnDensityPlot):
             self.update_colorbar_clim()
         self.canvas.draw_idle()

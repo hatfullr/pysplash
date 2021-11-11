@@ -76,8 +76,22 @@ from collections import OrderedDict
 from lib.fastfileread import FastFileRead
 import numpy as np
 from globals import debug
+import os.path
+
 
 def read_file(filename):
+    basename = os.path.basename(filename)
+    if basename[:3] == 'out' and basename[-4:] == ".sph":
+        return starsmasher(filename)
+    elif basename[:len('fluxcal')] == 'fluxcal' and basename[-len('.track'):] == '.track':
+        return fluxcal_track(filename)
+    else:
+        raise ValueError("File name '"+basename+"' does not match any of the accepted patterns in read_file")
+
+
+
+# For out*.sph files from StarSmasher
+def starsmasher(filename):
     header_names = [
         'ntot',
         'nnopt',
@@ -283,4 +297,57 @@ def read_file(filename):
     to_return['physical_units']['t'] = tunit
     
     return to_return
+
+
+
+
+
+# For fluxcal*.track files from FluxCal
+def fluxcal_track(filename):
+    munit = 1.9891e33
+    runit = 6.9599e10
+    display_units = [
+        1./runit, # x
+        1./runit, # y
+        1./runit, # z
+        1./munit, # m
+        1./runit, # h
+        1., # rho
+        1., # u
+        1., # mu
+        1., # g
+        1., # T_SPH
+        1., # Teff
+        1., # P
+        1., # P_env
+        1., # P_surf
+        1., # opacity
+        1., # opacity_surf
+        1., # rho_surf
+        1., # tau
+        1., # entropy
+        1, # ID
+    ]
     
+    with open(filename) as f:
+        header = f.readline().split()
+    data = FastFileRead(
+        filename,
+        header=1,
+        parallel=False,
+        verbose=debug > 1,
+    )[0]
+
+    to_return = {
+        'data'           : OrderedDict(),
+        'display_units'  : OrderedDict(),
+        'physical_units' : OrderedDict(),
+    }
+    
+    for i,key in enumerate(header):
+        to_return['data'][key] = data[:,i]
+        to_return['display_units'][key] = display_units[i]
+        to_return['physical_units'][key] = 1.
+
+    return to_return
+
