@@ -20,7 +20,6 @@ import numpy as np
 from copy import copy
 
 from lib.scatterplot import ScatterPlot
-from lib.columndensityplot import ColumnDensityPlot
 from lib.integratedvalueplot import IntegratedValuePlot
 
 class InteractivePlot(tk.Frame,object):
