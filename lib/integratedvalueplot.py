@@ -171,9 +171,6 @@ class IntegratedValuePlot(CustomAxesImage,object):
     else:
         def calculate_data(self,idx): # On CPU
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
-
-            self.xpixels = 20
-            self.ypixels = 20
             
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
