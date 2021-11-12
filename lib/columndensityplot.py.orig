@@ -8,8 +8,8 @@ import numpy as np
 import math
 from kernel import setupkernel,setupintegratedkernel
 from scipy.integrate import simps
-from globals import debug
-if debug > 0: from time import time
+import globals
+if globals.debug > 0: from time import time
 
 try:
     from numba import cuda,float64
@@ -23,6 +23,7 @@ class ColumnDensityPlot(CustomAxesImage,object):
     # m is mass of particles
     # h is radii of kernels
     def __init__(self,ax,x,y,m,h,u,**kwargs):
+        if globals.debug > 1: print("columndensityplot.__init__")
         self.ax = ax
         
         self.x = np.ascontiguousarray(x,dtype=np.double)
@@ -105,7 +106,8 @@ class ColumnDensityPlot(CustomAxesImage,object):
     # When calculate is called, we reset the refinement to the smallest pixel values,
     # calculate the data, update the plot, and then iteratively refine the image
     def calculate(self,*args,**kwargs):
-        if debug > 0: start = time()
+        if globals.debug > 1: print("columndensityplot.calculate")
+        if globals.debug > 0: start = time()
         # Reset the refinement
         #if self.smallest_xpixels is None: self.current_xpixels = self.xpixels
         #else: self.current_xpixels = self.smallest_xpixels
@@ -114,9 +116,10 @@ class ColumnDensityPlot(CustomAxesImage,object):
 
         # Calculate the data
         self.get_data()
-        if debug > 0: print("columndensityplot: took %f seconds" % (time()-start))
+        if globals.debug > 0: print("columndensityplot.calculate took %f seconds" % (time()-start))
     
     def get_data(self,*args,**kwargs):
+        if globals.debug > 1: print("columndensityplot.get_data")
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()
         
@@ -183,6 +186,7 @@ class ColumnDensityPlot(CustomAxesImage,object):
 
         
         def calculate_data(self,idx):
+            if globals.debug > 1: print("columndensityplot.calculate_data")
             # Do column density calculation on GPUs
 
             device_idx = cuda.to_device(np.where(idx)[0])
@@ -218,6 +222,7 @@ class ColumnDensityPlot(CustomAxesImage,object):
         
     else:
         def calculate_data(self,idx):
+            if globals.debug > 1: print("columndensityplot.calculate_data")
             # Calculate the column density for these LOSs (xpos,ypos).
             # Points along the LOS, zpos, are given and calculated outside this function
             # Returns an array of shape (len(xpos), len(ypos)). Each element of the
@@ -268,6 +273,3 @@ class ColumnDensityPlot(CustomAxesImage,object):
                     self._data[j,i] = sum(m[idx_x][idx_y][idx_r]*self.wint[indices]*invh3[idx_x][idx_y][idx_r])
                     
 
-    def set_scale(self,*args,**kwargs):
-        super(ColumnDensityPlot,self).set_scale(*args,**kwargs)
-        self.after_calculate()

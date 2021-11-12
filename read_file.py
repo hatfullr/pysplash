@@ -210,7 +210,7 @@ def starsmasher(filename):
         1., # z
         1., # m
         1., # h
-        munit/runit**3., # rho
+        1., # rho
         vunit, # vx
         vunit, # vy
         vunit, # vz

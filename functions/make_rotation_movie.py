@@ -14,7 +14,7 @@ def make_rotation_movie(gui):
             gui.controls.rotation_x.set(gui.controls.rotation_x.get() + 1)
         elif gui.controls.rotation_z.get() != 90:
             gui.controls.rotation_z.set(gui.controls.rotation_z.get() + 1)
-        gui.do_rotation(redraw=True)
+        gui.interactiveplot.rotate(redraw=True)
 
         if ((int(gui.controls.rotation_x.get())%10 == 0 and gui.controls.rotation_z.get() == 0) or
             (int(gui.controls.rotation_z.get())%10 == 0 and gui.controls.rotation_x.get() == 90)):
@@ -35,7 +35,7 @@ def make_rotation_movie(gui):
     anim = FuncAnimation(
         gui.interactiveplot.fig,
         update,
-        init_func=gui.reset_rotation(redraw=True),
+        init_func=gui.interactiveplot.reset_rotation(redraw=True),
         frames=nframes,
         interval=50,
         blit=True,

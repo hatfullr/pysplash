@@ -6,11 +6,12 @@ if support_threading:
     else: import Queue as queue
     import threading
     import sys
-    from globals import debug
+    import globals
 
     class ThreadedTask(threading.Thread,object):
         def __init__(self, master, target=None, start=True, args=[], kwargs={},
                      callback=None,callback_args=[],callback_kwargs={}):
+            if globals.debug > 1: print("threadedtask.__init__")
             self.root = master.winfo_toplevel()
             self.target = target
             self.args = args
@@ -25,16 +26,18 @@ if support_threading:
             if start: self.start()
 
         def start(self,*args,**kwargs):
+            if globals.debug > 1: print("threadedtask.start")
             self.started = True
-            if debug > 0: print("threadedtask: started")
             super(ThreadedTask,self).start(*args,**kwargs)
             
         def run(self,*args,**kwargs):
+            if globals.debug > 1: print("threadedtask.run")
             self.queue.put(self.target(*self.args,**self.kwargs),timeout=1)
             self._after_id = None
             self.process_queue()
             
         def process_queue(self,*args,**kwargs):
+            if globals.debug > 1: print("threadedtask.process_queue")
             if self.queue.empty(): # Not finished yet
                 if self._after_id is not None:
                     self.root.after_cancel(self._after_id)
@@ -42,7 +45,7 @@ if support_threading:
                 return
             else: # Finished
                 self.queue.get(0)
-                if debug > 0: print("threadedtask: finished")
+                if globals.debug > 0: print("threadedtask finished")
                 if self.callback is not None:
                     self.callback(*self.callback_args,**self.callback_kwargs)
         if version_info.major < 3:
@@ -54,6 +57,7 @@ else:
     class ThreadedTask:
         def __init__(self, master, target=None, start=True, args=[], kwargs={},
                      callback=None,callback_args=[],callback_kwargs={}):
+            if globals.debug > 1: print("threadedtask.__init__")
             if target is not None: target(*args,**kwargs)
             if callback is not None: callback(*callback_args,**callback_kwargs)
         def is_alive(self,*args,**kwargs): return False

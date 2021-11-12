@@ -1,19 +1,21 @@
 import collections
 import copy
 import numpy as np
+import globals
 
 runit = 6.599e10
 munit = 1.9891e33
 
 class Data(collections.OrderedDict,object):
     def __init__(self,data,rotations=None,*args,**kwargs):
+        if globals.debug > 1: print("data.__init__")
         super(Data,self).__init__(*args,**kwargs)
 
         for key,val in data.items():
             self[key] = val
         
         # Save the state of the data prior to any modifications
-        self.original = data
+        self._original = copy.deepcopy(data)
 
         self.display_units = collections.OrderedDict()
         self.physical_units = collections.OrderedDict()
@@ -25,16 +27,18 @@ class Data(collections.OrderedDict,object):
             self.rotate(rotations[0],rotations[1],rotations[2])
         
     def reset(self,*args,**kwargs):
-        self.__init__(self.original)
+        if globals.debug > 1: print("data.reset")
+        self.__init__(self._original)
         
     def rotate(self,anglexdeg,angleydeg,anglezdeg):
+        if globals.debug > 1: print("data.rotate")
         xangle = float(anglexdeg)/180.*np.pi
         yangle = float(angleydeg)/180.*np.pi
         zangle = float(anglezdeg)/180.*np.pi
 
-        x = self.original['data']['x']
-        y = self.original['data']['y']
-        z = self.original['data']['z']
+        x = self._original['data']['x']
+        y = self._original['data']['y']
+        z = self._original['data']['z']
         
         if zangle != 0: # rotate about z
             rold = np.sqrt(x*x + y*y)
@@ -54,7 +58,8 @@ class Data(collections.OrderedDict,object):
             phi -= xangle
             y = rold*np.cos(phi)
             z = rold*np.sin(phi)
-
+            
         self['data']['x'] = x
         self['data']['y'] = y
         self['data']['z'] = z
+

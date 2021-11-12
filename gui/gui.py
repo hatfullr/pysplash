@@ -12,12 +12,14 @@ else:
 
 from lib.data import Data
 from read_file import read_file
-from globals import compact_support
+import globals
 from widgets.menubar import MenuBar
 from functions.make_rotation_movie import make_rotation_movie
+import copy
 
 class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
+        if globals.debug > 1: print("gui.__init__")
         self.window = window
         self.fontname = fontname
         self.fontsize = fontsize
@@ -52,21 +54,18 @@ class GUI(tk.Frame,object):
 
         self.interactiveplot.plotcontrols.next_button.configure(command=self.next_file)
         self.interactiveplot.plotcontrols.back_button.configure(command=self.previous_file)
-
+        
         self.interactiveplot.plotcontrols.current_file.trace("w",self.read)
         self.interactiveplot.plotcontrols.current_file.set(sys.argv[1])
-
-        self.controls.rotation_x.trace('w',self.on_rotation_entered)
-        self.controls.rotation_y.trace('w',self.on_rotation_entered)
-        self.controls.rotation_z.trace('w',self.on_rotation_entered)
-
-        self.controls.caxis_adaptive_limits.trace('w',self.interactiveplot.toggle_clim_adaptive)
 
         self.rotation_after_id = None
         
         self.initialize_xy_controls()
+
+        self.controls.save_state()
         
     def initialize_xy_controls(self):
+        if globals.debug > 1: print("gui.initialize_xy_controls")
         N = len(self.get_data('x'))
         found_first = False
         for key,val in self.data['data'].items():
@@ -80,9 +79,11 @@ class GUI(tk.Frame,object):
                         break
     
     def create_variables(self):
+        if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
         
     def create_widgets(self):
+        if globals.debug > 1: print("gui.create_widgets")
         self.menubar = MenuBar(self.window,self)
         self.controls = Controls(
             self,
@@ -94,6 +95,7 @@ class GUI(tk.Frame,object):
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
         
     def place_widgets(self):
+        if globals.debug > 1: print("gui.place_widgets")
         self.interactiveplot.grid(row=0,column=0,sticky='news',padx=5,pady=5)
         self.controls.grid(row=0,column=1,sticky='ns',padx=5,pady=5)
         self.message_label.place(rely=1,relx=1,anchor="se")
@@ -103,28 +105,35 @@ class GUI(tk.Frame,object):
         self.rowconfigure(0,weight=1)
 
     def message(self,text,*args,**kwargs):
+        if globals.debug > 1: print("gui.message")
         # Display a message on the bottom-right hand corner of the window
         self.message_text.set(text)
     def clear_message(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.clear_message")
         self.message_text.set("")
 
     def set_user_controlled(self,value):
+        if globals.debug > 1: print("gui.set_user_controlled")
         if value:
             self.controls.enable('all')
             self.interactiveplot.plotcontrols.enable('all')
         else:
-            self.controls.disable('all')
+            self.controls.disable('all',temporarily=True)
             self.interactiveplot.plotcontrols.disable('all')
         self.user_controlled = value
-    def get_user_controlled(self): return self.user_controlled
+    def get_user_controlled(self):
+        if globals.debug > 1: print("gui.get_user_controlled")
+        return self.user_controlled
 
     def do_after(self,amount,todo,trigger,args=[],kwargs={}):
+        if globals.debug > 1: print("gui.do_after")
         if not trigger():
             self.after(amount,lambda amt=amount,td=todo,trig=trigger,arrgs=args,kwarrgs=kwargs: self.do_after(amt,td,trig,arrgs,kwarrgs))
         else:
             todo(*args,**kwargs)
 
     def read(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.read")
         self.data = Data(
             read_file(self.interactiveplot.plotcontrols.current_file.get()),
             rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
@@ -133,21 +142,27 @@ class GUI(tk.Frame,object):
         self.do_after(100,self.interactiveplot.update,lambda: self.controls.x.get() and self.controls.y.get())
 
     def get_data(self,key):
-        data = self.data['data'][key]
-        if key == 'h': return data*compact_support
+        if globals.debug > 1: print("gui.get_data")
+        data = copy.copy(self.data['data'][key])
+        if key == 'h': return data*globals.compact_support
         else: return data
 
     def get_display_units(self,key):
+        if globals.debug > 1: print("gui.get_display_units")
         return self.data['display_units'][key]
     def get_physical_units(self,key):
+        if globals.debug > 1: print("gui.get_physical_units")
         return self.data['physical_units'][key]
 
     def get_display_data(self,key):
+        if globals.debug > 1: print("gui.get_display_data")
         return self.get_data(key)*self.get_display_units(key)
     def get_physical_data(self,key):
+        if globals.debug > 1: print("gui.get_physical_data")
         return self.get_data(key)*self.get_physical_units(key)
     
     def next_file(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.next_file")
         skip_amount = int(self.interactiveplot.plotcontrols.skip_amount.get())
         filenames = sys.argv[1:]
 
@@ -159,6 +174,7 @@ class GUI(tk.Frame,object):
             self.interactiveplot.plotcontrols.current_file.set(filenames[nextidx])
 
     def previous_file(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.previous_file")
         skip_amount = int(self.interactiveplot.plotcontrols.skip_amount.get())
         filenames = sys.argv[1:]
         
@@ -168,33 +184,7 @@ class GUI(tk.Frame,object):
         
         if filenames[nextidx] != self.interactiveplot.plotcontrols.current_file.get():
             self.interactiveplot.plotcontrols.current_file.set(filenames[nextidx])
-            
-    def on_rotation_entered(self,*args,**kwargs):
-        if self.get_user_controlled():
-            if self.rotation_after_id is not None:
-                self.after_cancel(self.rotation_after_id)
-            self.rotation_after_id = self.after(
-                500,
-                self.do_rotation,
-            )
-
-    def do_rotation(self,redraw=True):
-        self.data.rotate(
-            self.controls.rotation_x.get(),
-            self.controls.rotation_y.get(),
-            self.controls.rotation_z.get(),
-        )
-        if redraw: self.interactiveplot.update()
-
-    def reset_rotation(self,redraw=True):
-        is_user_controlled = self.get_user_controlled()
-        if is_user_controlled: self.set_user_controlled(False)
-        self.data.reset()
-        self.controls.rotation_x.set(0)
-        self.controls.rotation_y.set(0)
-        self.controls.rotation_z.set(0)
-        self.do_rotation(redraw=redraw)
-        if is_user_controlled: self.set_user_controlled(True)
-
+    
     def make_rotation_movie(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)

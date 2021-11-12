@@ -6,12 +6,16 @@ else:
 import matplotlib.image
 import numpy as np
 from copy import copy
+import globals
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,scale='linear',physical_units=None,display_units=None,**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',physical_units=None,display_units=None,**kwargs):
+        if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
-        self.scale = scale
+        self.xscale = xscale
+        self.yscale = yscale
+        self.cscale = cscale
         self.display_units = display_units
         self.physical_units = physical_units
 
@@ -47,11 +51,14 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         pass
         
     def after(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.after")
         return self.widget.after(*args,**kwargs)
     def after_cancel(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.after_cancel")
         self.widget.after_cancel(*args,**kwargs)
 
     def _connect(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage._connect")
         self.cids = [
             self._axes.callbacks.connect('xlim_changed',self.wait_to_calculate),
             self._axes.callbacks.connect('ylim_changed',self.wait_to_calculate),
@@ -59,17 +66,20 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             self._axes.callbacks.connect('resize_event',self.calculate_xypixels),
         ]
     def _disconnect(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage._disconnect")
         for cid in self.cids:
             for obj in [self._axes,self._axes.get_figure()]:
                 obj.callbacks.disconnect(cid)
 
     def remove(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.remove")
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
         self._disconnect()
         super(CustomAxesImage,self).remove(*args,**kwargs)
                 
     def equalize_aspect_ratio(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.equalize_aspect_ratio")
         self._disconnect()
         xlim,ylim = self._axes.get_xlim(),self._axes.get_ylim()
         dx = xlim[1]-xlim[0]
@@ -84,6 +94,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._axes.get_figure().canvas.draw_idle()
         
     def calculate_xypixels(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.calculate_xypixels")
         fig = self._axes.get_figure()
         self.dpi = fig.dpi
         bbox = self._axes.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -91,6 +102,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.ypixels = int(bbox.height*self.dpi)
         
     def _calculate(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage._calculate")
         self.after_id_calculate = None
         self.equalize_aspect_ratio()
         if not (self.ypixels == self._data.shape[0] and self.xpixels == self._data.shape[1]):
@@ -112,6 +124,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             self._after_calculate()
 
     def _after_calculate(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage._after_calculate")
         self.thread = None
         if self.display_units is not None and self.physical_units is not None:
             self._extent = [
@@ -120,8 +133,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                 self._extent[2]*self.display_units[1],
                 self._extent[3]*self.display_units[1],
             ]
-        if self.scale == 'log10': self._data = np.log10(self._data)
-        elif self.scale == '^10': self._data = 10**self._data
         self.set_data(self._data)
         self.after_calculate()
         self._axes.get_figure().canvas.draw_idle()
@@ -129,39 +140,18 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change
     def wait_to_calculate(self,*args,**kwargs):
+        if globals.debug > 1: print("customaxesimage.wait_to_calculate")
         if self.after_id_calculate is not None:
             self.after_cancel(self.after_id_calculate)
         self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
 
     def set_data(self,new_data):
+        if globals.debug > 1: print("customaxesimage.set_data")
         self._data = new_data
-        #if (self._data.dtype != 'bool' and
-        #    self.physical_units is not None and
-        #    self.display_units is not None):
-        #    self._data *= self.display_units[2] / (self.display_units[0]*self.display_units[1])
+        if self._data.dtype != 'bool':
+            if self.cscale == 'log10': self._data = np.log10(self._data)
+            elif self.cscale == '^10': self._data = 10.**self._data
             
-        super(CustomAxesImage,self).set_data(new_data)
+        super(CustomAxesImage,self).set_data(self._data)
         self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")
-        
-    def get_scale(self):
-        return self.scale
-        
-    def set_scale(self,scale):
-        if scale != self.scale:
-            if self.scale == 'linear':
-                if scale == 'log10':
-                    self.set_data(np.log10(self._data))
-                elif scale == '^10':
-                    self.set_data(10**self._data)
-            elif self.scale == 'log10':
-                if scale == 'linear':
-                    self.set_data(10**self._data)
-                elif scale == '^10':
-                    self.set_data(10**(10**self._data))
-            elif self.scale == '^10':
-                if scale == 'linear':
-                    self.set_data(np.log10(self._data))
-                elif scale == 'log10':
-                    self.set_data(np.log10(np.log10(self._data)))
-            self.scale = scale
-            self._axes.get_figure().canvas.draw_idle()
+
