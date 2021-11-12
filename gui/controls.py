@@ -218,10 +218,7 @@ class Controls(tk.Frame,object):
             self.caxis_limits_frame,
             text="Adaptive",
             variable=self.caxis_adaptive_limits,
-            command=(
-                lambda *args,**kwargs: self.disable('colorbar limits'),
-                lambda *args,**kwargs: self.enable('colorbar limits'),
-            ),
+            command=self.toggle_adaptive_clim,
             state='disabled',
         )
         
@@ -414,9 +411,8 @@ class Controls(tk.Frame,object):
             elif group == 'colorbar':
                 children = self.get_all_children(wid=self.caxis_frame)
                 # Don't enable the colorbar limits entries if we are using adaptive limits
-                if self.caxis_adaptive_limits.get():
-                    if self.caxis_limits_entry_low in children: children.remove(self.caxis_limits_entry_low)
-                    if self.caxis_limits_entry_high in children: children.remove(self.caxis_limits_entry_high)
+                if self.caxis_limits_entry_low in children: children.remove(self.caxis_limits_entry_low)
+                if self.caxis_limits_entry_high in children: children.remove(self.caxis_limits_entry_high)
             elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
             self.set_widget_state(children,'normal')
 
@@ -471,3 +467,16 @@ class Controls(tk.Frame,object):
         #self.gui.set_user_controlled(True)
 
         self.save_state()
+
+
+    def toggle_adaptive_clim(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.toggle_adaptive_clim")
+        if self.gui.interactiveplot.colorbar_visible:
+            self.gui.interactiveplot.toggle_clim_adaptive()
+        if self.caxis_adaptive_limits.get():
+            self.disable('colorbar limits')
+        else:
+            self.enable('colorbar limits')
+            
+            
+                

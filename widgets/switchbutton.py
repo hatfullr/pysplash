@@ -16,18 +16,19 @@ class SwitchButton(tk.Button,object):
         
         super(SwitchButton,self).__init__(self.master,command=self.command,relief=relief,**kwargs)
         
-        if not hasattr(command,"__len__"): command = [command,command]
         self._command = command
 
     def command(self,*args,**kwargs):
         if self.cget('state') != 'disabled':
+            if not hasattr(self._command,"__len__"): command = [self._command,self._command]
+            else: command = self._command
             relief = self.cget('relief')
             if relief == 'raised':
                 self.configure(relief='sunken')
                 self.variable.set(True)
-                if self._command[0] is not None: self._command[0](*args,**kwargs)
+                if command[0] is not None: command[0](*args,**kwargs)
             else:
                 self.configure(relief='raised')
                 self.variable.set(False)
-                if self._command[1] is not None: self._command[1](*args,**kwargs)
+                if command[1] is not None: command[1](*args,**kwargs)
         

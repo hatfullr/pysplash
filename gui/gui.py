@@ -58,6 +58,7 @@ class GUI(tk.Frame,object):
         self.interactiveplot.plotcontrols.current_file.trace("w",self.read)
         self.interactiveplot.plotcontrols.current_file.set(sys.argv[1])
 
+
         self.rotation_after_id = None
         
         self.initialize_xy_controls()

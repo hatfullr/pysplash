@@ -95,7 +95,7 @@ class InteractivePlot(tk.Frame,object):
         self.xycoords = tk.StringVar()
         self.point_size = tk.IntVar(value=1)
         self.time = tk.DoubleVar()
-        self.clim_adaptive = tk.BooleanVar(value=False) # Gets immediately toggled to true in __init__
+        #self.clim_adaptive = tk.BooleanVar(value=False) # Gets immediately toggled to true in __init__
         
         self.time.trace('w',lambda event=None: self.set_time_text(event))
         self.connect_clim()
@@ -158,7 +158,7 @@ class InteractivePlot(tk.Frame,object):
         elif self.draw_type == 'Column density':
             self.show_colorbar()
             
-            if self.clim_adaptive.get():
+            if self.gui.controls.caxis_adaptive_limits.get():
                 self.connect_clim()
             
             A = self.gui.get_data('rho')
@@ -207,7 +207,7 @@ class InteractivePlot(tk.Frame,object):
         elif self.draw_type == 'Optical depth':
             self.show_colorbar()
             
-            if self.clim_adaptive.get():
+            if self.gui.controls.caxis_adaptive_limits.get():
                 self.connect_clim()
             
             A = self.gui.get_data('rho')*self.gui.get_data('opacity')
@@ -349,7 +349,7 @@ class InteractivePlot(tk.Frame,object):
         
     def update_colorbar_clim(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update_colorbar_clim")
-        if self.clim_adaptive.get():
+        if self.gui.controls.caxis_adaptive_limits.get():
             if self.drawn_object is not None:
                 data = self.drawn_object._data
                 vmin = np.nanmin(data[np.isfinite(data)])
@@ -391,15 +391,16 @@ class InteractivePlot(tk.Frame,object):
         
     def toggle_clim_adaptive(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.toggle_clim_adaptive")
-        if self.clim_adaptive.get(): # Turn off adaptive limits
-            self.clim_adaptive.set(False)
+        if self.gui.controls.caxis_adaptive_limits.get(): # Turn off adaptive limits
+            #self.gui.controls.caxis_adaptive_limits.set(False)
             self.disconnect_clim()
             # Set the user's entry boxes to be the current clim
-            clim = self.cax.get_ylim()
-            self.gui.controls.caxis_limits_low.set(clim[0])
-            self.gui.controls.caxis_limits_high.set(clim[1])
+            if self.colorbar_visible:
+                clim = self.cax.get_ylim()
+                self.gui.controls.caxis_limits_low.set(clim[0])
+                self.gui.controls.caxis_limits_high.set(clim[1])
         else: # Turn on adaptive limits
-            self.clim_adaptive.set(True)
+            #self.gui.controls.caxis_adaptive_limits.set(True)
             if self.cax is not None:
                 self.connect_clim()
                 self.update_colorbar_clim()
