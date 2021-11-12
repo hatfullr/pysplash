@@ -10,6 +10,7 @@ from widgets.integerentry import IntegerEntry
 from widgets.labelledframe import LabelledFrame
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
+from lib.integratedvalueplot import IntegratedValuePlot
 import numpy as np
 import globals
 
@@ -86,7 +87,7 @@ class Controls(tk.Frame,object):
             value="linear",
             padx=5,
             pady=5,
-            command=self.set_xaxis_scale,
+            #command=self.set_xaxis_scale,
         )
         self.xaxis_log_button = tk.Radiobutton(
             self.xaxis_buttons_frame,
@@ -96,7 +97,7 @@ class Controls(tk.Frame,object):
             value="log10",
             padx=5,
             pady=5,
-            command=self.set_xaxis_scale,
+            #command=self.set_xaxis_scale,
         )
         self.xaxis_10_button = tk.Radiobutton(
             self.xaxis_buttons_frame,
@@ -106,7 +107,7 @@ class Controls(tk.Frame,object):
             value="^10",
             padx=5,
             pady=5,
-            command=self.set_xaxis_scale,
+            #command=self.set_xaxis_scale,
         )
 
         self.yaxis_frame = tk.Frame(self.axes_frame)
@@ -126,7 +127,7 @@ class Controls(tk.Frame,object):
             value="linear",
             padx=5,
             pady=5,
-            command=self.set_yaxis_scale,
+            #command=self.set_yaxis_scale,
         )
         self.yaxis_log_button = tk.Radiobutton(
             self.yaxis_buttons_frame,
@@ -136,7 +137,7 @@ class Controls(tk.Frame,object):
             value="log10",
             padx=5,
             pady=5,
-            command=self.set_yaxis_scale,
+            #command=self.set_yaxis_scale,
         )
         self.yaxis_10_button = tk.Radiobutton(
             self.yaxis_buttons_frame,
@@ -146,7 +147,7 @@ class Controls(tk.Frame,object):
             value="^10",
             padx=5,
             pady=5,
-            command=self.set_yaxis_scale,
+            #command=self.set_yaxis_scale,
         )
 
 
@@ -154,9 +155,9 @@ class Controls(tk.Frame,object):
         self.caxis_frame = LabelledFrame(self,"Colorbar",relief='sunken',bd=1)
         
         self.caxis_label = tk.Label(self.caxis_frame,text="Type")
+        
         self.caxis_combobox = ttk.Combobox(
             self.caxis_frame,
-            values = ('None','Column density'),
             textvariable=self.c,
             state='readonly',
         )
@@ -170,7 +171,7 @@ class Controls(tk.Frame,object):
             value="linear",
             padx=5,
             pady=5,
-            command=self.set_caxis_scale,
+            #command=self.set_caxis_scale,
             state='disabled',
         )
         self.caxis_log_button = tk.Radiobutton(
@@ -181,7 +182,7 @@ class Controls(tk.Frame,object):
             value="log10",
             padx=5,
             pady=5,
-            command=self.set_caxis_scale,
+            #command=self.set_caxis_scale,
             state='disabled',
         )
         self.caxis_10_button = tk.Radiobutton(
@@ -192,7 +193,7 @@ class Controls(tk.Frame,object):
             value="^10",
             padx=5,
             pady=5,
-            command=self.set_caxis_scale,
+            #command=self.set_caxis_scale,
             state='disabled',
         )
 
@@ -363,6 +364,7 @@ class Controls(tk.Frame,object):
             self.y.set('y')
         if self.c.get() != 'None': self.enable('colorbar')
 
+    """
     def set_xaxis_scale(self,*args,**kwargs):
         if globals.debug > 1: print("controls.set_xaxis_scale")
         drawn_object = self.gui.interactiveplot.drawn_object
@@ -378,7 +380,7 @@ class Controls(tk.Frame,object):
         drawn_object = self.gui.interactiveplot.drawn_object
         if drawn_object is not None:
             drawn_object.cscale = self.caxis_scale.get()
-
+    """
     def get_all_children(self, finList=[], wid=None):
         if globals.debug > 1: print("controls.get_all_children")
         if wid is None: _list = self.winfo_children()
@@ -439,8 +441,7 @@ class Controls(tk.Frame,object):
                         
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
-        
-        self.save_state()
+
         #self.gui.set_user_controlled(False)
         
         # Perform any rotations necessary
@@ -451,8 +452,22 @@ class Controls(tk.Frame,object):
             self.rotation_z.get(),
         )
 
-
+        # If the only thing that changed was the colorbar scale (e.g. from linear to log),
+        # then simply do a quick edit on the image data
+        if (self.gui.interactiveplot.drawn_object is not None and 
+            self.saved_state is not None and 
+            self.gui.interactiveplot.colorbar_visible):
+            for v,val in self.saved_state:
+                if v is self.caxis_scale:
+                    print(val,self.caxis_scale.get())
+                    if val != self.caxis_scale.get():
+                        self.gui.interactiveplot.drawn_object.update_cscale(self.caxis_scale.get())
+                        self.gui.interactiveplot.update_colorbar_label()
+                        self.save_state()
+                        return
+        
         # Draw the new plot
         self.gui.interactiveplot.update()
         #self.gui.set_user_controlled(True)
 
+        self.save_state()

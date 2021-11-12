@@ -138,6 +138,18 @@ class GUI(tk.Frame,object):
             read_file(self.interactiveplot.plotcontrols.current_file.get()),
             rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
+        # Check for requisite keys for certain types of plots
+        values = ['None']
+        keys = self.data['data'].keys()
+        for key in ['x','y','m','h','rho']:
+            if key not in keys: break
+        else: values.append("Column density")
+        for key in ['x','y','m','h','rho','opacity']:
+            if key not in keys: break
+        else: values.append("Optical depth")
+
+        self.controls.caxis_combobox.configure(values=values)
+        
         self.controls.update_axis_comboboxes(self.data)
         self.do_after(100,self.interactiveplot.update,lambda: self.controls.x.get() and self.controls.y.get())
 

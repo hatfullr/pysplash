@@ -120,6 +120,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _after_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._after_calculate")
         self.thread = None
+        self._unscaled_data = copy(self._data)
         self.set_data(self._data)
         self.after_calculate()
         self._axes.get_figure().canvas.draw_idle()
@@ -132,13 +133,23 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             self.after_cancel(self.after_id_calculate)
         self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
 
-    def set_data(self,new_data):
+    def set_data(self,new_data,scaled=True):
         if globals.debug > 1: print("customaxesimage.set_data")
+        #self._data = new_data
+        if scaled:
+            if new_data.dtype != 'bool':
+                if self.cscale == 'log10': new_data = np.log10(new_data)
+                elif self.cscale == '^10': new_data = 10.**new_data
         self._data = new_data
-        if self._data.dtype != 'bool':
-            if self.cscale == 'log10': self._data = np.log10(self._data)
-            elif self.cscale == '^10': self._data = 10.**self._data
-            
-        super(CustomAxesImage,self).set_data(self._data)
+        super(CustomAxesImage,self).set_data(new_data)
         self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")
 
+    def update_cscale(self,cscale):
+        if globals.debug > 1: print("customaxesimage.update_cscale")
+        if cscale != self.cscale:
+            if cscale == 'linear': data = self._unscaled_data
+            elif cscale == 'log10': data = np.log10(self._unscaled_data)
+            elif cscale == '^10': data = 10.**self._unscaled_data
+            self.cscale = cscale
+            self.set_data(data,scaled=False)
+            

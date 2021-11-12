@@ -37,6 +37,7 @@ class InteractivePlot(tk.Frame,object):
         self.cax_cid = None
         self.cbwidth = 0.025
         self.cbbuff = 0.01
+        self.colorbar_visible = False
         
         self.drawn_object = None
         self.draw_type = 'None' # scatter
@@ -142,8 +143,7 @@ class InteractivePlot(tk.Frame,object):
         if globals.debug > 1: print("interactiveplot.update")
         
         self.reset() # Clear the current plot
-        
-        
+
         # Scatter plot
         if self.draw_type == 'None':
             self.hide_colorbar()
@@ -158,8 +158,6 @@ class InteractivePlot(tk.Frame,object):
         elif self.draw_type == 'Column density':
             self.show_colorbar()
             
-            self.colorbar.set_label('Column density')
-
             if self.clim_adaptive.get():
                 self.connect_clim()
             
@@ -197,6 +195,8 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('rho'),
                 ],
                 cmap=self.colorbar.cmap,
+                xscale=self.gui.controls.xaxis_scale.get(),
+                yscale=self.gui.controls.yaxis_scale.get(),
                 cscale=self.gui.controls.caxis_scale.get(),
             )
             
@@ -204,6 +204,55 @@ class InteractivePlot(tk.Frame,object):
             # color limits
             self.update_colorbar_clim()
 
+        elif self.draw_type == 'Optical depth':
+            self.show_colorbar()
+            
+            if self.clim_adaptive.get():
+                self.connect_clim()
+            
+            A = self.gui.get_data('rho')*self.gui.get_data('opacity')
+            x = self.gui.get_data(self.gui.controls.x.get())
+            y = self.gui.get_data(self.gui.controls.y.get())
+            m = self.gui.get_data('m')
+            h = self.gui.get_data('h')
+            rho = self.gui.get_data('rho')
+
+            idx = self.gui.get_data('u') != 0
+            
+            self.drawn_object = IntegratedValuePlot(
+                self.ax,
+                A[idx],
+                x[idx],
+                y[idx],
+                m[idx],
+                h[idx],
+                rho[idx],
+                [ # physical units
+                    self.gui.get_physical_units('rho')*self.gui.get_physical_units('opacity'),
+                    self.gui.get_physical_units(self.gui.controls.x.get()),
+                    self.gui.get_physical_units(self.gui.controls.y.get()),
+                    self.gui.get_physical_units('m'),
+                    self.gui.get_physical_units('h'),
+                    self.gui.get_physical_units('rho'),
+                ],
+                [ # display units
+                    self.gui.get_display_units('rho')*self.gui.get_display_units('opacity'),
+                    self.gui.get_display_units(self.gui.controls.x.get()),
+                    self.gui.get_display_units(self.gui.controls.y.get()),
+                    self.gui.get_display_units('m'),
+                    self.gui.get_display_units('h'),
+                    self.gui.get_display_units('rho'),
+                ],
+                cmap=self.colorbar.cmap,
+                xscale=self.gui.controls.xaxis_scale.get(),
+                yscale=self.gui.controls.yaxis_scale.get(),
+                cscale=self.gui.controls.caxis_scale.get(),
+            )
+
+            # Update the colorbar limits; automatically updates the plotted
+            # color limits
+            self.update_colorbar_clim()
+            
         self.canvas.draw_idle()
         
 
@@ -238,19 +287,16 @@ class InteractivePlot(tk.Frame,object):
         
         pos = self.ax.get_position()
         self.cax = self.fig.add_axes([
-            pos.x1-self.cbwidth,
+            pos.x1-self.cbwidth - 0.1,
             pos.y0 + 0.5*d,
             self.cbwidth,
             pos.height - 0.5*d,
         ],visible=False)
         
-        self.cax.xaxis.set_visible(False)
         self.cax.yaxis.tick_right()
         
         self.colorbar = matplotlib.colorbar.ColorbarBase(self.cax)
         
-        self.show_colorbar()
-
     def show_colorbar(self):
         if globals.debug > 1: print("interactiveplot.show_colorbar")
         if self.cax is None: self.init_colorbar()
@@ -263,7 +309,7 @@ class InteractivePlot(tk.Frame,object):
         self.ax.set_position([
             pos.x0,
             pos.y0 + 0.5*d,
-            pos.width - d,
+            pos.width - d - 0.1,
             pos.height - 0.5*d,
         ])
 
@@ -271,6 +317,9 @@ class InteractivePlot(tk.Frame,object):
 
         # Enable the colorbar scale controls
         self.gui.controls.enable('colorbar')
+        
+        self.colorbar_visible = True
+        self.update_colorbar_label()
 
     def hide_colorbar(self):
         if globals.debug > 1: print("interactiveplot.hide_colorbar")
@@ -295,6 +344,8 @@ class InteractivePlot(tk.Frame,object):
         # Disable the colorbar controls
         self.gui.controls.caxis_scale.set('linear')
         self.gui.controls.disable('colorbar')
+
+        self.colorbar_visible = False
         
     def update_colorbar_clim(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update_colorbar_clim")
@@ -360,3 +411,18 @@ class InteractivePlot(tk.Frame,object):
             self.update_colorbar_clim()
         self.canvas.draw_idle()
 
+    def update_colorbar_label(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.update_colorbar_label")
+        print(self.drawn_object)
+        print(hasattr(self.drawn_object,'cscale'))
+        if self.drawn_object is None: return
+        if not hasattr(self.drawn_object,"cscale"): return
+
+        label = self.draw_type
+        if self.drawn_object.cscale == 'log10':
+            label = "$\\log_{10}$ "+label
+        elif self.drawn_object.cscale == '^10':
+            label = "$10^{\\mathrm{"+label.replace(" ","\\ ")+"}}$"
+        
+        self.colorbar.set_label(label)
+        #self.colorbar.draw_all()

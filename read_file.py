@@ -345,9 +345,10 @@ def fluxcal_track(filename):
     }
     
     for i,key in enumerate(header):
+        if key == 'T_SPH': key = 'temperature'
         to_return['data'][key] = data[:,i]
         to_return['display_units'][key] = display_units[i]
         to_return['physical_units'][key] = 1.
-
+        
     return to_return
 
