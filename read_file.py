@@ -310,8 +310,8 @@ def fluxcal_track(filename):
         1./runit, # x
         1./runit, # y
         1./runit, # z
-        1./munit, # m
-        1./runit, # h
+        1., # m
+        1., # h
         1., # rho
         1., # u
         1., # mu

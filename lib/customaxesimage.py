@@ -9,19 +9,13 @@ from copy import copy
 import globals
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',physical_units=None,display_units=None,**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
         self.xscale = xscale
         self.yscale = yscale
         self.cscale = cscale
-        self.display_units = display_units
-        self.physical_units = physical_units
-
-        if ((self.display_units is not None and self.physical_units is None) or
-            (self.display_units is None and self.physical_units is not None)):
-            raise ValueError("Cannot have only one of physical_units and display_units be None")
         
         self._data = copy(data)
         self.calculate_xypixels()
@@ -126,13 +120,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _after_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._after_calculate")
         self.thread = None
-        if self.display_units is not None and self.physical_units is not None:
-            self._extent = [
-                self._extent[0]*self.display_units[0],
-                self._extent[1]*self.display_units[0],
-                self._extent[2]*self.display_units[1],
-                self._extent[3]*self.display_units[1],
-            ]
         self.set_data(self._data)
         self.after_calculate()
         self._axes.get_figure().canvas.draw_idle()

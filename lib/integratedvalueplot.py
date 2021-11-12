@@ -22,10 +22,13 @@ class IntegratedValuePlot(CustomAxesImage,object):
     def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
-        
+
+        self.A = np.ascontiguousarray(A,dtype=np.double)
         self.x = np.ascontiguousarray(x,dtype=np.double)
         self.y = np.ascontiguousarray(y,dtype=np.double)
+        self.m = np.ascontiguousarray(m,dtype=np.double)
         self.h = np.ascontiguousarray(h,dtype=np.double)
+        self.rho = np.ascontiguousarray(rho,dtype=np.double)
         
         self.physical_units = physical_units
         self.display_units = display_units
@@ -35,18 +38,21 @@ class IntegratedValuePlot(CustomAxesImage,object):
 
         # Make everything in physical units and then just set the
         # extent to display units later
+        self.A *= self.physical_units[0]
         self.x *= self.physical_units[1]
         self.y *= self.physical_units[2]
+        self.m *= self.physical_units[3]
         self.h *= self.physical_units[4]
+        self.rho *= self.physical_units[5]
         self.wint *= self.physical_units[4]**3
 
-        self.quantity = np.ascontiguousarray(
-            (m*self.physical_units[3])*(A*self.physical_units[0])/(rho*self.physical_units[5]),
-            dtype=np.double,
-        ) / h**3
-        
         self.h2 = self.h**2
         self.ctabinvh2 = self.ctab/self.h2
+
+        self.quantity = np.ascontiguousarray(
+            self.m*self.A/(self.rho*self.h2*self.h),
+            dtype=np.double,
+        )
 
         if has_jit:
             self.stream = cuda.stream()
@@ -72,8 +78,6 @@ class IntegratedValuePlot(CustomAxesImage,object):
         super(IntegratedValuePlot,self).__init__(
             self.ax,
             np.zeros((1,1),dtype=np.double),
-            physical_units=self.physical_units,
-            display_units=self.display_units,
             **kwargs
         )
 
@@ -96,16 +100,17 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 np.logical_and(xpmax > xmin*display_to_physical[1], xpmin < xmax*display_to_physical[1]),
                 np.logical_and(ypmax > ymin*display_to_physical[2], ypmin < ymax*display_to_physical[2]),
         )
-
+        
         if any(idx):
             self._extent = [xmin,xmax,ymin,ymax]
             self.dx = float(xmax-xmin)/float(self.xpixels) * display_to_physical[1]
             self.dy = float(ymax-ymin)/float(self.ypixels) * display_to_physical[2]
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
-
+            
             self.calculate_data(idx)
         if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
 
+    
     if has_jit:
         @staticmethod
         @cuda.jit('void(double[:,:], int64[:], double[:], double[:], double[:], double[:], double[:], double, double, double, double, int64, int64, double[:], double[:])') # Decorator parameters improve performance
@@ -124,7 +129,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 imax = min(int((xi+hi-xmin)/dx)+1,xpixels)
                 jmin = max(int((yi-hi-ymin)/dy),0)
                 jmax = min(int((yi+hi-ymin)/dy)+1,ypixels)
-
+                
                 for ix in range(imin,imax):
                     xpos = xmin + (ix+0.5)*dx
                     dx2 = (xpos-xi)*(xpos-xi)
@@ -138,7 +143,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
 
             device_idx = cuda.to_device(np.where(idx)[0])
-            device_data = cuda.to_device(np.zeros(np.shape(self._data)))
+            device_data = cuda.to_device(self._data)
 
             display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
             
@@ -167,24 +172,23 @@ class IntegratedValuePlot(CustomAxesImage,object):
             )
             cuda.synchronize()
             self._data = device_data.copy_to_host()
-
     else:
         def calculate_data(self,idx): # On CPU
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
-            
+
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
 
             display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
-            
+
             xmin *= display_to_physical[1]
             xmax *= display_to_physical[1]
             ymin *= display_to_physical[2]
             ymax *= display_to_physical[2]
-            
+
             xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*self.dx
             ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*self.dy
-            
+
             indexes = np.arange(len(self.x))[idx]
             x = self.x[idx]
             y = self.y[idx]
@@ -192,23 +196,23 @@ class IntegratedValuePlot(CustomAxesImage,object):
             h2 = self.h2[idx]
             quantity = self.quantity[idx]
             ctabinvh2 = self.ctabinvh2[idx]
-            
+
             dx = np.abs(xpos[:,None]-x)
             idx_xs = dx < h
-            
+
             for i,(idx_x,dx_x) in enumerate(zip(idx_xs,dx)):
                 if not any(idx_x): continue
                 dx_x = dx_x[idx_x]
-                
+
                 dy = np.abs(ypos[:,None]-y[idx_x])
                 idx_ys = dy < h[idx_x]
                 for j,(idx_y,dy_y) in enumerate(zip(idx_ys,dy)):
                     if not any(idx_y): continue
                     dr2 = dx_x[idx_y]**2 + dy_y[idx_y]**2
-                    
+
                     idx_r = dr2 < h2[idx_x][idx_y]
                     if not any(idx_r): continue
-                    
+
                     indices = (dr2[idx_r]*ctabinvh2[idx_x][idx_y][idx_r]).astype(int,copy=False)
                     self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices])
-                    
+
