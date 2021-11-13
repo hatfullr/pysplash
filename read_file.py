@@ -94,9 +94,7 @@ def read_file(filename):
     
     basename = os.path.basename(filename)
     for key, val in codes.items():
-        print(key,val)
         for pattern,method in val:
-            print(pattern,method,fnmatch.fnmatch(basename,pattern))
             if fnmatch.fnmatch(basename,pattern):
                 return method(filename)
                 break
