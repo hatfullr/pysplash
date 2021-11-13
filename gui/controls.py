@@ -30,7 +30,7 @@ class Controls(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.caxis_combobox.bind("<<ComboboxSelected>>",self.change_colorbar_type)
+        self.caxis_combobox.bind("<<ComboboxSelected>>",self.on_caxis_combobox_selected)
         self.saved_state = None
         self.previous_state = None
         
@@ -352,7 +352,17 @@ class Controls(tk.Frame,object):
         
         self.xaxis_combobox.config(values=keys)
         self.yaxis_combobox.config(values=keys)
-    
+
+    def on_caxis_combobox_selected(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.on_caxis_combobox_selected")
+        self.change_colorbar_type()
+        if self.c.get() == 'None':
+            self.disable('colorbar')
+            self.enable(self.point_size_entry)
+        else:
+            self.enable('colorbar')
+            self.disable(self.point_size_entry)
+        
     def change_colorbar_type(self,*args,**kwargs):
         if globals.debug > 1: print("controls.change_colorbar_type")
         self.gui.interactiveplot.set_draw_type(self.c.get())
@@ -360,24 +370,7 @@ class Controls(tk.Frame,object):
             self.x.set('x')
             self.y.set('y')
         if self.c.get() != 'None': self.enable('colorbar')
-
-    """
-    def set_xaxis_scale(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.set_xaxis_scale")
-        drawn_object = self.gui.interactiveplot.drawn_object
-        if drawn_object is not None:
-            drawn_object.xscale = self.xaxis_scale.get()
-    def set_yaxis_scale(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.set_yaxis_scale")
-        drawn_object = self.gui.interactiveplot.drawn_object
-        if drawn_object is not None:
-            drawn_object.yscale = self.yaxis_scale.get()
-    def set_caxis_scale(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.set_caxis_scale")
-        drawn_object = self.gui.interactiveplot.drawn_object
-        if drawn_object is not None:
-            drawn_object.cscale = self.caxis_scale.get()
-    """
+    
     def get_all_children(self, finList=[], wid=None):
         if globals.debug > 1: print("controls.get_all_children")
         if wid is None: _list = self.winfo_children()
@@ -389,10 +382,14 @@ class Controls(tk.Frame,object):
             
     def disable(self,group,temporarily=False):
         if globals.debug > 1: print("controls.disable")
-        if group == 'all': children = self.get_all_children()
-        elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
-        elif group == 'colorbar': children = self.get_all_children(wid=self.caxis_frame)
-        elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
+
+        if isinstance(group,str):
+            if group == 'all': children = self.get_all_children()
+            elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
+            elif group == 'colorbar': children = self.get_all_children(wid=self.caxis_frame)
+            elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
+        else: # Assume this is a widget
+            children = group
 
         if temporarily: self.previous_state = self.get_widget_state(children)
         else: self.previous_state = None
@@ -406,20 +403,26 @@ class Controls(tk.Frame,object):
                 widget.configure(state=state)
             self.previous_state = None
         else:
-            if group == 'all': children = self.get_all_children()
-            elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
-            elif group == 'colorbar':
-                children = self.get_all_children(wid=self.caxis_frame)
-                # Don't enable the colorbar limits entries if we are using adaptive limits
-                if self.caxis_limits_entry_low in children: children.remove(self.caxis_limits_entry_low)
-                if self.caxis_limits_entry_high in children: children.remove(self.caxis_limits_entry_high)
-            elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
+            if isinstance(group,str):
+                if group == 'all': children = self.get_all_children()
+                elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
+                elif group == 'colorbar':
+                    children = self.get_all_children(wid=self.caxis_frame)
+                    # Don't enable the colorbar limits entries if we are using adaptive limits
+                    if self.caxis_limits_entry_low in children: children.remove(self.caxis_limits_entry_low)
+                    if self.caxis_limits_entry_high in children: children.remove(self.caxis_limits_entry_high)
+                elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
+            else: # Assume this is a widget
+                children = group
+            
             self.set_widget_state(children,'normal')
 
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("controls.set_widget_state")
+        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
         for widget in widgets:
             if 'state' in widget.configure():
+                if isinstance(widget,tk.Label): continue
                 current_state = widget.cget('state')
                 if current_state != state:
                     if isinstance(widget,ttk.Combobox):
@@ -429,9 +432,11 @@ class Controls(tk.Frame,object):
 
     def get_widget_state(self,widgets):
         if globals.debug > 1: print("controls.get_widget_state")
+        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
         states = []
         for widget in widgets:
             if 'state' in widget.configure():
+                if isinstance(widget,tk.Label): continue
                 states.append([widget,widget.cget('state')])
         return states
                         
