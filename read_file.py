@@ -77,15 +77,32 @@ from lib.fastfileread import FastFileRead
 import numpy as np
 from globals import debug
 import os.path
-
+import fnmatch
 
 def read_file(filename):
+    # Supported pattern types are "*", "?", "[seq]", and "[!seq]"
+    # see https://docs.python.org/3/library/fnmatch.html for details
+    codes = {
+        "starsmasher" : [
+            ["out*.sph*",starsmasher],
+            ["restartrad*.sph*",starsmasher],
+        ],
+        "fluxcal" : [
+            ["fluxcal*.track*",fluxcal_track],
+        ],
+    }
+    
     basename = os.path.basename(filename)
-    if basename[:3] == 'out' and basename[-4:] == ".sph":
-        return starsmasher(filename)
-    elif basename[:len('fluxcal')] == 'fluxcal' and basename[-len('.track'):] == '.track':
-        return fluxcal_track(filename)
-    else:
+    for key, val in codes.items():
+        print(key,val)
+        for pattern,method in val:
+            print(pattern,method,fnmatch.fnmatch(basename,pattern))
+            if fnmatch.fnmatch(basename,pattern):
+                return method(filename)
+                break
+        else: continue # Only if the inner loop didn't break
+        break # Only if the inner loop did break
+    else: # Only if the inner loop didn't break
         raise ValueError("File name '"+basename+"' does not match any of the accepted patterns in read_file")
 
 
