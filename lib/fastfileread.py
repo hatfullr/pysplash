@@ -356,9 +356,9 @@ class FastFileRead:
             # Check if the footer is binary or text
             if fileobj['footer'] > 0:
                 # Check the very first part of the footer
-                fileobj['buffer'].seek(-8,2)
+                fileobj['buffer'].seek(-16,2)
                 try:
-                    fileobj['buffer'].read(8).decode('ascii')
+                    fileobj['buffer'].read(16).decode('ascii')
                 except UnicodeDecodeError: # Found binary
                     fileobj['buffer'].seek(fileobj['header'])
                     # Keep the footer the same, as we expect it is in number of bytes to skip

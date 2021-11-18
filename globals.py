@@ -7,4 +7,4 @@ compact_support = 2.
 # more information will be printed to the terminal.
 # Set this to 0 to get no output to the terminal at
 # all.
-debug = 2
+debug = 1
