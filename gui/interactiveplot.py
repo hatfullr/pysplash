@@ -406,8 +406,6 @@ class InteractivePlot(tk.Frame,object):
 
     def update_colorbar_label(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update_colorbar_label")
-        print(self.drawn_object)
-        print(hasattr(self.drawn_object,'cscale'))
         if self.drawn_object is None: return
         if not hasattr(self.drawn_object,"cscale"): return
 

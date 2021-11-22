@@ -443,7 +443,7 @@ class Controls(tk.Frame,object):
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
 
-        #self.gui.set_user_controlled(False)
+        self.gui.set_user_controlled(False)
         
         # Perform any rotations necessary
         #self.gui.data.reset()
@@ -460,7 +460,6 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.colorbar_visible):
             for v,val in self.saved_state:
                 if v is self.caxis_scale:
-                    print(val,self.caxis_scale.get())
                     if val != self.caxis_scale.get():
                         self.gui.interactiveplot.drawn_object.update_cscale(self.caxis_scale.get())
                         self.gui.interactiveplot.update_colorbar_label()
@@ -469,7 +468,7 @@ class Controls(tk.Frame,object):
         
         # Draw the new plot
         self.gui.interactiveplot.update()
-        #self.gui.set_user_controlled(True)
+        self.gui.set_user_controlled(True)
 
         self.save_state()
 
