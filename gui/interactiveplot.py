@@ -1,11 +1,9 @@
 from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
-    from plotcontrols import PlotControls
     from keypresshandler import KeyPressHandler
 else:
     import tkinter as tk
-    from gui.plotcontrols import PlotControls
     from gui.keypresshandler import KeyPressHandler
 import globals
 
@@ -47,8 +45,6 @@ class InteractivePlot(tk.Frame,object):
         self.place_widgets()
         
         self.draw_enabled = False
-        
-        self.plotcontrols.toolbar.set_message = lambda text: self.xycoords.set(text)
 
         self.canvas.draw()
         
@@ -88,14 +84,12 @@ class InteractivePlot(tk.Frame,object):
         self.ax.set_xlim(xmin-dx,xmax+dx)
         self.ax.set_ylim(ymin-dy,ymax+dy)
         self.enable_draw()
-        #self.draw()
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
         self.point_size = tk.IntVar(value=1)
         self.time = tk.DoubleVar()
-        #self.clim_adaptive = tk.BooleanVar(value=False) # Gets immediately toggled to true in __init__
         
         self.time.trace('w',lambda event=None: self.set_time_text(event))
         self.connect_clim()
@@ -105,13 +99,11 @@ class InteractivePlot(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("interactiveplot.create_widgets")
         self.canvas = FigureCanvasTkAgg(self.fig,master=self)
-        self.plotcontrols = PlotControls(self,self.canvas,bg='white',relief='sunken',highlightthickness=2)
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
         
     def place_widgets(self):
         if globals.debug > 1: print("interactiveplot.place_widgets")
         self.canvas.get_tk_widget().grid(row=0,sticky='news')
-        self.plotcontrols.grid(row=1,sticky='new')
         self.xycoords_label.place(in_=self.canvas.get_tk_widget(),relx=1,rely=1,anchor='se')
 
         self.rowconfigure(0,weight=1)

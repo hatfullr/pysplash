@@ -19,7 +19,8 @@ class Window(tk.Tk):
         self.resizing = False
         
         self.after_id = None
-        
+
+        self.configure(padx=5,pady=5)
         self.bind("<Configure>",self.detect_resize)
 
     # This prevents tkinter from slowing down by first closing tkinter

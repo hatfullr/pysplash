@@ -2,11 +2,13 @@ import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
     from tkFont import Font as tkFont
+    from plotcontrols import PlotControls
     from interactiveplot import InteractivePlot
     from controls import Controls
 else:
     import tkinter as tk
     import tkinter.font as tkFont
+    from gui.plotcontrols import PlotControls
     from gui.interactiveplot import InteractivePlot
     from gui.controls import Controls
 
@@ -52,11 +54,13 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.interactiveplot.plotcontrols.next_button.configure(command=self.next_file)
-        self.interactiveplot.plotcontrols.back_button.configure(command=self.previous_file)
+        self.plotcontrols.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
-        self.interactiveplot.plotcontrols.current_file.trace("w",self.read)
-        self.interactiveplot.plotcontrols.current_file.set(sys.argv[1])
+        self.plotcontrols.next_button.configure(command=self.next_file)
+        self.plotcontrols.back_button.configure(command=self.previous_file)
+        
+        self.plotcontrols.current_file.trace("w",self.read)
+        self.plotcontrols.current_file.set(sys.argv[1])
 
 
         self.rotation_after_id = None
@@ -89,16 +93,43 @@ class GUI(tk.Frame,object):
         self.controls = Controls(
             self,
             width=2*self.dpi, # pixels = inches * dpi
+            bd=1,
+            relief='sunken',
+            padx=5,
+            pady=5,
         ) 
         self.interactiveplot = InteractivePlot(
             self,
+            relief='sunken',
+            bd=1,
+        )
+        self.plotcontrols = PlotControls(
+            self,
+            self.interactiveplot.canvas,
+            bg='white',
+            relief='sunken',
+            bd=1,
         )
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
         
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
-        self.interactiveplot.grid(row=0,column=0,sticky='news',padx=5,pady=5)
-        self.controls.grid(row=0,column=1,sticky='ns',padx=5,pady=5)
+        self.interactiveplot.grid(
+            row=0,
+            column=0,
+            sticky='news',
+        )
+        self.plotcontrols.grid(
+            row=1,
+            column=0,
+            sticky='new',
+        )
+        self.controls.grid(
+            row=0,
+            column=1,
+            sticky='ns',
+            rowspan=2,
+        )
         self.message_label.place(rely=1,relx=1,anchor="se")
         self.pack(fill='both',expand=True)
 
@@ -117,10 +148,10 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.set_user_controlled")
         if value:
             self.controls.enable('all')
-            self.interactiveplot.plotcontrols.enable('all')
+            self.plotcontrols.enable('all')
         else:
             self.controls.disable('all',temporarily=True)
-            self.interactiveplot.plotcontrols.disable('all')
+            self.plotcontrols.disable('all')
         self.user_controlled = value
     def get_user_controlled(self):
         if globals.debug > 1: print("gui.get_user_controlled")
@@ -136,7 +167,7 @@ class GUI(tk.Frame,object):
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
         self.data = Data(
-            read_file(self.interactiveplot.plotcontrols.current_file.get()),
+            read_file(self.plotcontrols.current_file.get()),
             rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
         # Check for requisite keys for certain types of plots
@@ -176,27 +207,27 @@ class GUI(tk.Frame,object):
     
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
-        skip_amount = int(self.interactiveplot.plotcontrols.skip_amount.get())
+        skip_amount = int(self.plotcontrols.skip_amount.get())
         filenames = sys.argv[1:]
 
-        idx = filenames.index(self.interactiveplot.plotcontrols.current_file.get())
+        idx = filenames.index(self.plotcontrols.current_file.get())
         nextidx = min(idx+skip_amount,len(filenames)-1)
-        if nextidx == len(filenames)-1: self.interactiveplot.plotcontrols.skip_amount.set(1)
+        if nextidx == len(filenames)-1: self.plotcontrols.skip_amount.set(1)
         
-        if filenames[nextidx] != self.interactiveplot.plotcontrols.current_file.get():
-            self.interactiveplot.plotcontrols.current_file.set(filenames[nextidx])
+        if filenames[nextidx] != self.plotcontrols.current_file.get():
+            self.plotcontrols.current_file.set(filenames[nextidx])
 
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
-        skip_amount = int(self.interactiveplot.plotcontrols.skip_amount.get())
+        skip_amount = int(self.plotcontrols.skip_amount.get())
         filenames = sys.argv[1:]
         
-        idx = filenames.index(self.interactiveplot.plotcontrols.current_file.get())
+        idx = filenames.index(self.plotcontrols.current_file.get())
         nextidx = max(idx-skip_amount,0)
-        if nextidx == 0: self.interactiveplot.plotcontrols.skip_amount.set(1)
+        if nextidx == 0: self.plotcontrols.skip_amount.set(1)
         
-        if filenames[nextidx] != self.interactiveplot.plotcontrols.current_file.get():
-            self.interactiveplot.plotcontrols.current_file.set(filenames[nextidx])
+        if filenames[nextidx] != self.plotcontrols.current_file.get():
+            self.plotcontrols.current_file.set(filenames[nextidx])
     
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")

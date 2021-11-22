@@ -1,4 +1,19 @@
-#!/usr/bin/env python
+#!/bin/sh
+#!/bin/sh
+# -*- mode: Python -*-
+
+""":"
+# bash code here; finds a suitable python interpreter and execs this file.
+# prefer "python3", but try "python2" if the user doesn't have "python3".
+for pyver in 3 2; do
+    which python$pyver > /dev/null 2>&1 && exec python$pyver "$0" "$@"
+done
+echo "Could not find a suitable Python version. Please ensure either python3 or python2 are installed. See https://github.com/hatfullr/pysplash for details on dependencies." >&2
+exit 1
+":"""
+
+
+
 import sys
 from signal import signal,SIGINT
 from lib.window import Window

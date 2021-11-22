@@ -7,7 +7,6 @@ else:
 import numpy as np
 import math
 from kernel import setupkernel,setupintegratedkernel
-from scipy.integrate import simps
 import globals
 if globals.debug > 0: from time import time
 
