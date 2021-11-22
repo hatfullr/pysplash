@@ -2,9 +2,12 @@
 PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher and MESA data
 
 ## Dependencies
+* ![Python3](https://www.python.org/downloads/) or Python2
 * ![Tkinter](https://tkdocs.com/tutorial/install.html) (pre-installed with most Python distributions)
-* ![Numpy](https://numpy.org/install/) (pre-installed with most Python distributions)
 * ![Matplotlib](https://matplotlib.org/stable/users/installing.html)
+* Optional:
+** ![Numpy](https://numpy.org/install/) (pre-installed with most Python distributions)
+
 
 It is strongly encouraged that you use Python3.6+ and install ![Numba](https://numba.pydata.org/numba-doc/latest/user/installing.html). Doing so will allow PySplash to access the GPU and run up to ~450x faster.
 
