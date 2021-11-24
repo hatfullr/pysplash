@@ -10,17 +10,17 @@ else:
 import globals
 
 class PlotControls(tk.Frame,object):
-    def __init__(self,master,canvas,bg='white',*args,**kwargs):
+    def __init__(self,gui,canvas,bg='white',*args,**kwargs):
         if globals.debug > 1: print("plotcontrols.__init__")
-        self.master = master
+        self.gui = gui
         self.canvas = canvas
         self.bg = bg
-        super(PlotControls,self).__init__(self.master,*args,bg=self.bg,**kwargs)
+        super(PlotControls,self).__init__(self.gui,*args,bg=self.bg,**kwargs)
         
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
-        
+
         self.winfo_toplevel().bind("<<ResizeStopped>>",self.set_current_file_displayed)
         self.current_file.trace('w',self.set_current_file_displayed)
         self.skip_amount.set(1)
@@ -33,7 +33,7 @@ class PlotControls(tk.Frame,object):
         
     def create_widgets(self):
         if globals.debug > 1: print("plotcontrols.create_widgets")
-        self.toolbar = CustomToolbar(self,self.canvas,bg=self.bg)
+        self.toolbar = CustomToolbar(self,self.gui,self.canvas,bg=self.bg)
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
         self.back_button = tk.Button(self,text="<<",width=2,height=1,padx=5,pady=5)
         self.skip_amount_entry = tk.Entry(self,textvariable=self.skip_amount,width=5)

@@ -9,13 +9,14 @@ from copy import copy
 import globals
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
         self.xscale = xscale
         self.yscale = yscale
         self.cscale = cscale
+        self.aspect = aspect
         
         self._data = copy(data)
         self.calculate_xypixels()
@@ -72,20 +73,29 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._disconnect()
         super(CustomAxesImage,self).remove(*args,**kwargs)
                 
-    def equalize_aspect_ratio(self,*args,**kwargs):
+    def equalize_aspect_ratio(self,xlim=None,ylim=None):
         if globals.debug > 1: print("customaxesimage.equalize_aspect_ratio")
-        self._disconnect()
-        xlim,ylim = self._axes.get_xlim(),self._axes.get_ylim()
+        flag = False
+        if xlim is None and ylim is None: flag = True
+        
+        if flag:
+            self._disconnect()
+            xlim,ylim = self._axes.get_xlim(),self._axes.get_ylim()
         dx = xlim[1]-xlim[0]
         dy = ylim[1]-ylim[0]
         cx = 0.5*(xlim[1]+xlim[0])
         cy = 0.5*(ylim[1]+ylim[0])
         if dx < dy:
-            self._axes.set_xlim(cx-0.5*dy,cx+0.5*dy)
+            xlim = [cx-0.5*dy,cx+0.5*dy]
         else:
-            self._axes.set_ylim(cy-0.5*dx,cy+0.5*dx)
-        self._connect()
-        self._axes.get_figure().canvas.draw_idle()
+            ylim = [cy-0.5*dx,cy+0.5*dx]
+        if flag:
+            self._axes.set_xlim(xlim)
+            self._axes.set_ylim(ylim)
+            self._connect()
+            self._axes.get_figure().canvas.draw_idle()
+        else:
+            return xlim, ylim
         
     def calculate_xypixels(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.calculate_xypixels")
@@ -98,7 +108,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._calculate")
         self.after_id_calculate = None
-        self.equalize_aspect_ratio()
+        if self.aspect == 'equal': self.equalize_aspect_ratio()
         if not (self.ypixels == self._data.shape[0] and self.xpixels == self._data.shape[1]):
             self._data = np.resize(self._data,(self.ypixels,self.xpixels)) # Fills new entries with 0
         if self.threaded:
@@ -152,4 +162,4 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             elif cscale == '^10': data = 10.**self._unscaled_data
             self.cscale = cscale
             self.set_data(data,scaled=False)
-            
+

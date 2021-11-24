@@ -30,6 +30,9 @@ class InteractivePlot(tk.Frame,object):
         self.fig = Figure(figsize=(6,6),dpi=int(self.gui.dpi))
         self.ax = self.fig.add_subplot(111)
 
+        self.x_cid = None
+        self.y_cid = None
+        
         self.cax = None
         self.colorbar = None
         self.cax_cid = None
@@ -73,16 +76,9 @@ class InteractivePlot(tk.Frame,object):
     
     def initialize_drawn_object(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.initialize_drawn_object")
-        x = self.gui.get_display_data(self.gui.controls.x.get())
-        y = self.gui.get_display_data(self.gui.controls.y.get())
-        
-        xmargin, ymargin = self.ax.margins()
-        xmin, xmax = np.amin(x), np.amax(x)
-        ymin, ymax = np.amin(y), np.amax(y)
-        dx = (xmax-xmin)*xmargin
-        dy = (ymax-ymin)*ymargin
-        self.ax.set_xlim(xmin-dx,xmax+dx)
-        self.ax.set_ylim(ymin-dy,ymax+dy)
+
+        self.reset_data_xlim()
+        self.reset_data_ylim()
         self.enable_draw()
 
     def create_variables(self):
@@ -92,6 +88,7 @@ class InteractivePlot(tk.Frame,object):
         self.time = tk.DoubleVar()
         
         self.time.trace('w',lambda event=None: self.set_time_text(event))
+        
         self.connect_clim()
 
         self.time_text = None
@@ -132,7 +129,15 @@ class InteractivePlot(tk.Frame,object):
             self.drawn_object = None
     
     def update(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.update")
+        if globals.debug > 1:
+            print("interactiveplot.update")
+            print("    self.ax = ",self.ax)
+        x = self.gui.controls.x.get()
+        y = self.gui.controls.y.get()
+        if x in ['x','y','z'] and y in ['x','y','z']:
+            aspect = 'equal'
+        else:
+            aspect = None
         
         self.reset() # Clear the current plot
 
@@ -141,9 +146,10 @@ class InteractivePlot(tk.Frame,object):
             self.hide_colorbar()
             self.drawn_object = ScatterPlot(
                 self.ax,
-                self.gui.get_display_data(self.gui.controls.x.get()),
-                self.gui.get_display_data(self.gui.controls.y.get()),
+                self.gui.get_display_data(x),
+                self.gui.get_display_data(y),
                 s=self.gui.controls.point_size,
+                aspect=aspect,
             )
         
         # Column density plot
@@ -154,8 +160,6 @@ class InteractivePlot(tk.Frame,object):
                 self.connect_clim()
             
             A = self.gui.get_data('rho')
-            x = self.gui.get_data(self.gui.controls.x.get())
-            y = self.gui.get_data(self.gui.controls.y.get())
             m = self.gui.get_data('m')
             h = self.gui.get_data('h')
             rho = self.gui.get_data('rho')
@@ -165,23 +169,23 @@ class InteractivePlot(tk.Frame,object):
             self.drawn_object = IntegratedValuePlot(
                 self.ax,
                 A[idx],
-                x[idx],
-                y[idx],
+                self.gui.get_data(x)[idx],
+                self.gui.get_data(y)[idx],
                 m[idx],
                 h[idx],
                 rho[idx],
                 [ # physical units
                     self.gui.get_physical_units('rho'),
-                    self.gui.get_physical_units(self.gui.controls.x.get()),
-                    self.gui.get_physical_units(self.gui.controls.y.get()),
+                    self.gui.get_physical_units(x),
+                    self.gui.get_physical_units(y),
                     self.gui.get_physical_units('m'),
                     self.gui.get_physical_units('h'),
                     self.gui.get_physical_units('rho'),
                 ],
                 [ # display units
                     self.gui.get_display_units('rho'),
-                    self.gui.get_display_units(self.gui.controls.x.get()),
-                    self.gui.get_display_units(self.gui.controls.y.get()),
+                    self.gui.get_display_units(x),
+                    self.gui.get_display_units(y),
                     self.gui.get_display_units('m'),
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
@@ -190,6 +194,7 @@ class InteractivePlot(tk.Frame,object):
                 xscale=self.gui.controls.xaxis_scale.get(),
                 yscale=self.gui.controls.yaxis_scale.get(),
                 cscale=self.gui.controls.caxis_scale.get(),
+                aspect=aspect,
             )
             
             # Update the colorbar limits; automatically updates the plotted
@@ -362,29 +367,59 @@ class InteractivePlot(tk.Frame,object):
                 self.colorbar.norm = matplotlib.colors.Normalize(vmin=ylim[0],vmax=ylim[1])
                 self.colorbar.draw_all()
                 self.canvas.draw_idle()
-    
+                
     def update_data_clim(self,axis=None,ylim=None):
         if globals.debug > 1: print("interactiveplot.update_data_clim")
         if self.drawn_object is not None:
             if ylim is None: ylim = self.cax.get_ylim()
             self.drawn_object.set_clim(ylim)
 
+    def connect_clim(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.connect_clim")
+        if self.cax is not None: self.cax_cid = self.cax.callbacks.connect('ylim_changed',self.update_data_clim)
+    
     def disconnect_clim(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.disconnect_clim")
         if self.cax_cid is not None:
             self.cax.callbacks.disconnect(self.cax_cid)
             self.cax_cid = None
-        
-        
-    def connect_clim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.connect_clim")
-        if self.cax is not None: self.cax_cid = self.cax.callbacks.connect('ylim_changed',self.update_data_clim)
-        
+
+    def update_controls_xlim(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.update_controls_xlim")
+        xlim = self.ax.get_xlim()
+        self.gui.controls.xaxis_limits_low.set(xlim[0])
+        self.gui.controls.xaxis_limits_high.set(xlim[1])
+
+    def update_controls_ylim(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.update_controls_ylim")
+        ylim = self.ax.get_ylim()
+        self.gui.controls.yaxis_limits_low.set(ylim[0])
+        self.gui.controls.yaxis_limits_high.set(ylim[1])
+    
+    def toggle_xlim_adaptive(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.toggle_xlim_adaptive")
+        if self.gui.controls.xaxis_adaptive_limits.get(): # Turn on adaptive limits
+            self.update_controls_xlim()
+            self.x_cid = self.ax.callbacks.connect("xlim_changed",self.update_controls_xlim)
+        else: # Turn off adaptive limits
+            if self.x_cid is not None:
+                self.ax.callbacks.disconnect(self.x_cid)
+                self.x_cid = None
+
+    def toggle_ylim_adaptive(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.toggle_ylim_adaptive")
+        if self.gui.controls.yaxis_adaptive_limits.get(): # Turn on adaptive limits
+            self.update_controls_ylim()
+            self.y_cid = self.ax.callbacks.connect("ylim_changed",self.update_controls_ylim)
+        else: # Turn off adaptive limits
+            if self.y_cid is not None:
+                self.ax.callbacks.disconnect(self.y_cid)
+                self.y_cid = None
+            
         
     def toggle_clim_adaptive(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.toggle_clim_adaptive")
         if self.gui.controls.caxis_adaptive_limits.get(): # Turn off adaptive limits
-            #self.gui.controls.caxis_adaptive_limits.set(False)
             self.disconnect_clim()
             # Set the user's entry boxes to be the current clim
             if self.colorbar_visible:
@@ -392,7 +427,6 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.controls.caxis_limits_low.set(clim[0])
                 self.gui.controls.caxis_limits_high.set(clim[1])
         else: # Turn on adaptive limits
-            #self.gui.controls.caxis_adaptive_limits.set(True)
             if self.cax is not None:
                 self.connect_clim()
                 self.update_colorbar_clim()
@@ -417,3 +451,40 @@ class InteractivePlot(tk.Frame,object):
         
         self.colorbar.set_label(label)
         #self.colorbar.draw_all()
+
+    def get_data_xlim(self,*args,**kwargs):
+        x = self.gui.get_display_data(self.gui.controls.x.get())
+        xmin = np.amin(x)
+        xmax = np.amax(x)
+        xmargin = self.ax.margins()[0]
+        dx = (xmax-xmin)*xmargin
+        return (xmin-dx, xmax+dx)
+    def get_data_ylim(self,*args,**kwargs):
+        y = self.gui.get_display_data(self.gui.controls.y.get())
+        ymin = np.amin(y)
+        ymax = np.amax(y)
+        ymargin = self.ax.margins()[1]
+        dy = (ymax-ymin)*ymargin
+        return (ymin-dy, ymax+dy)
+                      
+        
+    def reset_data_xlim(self,*args,**kwargs):
+        self.ax.set_xlim(self.get_data_xlim())
+    
+    def reset_data_ylim(self,*args,**kwargs):
+        self.ax.set_ylim(self.get_data_ylim())
+
+    def reset_data_xylim(self,*args,**kwargs):
+        if hasattr(self.gui, "data"):
+            new_xlim = np.array(self.get_data_xlim())
+            new_ylim = np.array(self.get_data_ylim())
+            if self.drawn_object is not None:
+                if self.drawn_object.aspect == 'equal':
+                    new_xlim, new_ylim = self.drawn_object.equalize_aspect_ratio(xlim=new_xlim,ylim=new_ylim)
+            xlim = np.array(self.ax.get_xlim())
+            ylim = np.array(self.ax.get_ylim())
+
+            if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
+            if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
+            self.canvas.draw_idle()
+                         

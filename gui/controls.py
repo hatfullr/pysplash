@@ -48,6 +48,14 @@ class Controls(tk.Frame,object):
         self.rotation_y = tk.DoubleVar(value=0)
         self.rotation_z = tk.DoubleVar(value=0)
 
+        self.xaxis_adaptive_limits = tk.BooleanVar(value=True)
+        self.xaxis_limits_high = tk.DoubleVar()
+        self.xaxis_limits_low = tk.DoubleVar()
+
+        self.yaxis_adaptive_limits = tk.BooleanVar(value=True)
+        self.yaxis_limits_high = tk.DoubleVar()
+        self.yaxis_limits_low = tk.DoubleVar()
+        
         self.caxis_adaptive_limits = tk.BooleanVar(value=True)
         self.caxis_limits_high = tk.DoubleVar()
         self.caxis_limits_low = tk.DoubleVar()
@@ -69,7 +77,8 @@ class Controls(tk.Frame,object):
         
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
-        
+
+        # x-axis
         self.xaxis_frame = tk.Frame(self.axes_frame)
         self.xaxis_buttons_frame = tk.Frame(self.xaxis_frame)
         
@@ -110,6 +119,33 @@ class Controls(tk.Frame,object):
             #command=self.set_xaxis_scale,
         )
 
+        self.xaxis_limits_frame = tk.Frame(self.xaxis_frame)
+        self.xaxis_limits_label = tk.Label(
+            self.xaxis_limits_frame,
+            text="Limits",
+        )
+        self.xaxis_limits_entry_low = FloatEntry(
+            self.xaxis_limits_frame,
+            textvariable=self.xaxis_limits_low,
+            width=7,
+            state='disabled',
+        )
+        self.xaxis_limits_entry_high = FloatEntry(
+            self.xaxis_limits_frame,
+            textvariable=self.xaxis_limits_high,
+            width=7,
+            state='disabled',
+        )
+        self.xaxis_limits_adaptive_button = SwitchButton(
+            self.xaxis_limits_frame,
+            text="Adaptive",
+            variable=self.xaxis_adaptive_limits,
+            command=self.toggle_adaptive_xlim,
+        )
+
+
+        
+        # y-axis
         self.yaxis_frame = tk.Frame(self.axes_frame)
         self.yaxis_buttons_frame = tk.Frame(self.yaxis_frame)
         
@@ -151,6 +187,35 @@ class Controls(tk.Frame,object):
         )
 
 
+        self.yaxis_limits_frame = tk.Frame(self.yaxis_frame)
+        self.yaxis_limits_label = tk.Label(
+            self.yaxis_limits_frame,
+            text="Limits",
+        )
+        self.yaxis_limits_entry_low = FloatEntry(
+            self.yaxis_limits_frame,
+            textvariable=self.yaxis_limits_low,
+            width=7,
+            state='disabled',
+        )
+        self.yaxis_limits_entry_high = FloatEntry(
+            self.yaxis_limits_frame,
+            textvariable=self.yaxis_limits_high,
+            width=7,
+            state='disabled',
+        )
+        self.yaxis_limits_adaptive_button = SwitchButton(
+            self.yaxis_limits_frame,
+            text="Adaptive",
+            variable=self.yaxis_adaptive_limits,
+            command=self.toggle_adaptive_ylim,
+        )
+
+
+
+
+
+        
         # Colorbar controls
         self.caxis_frame = LabelledFrame(self,"Colorbar",relief='sunken',bd=1)
         
@@ -247,6 +312,13 @@ class Controls(tk.Frame,object):
         self.xaxis_10_button.pack(side='left')
 
         self.xaxis_buttons_frame.grid(row=1,column=0,columnspan=2,sticky='ne')
+
+        self.xaxis_limits_label.grid(row=0,column=0)
+        self.xaxis_limits_entry_low.grid(row=0,column=1)
+        self.xaxis_limits_entry_high.grid(row=0,column=2)
+        self.xaxis_limits_adaptive_button.grid(row=0,column=3)
+        self.xaxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
+        
         self.xaxis_frame.grid(row=0,column=0,sticky='new')
 
         self.yaxis_label.grid(row=0,column=0)
@@ -256,6 +328,13 @@ class Controls(tk.Frame,object):
         self.yaxis_10_button.pack(side='left')
 
         self.yaxis_buttons_frame.grid(row=1,column=0,columnspan=2,sticky='ne')
+
+        self.yaxis_limits_label.grid(row=0,column=0)
+        self.yaxis_limits_entry_low.grid(row=0,column=1)
+        self.yaxis_limits_entry_high.grid(row=0,column=2)
+        self.yaxis_limits_adaptive_button.grid(row=0,column=3)
+        self.yaxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
+        
         self.yaxis_frame.grid(row=1,column=0,sticky='new')
         
         self.xaxis_frame.columnconfigure(1,weight=1)
@@ -278,8 +357,7 @@ class Controls(tk.Frame,object):
         self.caxis_limits_entry_low.grid(row=0,column=1)
         self.caxis_limits_entry_high.grid(row=0,column=2)
         self.caxis_limits_adaptive_button.grid(row=0,column=3)
-
-        self.caxis_limits_frame.grid(row=2,column=0,columnspan=2)
+        self.caxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
         
         self.caxis_frame.columnconfigure(1,weight=1)
         self.caxis_frame.pack(side='top',fill='both')
@@ -307,8 +385,11 @@ class Controls(tk.Frame,object):
             if item not in self.saved_state:
                 self.update_button.configure(state='normal')
                 break
-        else:
-            self.update_button.configure(state='disabled')
+        else: # No break
+            if self.gui.plotcontrols.toolbar.queued_zoom is not None:
+                self.update_button.configure(state='normal')
+            else:
+                self.update_button.configure(state='disabled')
 
     def get_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.get_state")
@@ -386,6 +467,8 @@ class Controls(tk.Frame,object):
         if isinstance(group,str):
             if group == 'all': children = self.get_all_children()
             elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
+            elif group == 'xaxis limits': children = [self.xaxis_limits_entry_low,self.xaxis_limits_entry_high]
+            elif group == 'yaxis limits': children = [self.yaxis_limits_entry_low,self.yaxis_limits_entry_high]
             elif group == 'colorbar': children = self.get_all_children(wid=self.caxis_frame)
             elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
         else: # Assume this is a widget
@@ -406,6 +489,8 @@ class Controls(tk.Frame,object):
             if isinstance(group,str):
                 if group == 'all': children = self.get_all_children()
                 elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
+                elif group == 'xaxis limits': children = [self.xaxis_limits_entry_low,self.xaxis_limits_entry_high]
+                elif group == 'yaxis limits': children = [self.yaxis_limits_entry_low,self.yaxis_limits_entry_high]
                 elif group == 'colorbar':
                     children = self.get_all_children(wid=self.caxis_frame)
                     # Don't enable the colorbar limits entries if we are using adaptive limits
@@ -443,18 +528,7 @@ class Controls(tk.Frame,object):
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
 
-        self.gui.set_user_controlled(False)
         
-        # Perform any rotations necessary
-        #self.gui.data.reset()
-        self.gui.data.rotate(
-            self.rotation_x.get(),
-            self.rotation_y.get(),
-            self.rotation_z.get(),
-        )
-
-        # If the only thing that changed was the colorbar scale (e.g. from linear to log),
-        # then simply do a quick edit on the image data
         if (self.gui.interactiveplot.drawn_object is not None and 
             self.saved_state is not None and 
             self.gui.interactiveplot.colorbar_visible):
@@ -463,8 +537,18 @@ class Controls(tk.Frame,object):
                     if val != self.caxis_scale.get():
                         self.gui.interactiveplot.drawn_object.update_cscale(self.caxis_scale.get())
                         self.gui.interactiveplot.update_colorbar_label()
-                        self.save_state()
-                        return
+
+        self.gui.set_user_controlled(False)
+        
+        if self.gui.plotcontrols.toolbar.queued_zoom is not None:
+            self.gui.plotcontrols.toolbar.queued_zoom()
+            
+        # Perform any rotations necessary
+        self.gui.data.rotate(
+            self.rotation_x.get(),
+            self.rotation_y.get(),
+            self.rotation_z.get(),
+        )
         
         # Draw the new plot
         self.gui.interactiveplot.update()
@@ -473,6 +557,23 @@ class Controls(tk.Frame,object):
         self.save_state()
 
 
+    def toggle_adaptive_xlim(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.toggle_adaptive_xlim")
+        self.gui.interactiveplot.toggle_xlim_adaptive()
+        if self.xaxis_adaptive_limits.get():
+            self.disable('xaxis limits')
+        else:
+            self.enable('xaxis limits')
+
+    def toggle_adaptive_ylim(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.toggle_adaptive_ylim")
+        self.gui.interactiveplot.toggle_ylim_adaptive()
+        if self.yaxis_adaptive_limits.get():
+            self.disable('yaxis limits')
+        else:
+            self.enable('yaxis limits')
+        
+        
     def toggle_adaptive_clim(self,*args,**kwargs):
         if globals.debug > 1: print("controls.toggle_adaptive_clim")
         if self.gui.interactiveplot.colorbar_visible:
@@ -484,3 +585,4 @@ class Controls(tk.Frame,object):
             
             
                 
+    

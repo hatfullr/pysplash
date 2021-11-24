@@ -1,8 +1,10 @@
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
+import numpy as np
+import sys
 
 class CustomToolbar(NavigationToolbar2Tk):
-    def __init__(self,master,canvas,**kwargs):
+    def __init__(self,master,gui,canvas,**kwargs):
         self.toolitems = (
             (u'Home', u'', u'home', u'home'),
             (u'Pan', u'', u'move', u'pan'),
@@ -11,12 +13,15 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Save', u'', u'filesave', u'save_figure'),
             )
         self.master = master
+        self.gui = gui
         self.canvas = canvas
         self.toolbar = NavigationToolbar2Tk
         self.toolbar._old_Button = self.toolbar._Button
         self.toolbar._Button = self._new_Button
         self.toolbar.__init__(self,self.canvas,self.master)
-        self.toolbar.home = self.new_home
+        #self.toolbar.home = self.new_home
+
+        self.queued_zoom = None
         
         self.configure(**kwargs)
 
@@ -25,6 +30,9 @@ class CustomToolbar(NavigationToolbar2Tk):
             if type(child).__name__ == 'Label':
                 child.pack_forget()
 
+    def home(self,*args,**kwargs):
+        self.gui.interactiveplot.reset_data_xylim()
+                
     def _new_Button(self, *args, **kwargs):
         b = self._old_Button(*args, **kwargs)
         # It expects dpi=100, but we have a different dpi. Because shit is
@@ -35,38 +43,38 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.height = b._ntimage.height()
         b.config(height=self.height,image=b._ntimage)
         return b
-        
-    def new_home(self,*args):
-        # The original "home" function looks like this:
-        #"""Restore the original view."""
-        #self.toolbar._nav_stack.home()
-        #self.toolbar.set_history_buttons(self.toolbar)
-        #self.toolbar._update_view(self.toolbar)
 
-        self.toolbar.home(self.toolbar)
-        
-        # We want to do everything the original home function does,
-        # but this time correctly set the plotting limits.
-        
-        # ax[0] is the axis we can see. Not sure what ax[1] is.
-        ax = self.canvas.figure.axes[0]
-        margin = ax.margins()
-        xmin = np.inf
-        xmax = -np.inf
-        ymin = np.inf
-        ymax = -np.inf
-        
-        # This will work only for scatter plots. Revise in the future if needed.
-        for child in ax.get_children():
-            if isinstance(child,PathCollection):
-                xy = child.get_offsets()
-                xmin = min(xmin,np.nanmin(xy[:,0]))
-                xmax = max(xmax,np.nanmax(xy[:,0]))
-                ymin = min(ymin,np.nanmin(xy[:,1]))
-                ymax = max(ymax,np.nanmax(xy[:,1]))
 
-        dx = xmax-xmin
-        dy = ymax-ymin
-        ax.set_xlim(xmin - dx*margin[0], xmax + dx*margin[0])
-        ax.set_ylim(ymin - dy*margin[1], ymax + dy*margin[1])
-        self.canvas.draw()
+    def on_queued_zoom(self,event):
+        flag = False
+        if self.gui.interactiveplot.drawn_object is not None: flag = True
+
+        if flag: self.gui.interactiveplot.drawn_object._disconnect()
+            
+        super(CustomToolbar,self).release_zoom(event)
+
+        if flag: self.gui.interactiveplot.drawn_object._connect()
+    
+    def release_zoom(self,event):
+        self.queued_zoom = None
+        if sys.version_info.major < 3: # Python2
+            for zoom_id in self._ids_zoom:
+                self.canvas.mpl_disconnect(zoom_id)
+            self.queued_zoom = lambda event=event: self.on_queued_zoom(event)
+        else: # Python3
+            if self._zoom_info is not None:
+                if isinstance(self._zoom_info,dict):
+                    axes = self._zoom_info['axes']
+                    cid = self._zoom_info['cid']
+                elif hasattr(self._zoom_info,'axes'):
+                    axes = self._zoom_info.axes
+                    cid = self._zoom_info.cid
+                else:
+                    raise ValueError("Problem with the matplotlib zoom function. Please submit a bug report on GitHub with your current version of matplotlib.")
+                self.canvas.mpl_disconnect(cid)
+                self.queued_zoom = lambda event=event: self.on_queued_zoom(event)
+        if self.queued_zoom is not None:
+            self.gui.controls.save_state()
+            self.gui.controls.on_state_change()
+
+
