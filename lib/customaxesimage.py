@@ -27,6 +27,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._axes.add_image(self)
         self.threaded = False
 
+        self.previous_xlim = self._axes.get_xlim()
+        self.previous_ylim = self._axes.get_ylim()
+        
         self.thread = None
         
         self._extent = kwargs['extent']
@@ -141,7 +144,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if globals.debug > 1: print("customaxesimage.wait_to_calculate")
         if self.after_id_calculate is not None:
             self.after_cancel(self.after_id_calculate)
-        self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
+        self.after_id_calculate = self.after(1000,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
 
     def set_data(self,new_data,scaled=True):
         if globals.debug > 1: print("customaxesimage.set_data")

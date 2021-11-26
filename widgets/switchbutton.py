@@ -17,7 +17,7 @@ class SwitchButton(tk.Button,object):
         super(SwitchButton,self).__init__(self.master,command=self.command,relief=relief,**kwargs)
         
         self._command = command
-
+    
     def command(self,*args,**kwargs):
         if self.cget('state') != 'disabled':
             if not hasattr(self._command,"__len__"): command = [self._command,self._command]

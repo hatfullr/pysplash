@@ -10,6 +10,7 @@ from widgets.integerentry import IntegerEntry
 from widgets.labelledframe import LabelledFrame
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
+from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
 import numpy as np
 import globals
@@ -25,46 +26,35 @@ class Controls(tk.Frame,object):
         style.map('TCombobox', selectbackground=[('readonly', 'white')])
         style.map('TCombobox', selectforeground=[('readonly', 'black')])
         style.map('TCombobox', fieldbackground=[('disabled',self.gui["bg"])])
+
+        self.axis_names = [
+            'XAxis',
+            'YAxis',
+            'Colorbar',
+        ]
         
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
 
-        self.caxis_combobox.bind("<<ComboboxSelected>>",self.on_caxis_combobox_selected)
+
+        for variable in self.get_variables():
+            variable.trace('w',self.on_state_change)
+        
+        #self.caxis_combobox.bind("<<ComboboxSelected>>",self.on_caxis_combobox_selected)
         self.saved_state = None
         self.previous_state = None
+
         
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
-        self.x = tk.StringVar()
-        self.y = tk.StringVar()
-        self.c = tk.StringVar(value='None')
-        self.xaxis_scale = tk.StringVar(value="linear")
-        self.yaxis_scale = tk.StringVar(value="linear")
-        self.caxis_scale = tk.StringVar(value="linear")
+
         self.point_size = tk.IntVar(value=1)
 
         self.rotation_x = tk.DoubleVar(value=0)
         self.rotation_y = tk.DoubleVar(value=0)
         self.rotation_z = tk.DoubleVar(value=0)
 
-        self.xaxis_adaptive_limits = tk.BooleanVar(value=True)
-        self.xaxis_limits_high = tk.DoubleVar()
-        self.xaxis_limits_low = tk.DoubleVar()
-
-        self.yaxis_adaptive_limits = tk.BooleanVar(value=True)
-        self.yaxis_limits_high = tk.DoubleVar()
-        self.yaxis_limits_low = tk.DoubleVar()
-        
-        self.caxis_adaptive_limits = tk.BooleanVar(value=True)
-        self.caxis_limits_high = tk.DoubleVar()
-        self.caxis_limits_low = tk.DoubleVar()
-
-        for variable in self.get_variables():
-            variable.trace('w',self.on_state_change)
-
-        #self.c.trace('w',self.change_colorbar_type)
-        
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
         # Update button
@@ -78,215 +68,9 @@ class Controls(tk.Frame,object):
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
 
-        # x-axis
-        self.xaxis_frame = tk.Frame(self.axes_frame)
-        self.xaxis_buttons_frame = tk.Frame(self.xaxis_frame)
-        
-        self.xaxis_label = tk.Label(self.xaxis_frame,text="X Axis")
-        self.xaxis_combobox = ttk.Combobox(
-            self.xaxis_frame,
-            textvariable=self.x,
-            state='readonly',
-        )
-        self.xaxis_linear_button = tk.Radiobutton(
-            self.xaxis_buttons_frame,
-            text="linear",
-            variable=self.xaxis_scale,
-            indicatoron=False,
-            value="linear",
-            padx=5,
-            pady=5,
-            #command=self.set_xaxis_scale,
-        )
-        self.xaxis_log_button = tk.Radiobutton(
-            self.xaxis_buttons_frame,
-            text="log10",
-            variable=self.xaxis_scale,
-            indicatoron=False,
-            value="log10",
-            padx=5,
-            pady=5,
-            #command=self.set_xaxis_scale,
-        )
-        self.xaxis_10_button = tk.Radiobutton(
-            self.xaxis_buttons_frame,
-            text="^10",
-            variable=self.xaxis_scale,
-            indicatoron=False,
-            value="^10",
-            padx=5,
-            pady=5,
-            #command=self.set_xaxis_scale,
-        )
-
-        self.xaxis_limits_frame = tk.Frame(self.xaxis_frame)
-        self.xaxis_limits_label = tk.Label(
-            self.xaxis_limits_frame,
-            text="Limits",
-        )
-        self.xaxis_limits_entry_low = FloatEntry(
-            self.xaxis_limits_frame,
-            textvariable=self.xaxis_limits_low,
-            width=7,
-            state='disabled',
-        )
-        self.xaxis_limits_entry_high = FloatEntry(
-            self.xaxis_limits_frame,
-            textvariable=self.xaxis_limits_high,
-            width=7,
-            state='disabled',
-        )
-        self.xaxis_limits_adaptive_button = SwitchButton(
-            self.xaxis_limits_frame,
-            text="Adaptive",
-            variable=self.xaxis_adaptive_limits,
-            command=self.toggle_adaptive_xlim,
-        )
-
-
-        
-        # y-axis
-        self.yaxis_frame = tk.Frame(self.axes_frame)
-        self.yaxis_buttons_frame = tk.Frame(self.yaxis_frame)
-        
-        self.yaxis_label = tk.Label(self.yaxis_frame,text="Y Axis")
-        self.yaxis_combobox = ttk.Combobox(
-            self.yaxis_frame,
-            textvariable=self.y,
-            state='readonly',
-        )
-        self.yaxis_linear_button = tk.Radiobutton(
-            self.yaxis_buttons_frame,
-            text="linear",
-            variable=self.yaxis_scale,
-            indicatoron=False,
-            value="linear",
-            padx=5,
-            pady=5,
-            #command=self.set_yaxis_scale,
-        )
-        self.yaxis_log_button = tk.Radiobutton(
-            self.yaxis_buttons_frame,
-            text="log10",
-            variable=self.yaxis_scale,
-            indicatoron=False,
-            value="log10",
-            padx=5,
-            pady=5,
-            #command=self.set_yaxis_scale,
-        )
-        self.yaxis_10_button = tk.Radiobutton(
-            self.yaxis_buttons_frame,
-            text="^10",
-            variable=self.yaxis_scale,
-            indicatoron=False,
-            value="^10",
-            padx=5,
-            pady=5,
-            #command=self.set_yaxis_scale,
-        )
-
-
-        self.yaxis_limits_frame = tk.Frame(self.yaxis_frame)
-        self.yaxis_limits_label = tk.Label(
-            self.yaxis_limits_frame,
-            text="Limits",
-        )
-        self.yaxis_limits_entry_low = FloatEntry(
-            self.yaxis_limits_frame,
-            textvariable=self.yaxis_limits_low,
-            width=7,
-            state='disabled',
-        )
-        self.yaxis_limits_entry_high = FloatEntry(
-            self.yaxis_limits_frame,
-            textvariable=self.yaxis_limits_high,
-            width=7,
-            state='disabled',
-        )
-        self.yaxis_limits_adaptive_button = SwitchButton(
-            self.yaxis_limits_frame,
-            text="Adaptive",
-            variable=self.yaxis_adaptive_limits,
-            command=self.toggle_adaptive_ylim,
-        )
-
-
-
-
-
-        
-        # Colorbar controls
-        self.caxis_frame = LabelledFrame(self,"Colorbar",relief='sunken',bd=1)
-        
-        self.caxis_label = tk.Label(self.caxis_frame,text="Type")
-        
-        self.caxis_combobox = ttk.Combobox(
-            self.caxis_frame,
-            textvariable=self.c,
-            state='readonly',
-        )
-        
-        self.caxis_buttons_frame = tk.Frame(self.caxis_frame)
-        self.caxis_linear_button = tk.Radiobutton(
-            self.caxis_buttons_frame,
-            text="linear",
-            variable=self.caxis_scale,
-            indicatoron=False,
-            value="linear",
-            padx=5,
-            pady=5,
-            #command=self.set_caxis_scale,
-            state='disabled',
-        )
-        self.caxis_log_button = tk.Radiobutton(
-            self.caxis_buttons_frame,
-            text="log10",
-            variable=self.caxis_scale,
-            indicatoron=False,
-            value="log10",
-            padx=5,
-            pady=5,
-            #command=self.set_caxis_scale,
-            state='disabled',
-        )
-        self.caxis_10_button = tk.Radiobutton(
-            self.caxis_buttons_frame,
-            text="^10",
-            variable=self.caxis_scale,
-            indicatoron=False,
-            value="^10",
-            padx=5,
-            pady=5,
-            #command=self.set_caxis_scale,
-            state='disabled',
-        )
-
-        self.caxis_limits_frame = tk.Frame(self.caxis_frame)
-        self.caxis_limits_label = tk.Label(
-            self.caxis_limits_frame,
-            text="Limits",
-        )
-        self.caxis_limits_entry_low = FloatEntry(
-            self.caxis_limits_frame,
-            textvariable=self.caxis_limits_low,
-            width=7,
-            state='disabled',
-        )
-        self.caxis_limits_entry_high = FloatEntry(
-            self.caxis_limits_frame,
-            textvariable=self.caxis_limits_high,
-            width=7,
-            state='disabled',
-        )
-        self.caxis_limits_adaptive_button = SwitchButton(
-            self.caxis_limits_frame,
-            text="Adaptive",
-            variable=self.caxis_adaptive_limits,
-            command=self.toggle_adaptive_clim,
-            state='disabled',
-        )
-        
+        self.axis_controllers = {}
+        for axis_name in self.axis_names:
+            self.axis_controllers[axis_name] = AxisController(self,axis_name)
 
         # Plot controls
         self.plot_controls_frame = LabelledFrame(self,"Plot Controls",relief='sunken',bd=1)
@@ -305,63 +89,8 @@ class Controls(tk.Frame,object):
         self.update_button.pack(side='top',fill='x')
         
         # Axis controls
-        self.xaxis_label.grid(row=0,column=0)
-        self.xaxis_combobox.grid(row=0,column=1,sticky='ew')
-        self.xaxis_linear_button.pack(side='left')
-        self.xaxis_log_button.pack(side='left')
-        self.xaxis_10_button.pack(side='left')
-
-        self.xaxis_buttons_frame.grid(row=1,column=0,columnspan=2,sticky='ne')
-
-        self.xaxis_limits_label.grid(row=0,column=0)
-        self.xaxis_limits_entry_low.grid(row=0,column=1)
-        self.xaxis_limits_entry_high.grid(row=0,column=2)
-        self.xaxis_limits_adaptive_button.grid(row=0,column=3)
-        self.xaxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
-        
-        self.xaxis_frame.grid(row=0,column=0,sticky='new')
-
-        self.yaxis_label.grid(row=0,column=0)
-        self.yaxis_combobox.grid(row=0,column=1,sticky='ew')
-        self.yaxis_linear_button.pack(side='left')
-        self.yaxis_log_button.pack(side='left')
-        self.yaxis_10_button.pack(side='left')
-
-        self.yaxis_buttons_frame.grid(row=1,column=0,columnspan=2,sticky='ne')
-
-        self.yaxis_limits_label.grid(row=0,column=0)
-        self.yaxis_limits_entry_low.grid(row=0,column=1)
-        self.yaxis_limits_entry_high.grid(row=0,column=2)
-        self.yaxis_limits_adaptive_button.grid(row=0,column=3)
-        self.yaxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
-        
-        self.yaxis_frame.grid(row=1,column=0,sticky='new')
-        
-        self.xaxis_frame.columnconfigure(1,weight=1)
-        self.yaxis_frame.columnconfigure(1,weight=1)
-
-        self.axes_frame.columnconfigure(0,weight=1)
-        self.axes_frame.pack(side='top',fill='both')
-
-        # Colorbar controls
-        self.caxis_label.grid(row=0,column=0)
-        self.caxis_combobox.grid(row=0,column=1,sticky='ew')
-
-        self.caxis_linear_button.pack(side='left')
-        self.caxis_log_button.pack(side='left')
-        self.caxis_10_button.pack(side='left')
-
-        self.caxis_buttons_frame.grid(row=1,column=0,columnspan=2,sticky='ne')
-
-        self.caxis_limits_label.grid(row=0,column=0)
-        self.caxis_limits_entry_low.grid(row=0,column=1)
-        self.caxis_limits_entry_high.grid(row=0,column=2)
-        self.caxis_limits_adaptive_button.grid(row=0,column=3)
-        self.caxis_limits_frame.grid(row=2,column=0,columnspan=2,sticky='ne')
-        
-        self.caxis_frame.columnconfigure(1,weight=1)
-        self.caxis_frame.pack(side='top',fill='both')
-
+        for axis_name,axis_controller in self.axis_controllers.items():
+            axis_controller.pack(side='top',fill='x')
 
         # Plot controls
         self.point_size_label.grid(row=0,column=0)
@@ -380,6 +109,7 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.on_state_change")
         # Compare the current state to the previous state
         if self.saved_state is None: return
+        
         current_state = self.get_state()
         for item in current_state:
             if item not in self.saved_state:
@@ -405,15 +135,21 @@ class Controls(tk.Frame,object):
         self.saved_state = self.get_state()
         self.update_button.configure(state='disabled')
 
+    
     def get_variables(self,*args,**kwargs):
         if globals.debug > 1: print("controls.get_variables")
         variables = []
+
+        for child in self.get_all_children():
+            if hasattr(child,"get_variables"): variables += child.get_variables()
+            
         for name in dir(self):
             attr = getattr(self,name)
             if isinstance(attr,(tk.IntVar,tk.DoubleVar,tk.StringVar,tk.BooleanVar)):
                 variables.append(attr)
         return variables
-        
+    
+    
     def update_axis_comboboxes(self,data):
         if globals.debug > 1: print("controls.update_axis_comboboxes")
         # Update the values in the comboboxes with the keys in data
@@ -453,7 +189,7 @@ class Controls(tk.Frame,object):
         if self.c.get() != 'None': self.enable('colorbar')
     
     def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("controls.get_all_children")
+        #if globals.debug > 1: print("controls.get_all_children")
         if wid is None: _list = self.winfo_children()
         else: _list = wid.winfo_children()        
         for item in _list:
@@ -582,7 +318,10 @@ class Controls(tk.Frame,object):
             self.disable('colorbar limits')
         else:
             self.enable('colorbar limits')
-            
-            
                 
-    
+    def connect(self):
+        # Connect the controls to the interactiveplot
+        ax = self.gui.interactiveplot.ax
+        self.axis_controllers['XAxis'].connect(ax.xaxis)
+        self.axis_controllers['YAxis'].connect(ax.yaxis)
+        self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.cax)

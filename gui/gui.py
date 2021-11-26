@@ -54,6 +54,8 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
+        
+
         self.plotcontrols.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
         self.plotcontrols.next_button.configure(command=self.next_file)
@@ -61,12 +63,13 @@ class GUI(tk.Frame,object):
         
         self.plotcontrols.current_file.trace("w",self.read)
         self.plotcontrols.current_file.set(sys.argv[1])
-
-
-        self.rotation_after_id = None
+        
         
         self.initialize_xy_controls()
 
+        # Connect the controls to the interative plot
+        self.controls.connect()
+        
         self.controls.save_state()
         
     def initialize_xy_controls(self):
@@ -77,10 +80,10 @@ class GUI(tk.Frame,object):
             if hasattr(val,"__len__"):
                 if len(val) == N:
                     if not found_first:
-                        self.controls.x.set(key)
+                        self.controls.axis_controllers['XAxis'].value.set(key)
                         found_first = True
                     else:
-                        self.controls.y.set(key)
+                        self.controls.axis_controllers['YAxis'].value.set(key)
                         break
     
     def create_variables(self):
@@ -90,6 +93,11 @@ class GUI(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
         self.menubar = MenuBar(self.window,self)
+        self.interactiveplot = InteractivePlot(
+            self,
+            relief='sunken',
+            bd=1,
+        )
         self.controls = Controls(
             self,
             width=2*self.dpi, # pixels = inches * dpi
@@ -97,11 +105,6 @@ class GUI(tk.Frame,object):
             relief='sunken',
             padx=5,
             pady=5,
-        ) 
-        self.interactiveplot = InteractivePlot(
-            self,
-            relief='sunken',
-            bd=1,
         )
         self.plotcontrols = PlotControls(
             self,
@@ -170,20 +173,42 @@ class GUI(tk.Frame,object):
             read_file(self.plotcontrols.current_file.get()),
             rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
-        # Check for requisite keys for certain types of plots
+        
+
+        
+        # Make sure the data has the required keys for scatter plots
+        data_keys = self.data['data'].keys()
+        for data_key in ['x','y','z','m','h']:
+            if data_key not in data_keys:
+                raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
+
+        keys = []
+        N = len(self.data['data']['x'])
+        for key,val in self.data['data'].items():
+            if hasattr(val,"__len__"):
+                if len(val) == N: keys.append(key)
+        
+        # Check for requisite keys for colorbar plots
         values = ['None']
-        keys = self.data['data'].keys()
+        ckeys = self.data['data'].keys()
         for key in ['x','y','m','h','rho']:
-            if key not in keys: break
+            if key not in ckeys: break
         else: values.append("Column density")
         for key in ['x','y','m','h','rho','opacity']:
-            if key not in keys: break
+            if key not in ckeys: break
         else: values.append("Optical depth")
 
-        self.controls.caxis_combobox.configure(values=values)
         
-        self.controls.update_axis_comboboxes(self.data)
-        self.do_after(100,self.interactiveplot.update,lambda: self.controls.x.get() and self.controls.y.get())
+        # Update the axis controllers
+        for axis_name, axis_controller in self.controls.axis_controllers.items():
+            if axis_name != 'Colorbar':
+                axis_controller.combobox.configure(values=keys)
+        self.controls.axis_controllers['Colorbar'].combobox.configure(values=values)
+        
+        #self.controls.caxis_combobox.configure(values=values)
+        
+        #self.controls.update_axis_comboboxes(self.data)
+        #self.do_after(100,self.interactiveplot.update,lambda: self.controls.x.get() and self.controls.y.get())
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
@@ -216,6 +241,7 @@ class GUI(tk.Frame,object):
         
         if filenames[nextidx] != self.plotcontrols.current_file.get():
             self.plotcontrols.current_file.set(filenames[nextidx])
+            self.interactiveplot.update()
 
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
@@ -228,6 +254,7 @@ class GUI(tk.Frame,object):
         
         if filenames[nextidx] != self.plotcontrols.current_file.get():
             self.plotcontrols.current_file.set(filenames[nextidx])
+            self.interactiveplot.update()
     
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")
