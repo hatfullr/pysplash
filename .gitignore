@@ -1,3 +1,7 @@
-**/*.pyc
 **/*~
 **/*#
+**/*.pyc
+**/*.gif
+**/*.png
+**/out*.sph
+**/fluxcal*.track
