@@ -9,9 +9,10 @@ else:
     #from lib.threadedtask import ThreadedTask
 
 import globals
-if globals.debug > 0: from time import time
+from time import time
 import numpy as np
 import math
+import multiprocessing
 
 try:
     from numba import cuda,float64
@@ -19,6 +20,8 @@ try:
     has_jit = True
 except ImportError:
     has_jit = False
+
+
 
 class ScatterPlot(CustomAxesImage,object):
     # s is size of markers in points**2
@@ -34,6 +37,9 @@ class ScatterPlot(CustomAxesImage,object):
         
         self.initializing = True
         self.set_size(s)
+
+        self.cpu_mp_time = 0.
+        self.cpu_serial_time = np.inf
         
         kwargs['cmap'] = 'binary'
         super(ScatterPlot,self).__init__(
@@ -92,13 +98,17 @@ class ScatterPlot(CustomAxesImage,object):
             self.dy = (ymax-ymin)/float(self.ypixels)
             
             self._data[:] = False
-            self.calculate_data(self.x[idx],self.y[idx])
+            if has_jit:
+                self.calculate_data_gpu(self.x[idx],self.y[idx])
+            else:
+                self.calculate_data_cpu(self.x[idx],self.y[idx])
+            
             if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time()-start))
 
     if has_jit:
         @staticmethod
         @cuda.jit
-        def calculate_indices(data,delta_xy,invdx,invdy):
+        def calculate_indices_gpu(data,delta_xy,invdx,invdy):
             i = cuda.grid(1)
             if i < delta_xy.size:
                 data[int(delta_xy[i][1]*invdy),int(delta_xy[i][0]*invdx)] = True
@@ -115,7 +125,7 @@ class ScatterPlot(CustomAxesImage,object):
 
             blockspergrid = N // threadsperblock + 1
             
-            self.calculate_indices[blockspergrid,threadsperblock](
+            self.calculate_indices_gpu[blockspergrid,threadsperblock](
                 device_data,
                 device_delta_xy,
                 1./self.dx,
@@ -123,21 +133,44 @@ class ScatterPlot(CustomAxesImage,object):
             )
             cuda.synchronize()
             self._data = device_data.copy_to_host()
-            
-    else:
-        def calculate_data_gpu(self,*args,**kwargs):
-            return self.calculate_data_cpu(*args,**kwargs)
 
     def calculate_data_cpu(self,x,y):
         if globals.debug > 1: print("scatterplot.calculate_data_cpu")
-        xmin,xmax,ymin,ymax = self._extent
-        for xp,yp in zip(x,y):
-            self._data[int((yp-ymin)/self.dy),int((xp-xmin)/self.dx)] = True
+        if globals.use_multiprocessing_on_scatter_plots:
+            self.calculate_data_cpu_mp(x,y)
+        else:
+            self.calculate_data_cpu_serial(x,y)
+            
+    def calculate_data_cpu_serial(self,x,y,data=None):
+        if globals.debug > 1: print("scatterplot.calculate_data_cpu_serial")
+        # This is the fastest I could possibly make it
+        if data is None: data = self._data
+        indices_x = ((x-self._extent[0])/self.dx-0.5).astype(int,copy=False)
+        indices_y = ((y-self._extent[2])/self.dy-0.5).astype(int,copy=False)
+        data[indices_y,indices_x] = True
+        
+
+    def calculate_data_cpu_mp(self,x,y,data=None):
+        if globals.debug > 1: print("scatterplot.calculate_data_mp")
+        if data is None: data = self._data
+        pool = multiprocessing.Pool()
+        nprocs = pool._processes
+
+        chunks = np.array_split(np.arange(len(x)),nprocs)
+        
+        procs = [None]*nprocs
+        for p in range(nprocs):
+            chunk = chunks[p]
+            procs[p] = pool.apply_async(
+                calculate_indices_cpu,
+                args=(x[chunk],y[chunk],self._extent[0],self._extent[2],self.dx,self.dy,),
+            )
+        for proc in procs:
+            indices_x, indices_y = proc.get()
+            data[indices_y,indices_x] = True
+
+        pool.close()
     
-    def calculate_data(self,x,y):
-        if globals.debug > 1: print("scatterplot.calculate_data")
-        try:
-            self.calculate_data_gpu(x,y)
-        except:
-            self.calculate_data_cpu(x,y)
+def calculate_indices_cpu(x,y,xmin,ymin,dx,dy):
+    return ((x-xmin)/dx-0.5).astype(int,copy=False), ((y-ymin)/dy-0.5).astype(int,copy=False)
 
