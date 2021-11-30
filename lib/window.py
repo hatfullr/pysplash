@@ -4,6 +4,7 @@ if sys.version_info.major < 3:
 else:
     import tkinter as tk
 import globals
+import os
     
 class Window(tk.Tk):
     def __init__(self):
@@ -36,6 +37,17 @@ class Window(tk.Tk):
 
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("window.close")
+
+        # Save preferences in the gui
+        for child in self.winfo_children():
+            if(hasattr(child,"save_preferences")):
+                child.save_preferences()
+        
+        # Remove all files from the "tmp" directory
+        tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
+        for filename in os.listdir(tmp_path):
+            os.remove(os.path.join(tmp_path,filename))
+                
         self.quit()
 
     def on_resize(self,event):

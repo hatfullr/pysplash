@@ -18,6 +18,9 @@ import globals
 from widgets.menubar import MenuBar
 from functions.make_rotation_movie import make_rotation_movie
 import copy
+import os.path
+import json
+import os
 
 class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
@@ -31,8 +34,8 @@ class GUI(tk.Frame,object):
         self.user_controlled = True
 
         # Capture the filenames from the execution arguments
-        if len(sys.argv[1:]) == 0:
-            raise RuntimeError("No filenames provided")
+        #if len(sys.argv[1:]) == 0:
+        #    raise RuntimeError("No filenames provided")
         
         if sys.version_info.major < 3:
             self.default_font = tkFont(name=self.fontname,exists=True)
@@ -49,6 +52,13 @@ class GUI(tk.Frame,object):
         self.dpi = self.window.winfo_fpixels('1i')
 
         super(GUI,self).__init__(self.window)
+
+        self.data = None
+        
+        self.preferences = {}
+        self.preferences_file = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"preferences.json")
+
+        self.load_preferences()
         
         self.create_variables()
         self.create_widgets()
@@ -62,10 +72,11 @@ class GUI(tk.Frame,object):
         self.plotcontrols.back_button.configure(command=self.previous_file)
         
         self.plotcontrols.current_file.trace("w",self.read)
-        self.plotcontrols.current_file.set(sys.argv[1])
-        
-        
-        self.initialize_xy_controls()
+        if len(sys.argv) > 1:
+            self.filenames = sys.argv[1:]
+            self.plotcontrols.current_file.set(sys.argv[1])
+        else:
+            self.filenames = []
 
         # Connect the controls to the interative plot
         self.controls.connect()
@@ -178,7 +189,7 @@ class GUI(tk.Frame,object):
         
         # Make sure the data has the required keys for scatter plots
         data_keys = self.data['data'].keys()
-        for data_key in ['x','y','z','m','h']:
+        for data_key in ['x','y','z']:
             if data_key not in data_keys:
                 raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
 
@@ -204,6 +215,8 @@ class GUI(tk.Frame,object):
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=values)
+
+        self.initialize_xy_controls()
         
         #self.controls.caxis_combobox.configure(values=values)
         
@@ -212,9 +225,12 @@ class GUI(tk.Frame,object):
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
-        data = copy.copy(self.data['data'][key])
-        if key == 'h': return data*globals.compact_support
-        else: return data
+        if self.data is None:
+            return None
+        else:
+            data = copy.copy(self.data['data'][key])
+            if key == 'h': return data*globals.compact_support
+            else: return data
 
     def get_display_units(self,key):
         if globals.debug > 1: print("gui.get_display_units")
@@ -233,29 +249,61 @@ class GUI(tk.Frame,object):
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
         skip_amount = int(self.plotcontrols.skip_amount.get())
-        filenames = sys.argv[1:]
+        #filenames = sys.argv[1:]
 
-        idx = filenames.index(self.plotcontrols.current_file.get())
-        nextidx = min(idx+skip_amount,len(filenames)-1)
-        if nextidx == len(filenames)-1: self.plotcontrols.skip_amount.set(1)
+        idx = self.filenames.index(self.plotcontrols.current_file.get())
+        nextidx = min(idx+skip_amount,len(self.filenames)-1)
+        if nextidx == len(self.filenames)-1: self.plotcontrols.skip_amount.set(1)
         
-        if filenames[nextidx] != self.plotcontrols.current_file.get():
-            self.plotcontrols.current_file.set(filenames[nextidx])
+        if self.filenames[nextidx] != self.plotcontrols.current_file.get():
+            self.plotcontrols.current_file.set(self.filenames[nextidx])
             self.interactiveplot.update()
 
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
         skip_amount = int(self.plotcontrols.skip_amount.get())
-        filenames = sys.argv[1:]
+        #filenames = sys.argv[1:]
         
-        idx = filenames.index(self.plotcontrols.current_file.get())
+        idx = self.filenames.index(self.plotcontrols.current_file.get())
         nextidx = max(idx-skip_amount,0)
         if nextidx == 0: self.plotcontrols.skip_amount.set(1)
         
-        if filenames[nextidx] != self.plotcontrols.current_file.get():
-            self.plotcontrols.current_file.set(filenames[nextidx])
+        if self.filenames[nextidx] != self.plotcontrols.current_file.get():
+            self.plotcontrols.current_file.set(self.filenames[nextidx])
             self.interactiveplot.update()
     
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)
+
+    def set_preference(self,key,value):
+        self.preferences[key] = value
+
+    def get_preference(self,key):
+        if key in self.preferences.keys():
+            return self.preferences[key]
+        else:
+            return None
+        
+    def save_preferences(self,*args,**kwargs):
+        with open(self.preferences_file,'w') as f:
+            json.dump(self.preferences, f, indent=4)
+
+    def load_preferences(self,*args,**kwargs):
+        if not os.path.isfile(self.preferences_file): return
+        with open(self.preferences_file,'r') as f:
+            f.seek(0,2)
+            filesize = f.tell()
+            f.seek(0)
+            if filesize == 0: self.preferences = {}
+            else: self.preferences = json.load(f)
+
+    def update_filenames(self,*args,**kwargs):
+        tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
+
+        for filename in os.listdir(tmp_path):
+            if filename not in self.filenames:
+                self.filenames.append(os.path.join(tmp_path,filename))
+        
+            
+                         

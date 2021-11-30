@@ -69,7 +69,7 @@ class InteractivePlot(tk.Frame,object):
     def wait_for_init(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.wait_for_init")
         if self.init_after_id is not None: self.after_cancel(self.init_after_id)
-        if 'data' not in dir(self.gui):
+        if self.gui.data is None:
             self.init_after_id = self.after(100,self.wait_for_init)
         else:
             self.initialize_drawn_object()
