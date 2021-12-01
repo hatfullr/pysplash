@@ -77,6 +77,7 @@ class OrientationArrows:
                     length_includes_head=self.length_includes_head,
                     width=0.003,
                     transform=self.ax.transAxes,
+                    zorder=1.e30,
                     **self.kwargs
                 )
                 self.artists.append(artist)
@@ -93,7 +94,8 @@ class OrientationArrows:
                     (self.x0,self.y0),
                     radius=radius,
                     color=self.color[i],
-                    zorder=1.e30,
+                    transform=self.ax.transAxes,
+                    zorder=1.e30+1,
                 )
                 self.artists.append(artist)
                 self.ax.add_artist(artist)
@@ -104,7 +106,8 @@ class OrientationArrows:
                         (self.x0,self.y0),
                         radius=radius*0.1,
                         color='black',
-                        zorder=1.e30+1,
+                        transform=self.ax.transAxes,
+                        zorder=1.e30+2,
                     )
                 else:
                     # Pointing into the screen
@@ -119,7 +122,8 @@ class OrientationArrows:
                         vertices[:,0],
                         vertices[:,1],
                         color='black',
-                        zorder=1.e30+1,
+                        zorder=1.e30+2,
+                        transform=self.ax.transAxes,
                         linewidth=0.5,
                     )
                 self.artists.append(artist)

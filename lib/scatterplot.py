@@ -32,9 +32,6 @@ class ScatterPlot(CustomAxesImage,object):
         self.y = y
         self.s = s
 
-        self.previous_x = None
-        self.previous_y = None
-        
         self.initializing = True
         self.set_size(s)
 

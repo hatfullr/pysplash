@@ -52,6 +52,11 @@ class InteractivePlot(tk.Frame,object):
         
         self.draw_enabled = False
 
+        self.previous_args = None
+        self.previous_kwargs = None
+        self.previous_xlim = None
+        self.previous_ylim = None
+
         self.canvas.draw()
         
         self.winfo_toplevel().bind("<<ResizeStarted>>",self.disable_draw)
@@ -143,8 +148,6 @@ class InteractivePlot(tk.Frame,object):
         else:
             aspect = None
         
-        self.reset() # Clear the current plot
-
         # Update the orientation
         if self.gui.controls.show_orientation.get():
             self.orientation.draw()
@@ -156,32 +159,33 @@ class InteractivePlot(tk.Frame,object):
             self.canvas.draw_idle()
             return
 
+        
+        
+        
         # Scatter plot
         if self.draw_type == 'None':
-            self.hide_colorbar()
-            self.drawn_object = ScatterPlot(
+            method = ScatterPlot
+            args = (
                 self.ax,
                 self.gui.get_display_data(x),
                 self.gui.get_display_data(y),
+            )
+            kwargs = dict(
                 s=self.gui.controls.point_size,
                 aspect=aspect,
             )
-        
+
         # Column density plot
         elif self.draw_type == 'Column density':
-            self.show_colorbar()
-            
-            #if self.gui.controls.caxis_adaptive_limits.get():
-            #    self.connect_clim()
-            
             A = self.gui.get_data('rho')
             m = self.gui.get_data('m')
             h = self.gui.get_data('h')
             rho = self.gui.get_data('rho')
 
             idx = self.gui.get_data('u') != 0
-            
-            self.drawn_object = IntegratedValuePlot(
+
+            method = IntegratedValuePlot
+            args = (
                 self.ax,
                 A[idx],
                 self.gui.get_data(x)[idx],
@@ -204,24 +208,18 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('m'),
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
-                ],
+                ]
+            )
+
+            kwargs = dict(
                 cmap=self.colorbar.cmap,
                 xscale=self.gui.controls.xaxis_scale.get(),
                 yscale=self.gui.controls.yaxis_scale.get(),
                 cscale=self.gui.controls.caxis_scale.get(),
                 aspect=aspect,
             )
-            
-            # Update the colorbar limits; automatically updates the plotted
-            # color limits
-            self.update_colorbar_clim()
 
         elif self.draw_type == 'Optical depth':
-            self.show_colorbar()
-            
-            #if self.gui.controls.caxis_adaptive_limits.get():
-            #    self.connect_clim()
-            
             A = self.gui.get_data('rho')*self.gui.get_data('opacity')
             x = self.gui.get_data(self.gui.controls.x.get())
             y = self.gui.get_data(self.gui.controls.y.get())
@@ -230,8 +228,9 @@ class InteractivePlot(tk.Frame,object):
             rho = self.gui.get_data('rho')
 
             idx = self.gui.get_data('u') != 0
-            
-            self.drawn_object = IntegratedValuePlot(
+
+            method = IntegratedValuePlot
+            args = (
                 self.ax,
                 A[idx],
                 x[idx],
@@ -255,16 +254,73 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
                 ],
+            )
+            kwargs = dict(
                 cmap=self.colorbar.cmap,
                 xscale=self.gui.controls.xaxis_scale.get(),
                 yscale=self.gui.controls.yaxis_scale.get(),
                 cscale=self.gui.controls.caxis_scale.get(),
             )
 
+
+        
+
+        # If the plot we are going to make is the same as the plot already
+        # on the canvas, then don't draw a new one
+        if self.drawn_object is not None:
+            xmin,xmax,ymin,ymax = self.drawn_object._extent
+            if (self.previous_xlim[0] == xmin and
+                self.previous_xlim[1] == xmax and
+                self.previous_ylim[0] == ymin and
+                self.previous_ylim[1] == ymax):
+                
+                if len(args) == len(self.previous_args):
+                    for arg in args:
+                        for prev_arg in self.previous_args:
+                            try:
+                                if arg == prev_arg:
+                                    break
+                            except ValueError:
+                                if np.array_equal(arg,prev_arg):
+                                    break
+                        else:
+                            break
+                    else: # The args are the same as before
+                        keys = self.previous_kwargs.keys()
+                        if len(keys) == len(kwargs.keys()):
+                            for key,val in kwargs.items():
+                                if key not in keys or self.previous_kwargs[key] != val:
+                                    break
+                            else:
+                                return
+
+        # We only get here if the plot we are going to draw won't be
+        # the same as the previous plot
+                            
+        
+        # Before creation
+        if self.draw_type == 'None':
+            self.hide_colorbar()
+        else:
+            self.show_colorbar()
+            #if self.gui.controls.caxis_adaptive_limits.get():
+            #    self.connect_clim()
+
+            
+        self.reset() # Clear the current plot
+        self.drawn_object = method(*args,**kwargs)
+
+
+        
+        # After creation
+        if self.draw_type != 'None':
             # Update the colorbar limits; automatically updates the plotted
             # color limits
             self.update_colorbar_clim()
 
+        self.previous_args = args
+        self.previous_kwargs = kwargs            
+            
         xadaptive = self.gui.controls.axis_controllers['XAxis'].is_adaptive.get()
         yadaptive = self.gui.controls.axis_controllers['YAxis'].is_adaptive.get()
         cadaptive = self.gui.controls.axis_controllers['Colorbar'].is_adaptive.get()
@@ -274,6 +330,8 @@ class InteractivePlot(tk.Frame,object):
         elif yadaptive: self.reset_data_ylim(draw=False)
             
         self.canvas.draw_idle()
+        self.previous_xlim = self.ax.get_xlim()
+        self.previous_ylim = self.ax.get_ylim()
         
 
     def on_point_size_changed(self,*args,**kwargs):
