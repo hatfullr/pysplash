@@ -2,9 +2,7 @@ import collections
 import copy
 import numpy as np
 import globals
-
-runit = 6.599e10
-munit = 1.9891e33
+from functions.rotate import rotate
 
 class Data(collections.OrderedDict,object):
     def __init__(self,data,rotations=None,*args,**kwargs):
@@ -32,34 +30,9 @@ class Data(collections.OrderedDict,object):
         
     def rotate(self,anglexdeg,angleydeg,anglezdeg):
         if globals.debug > 1: print("data.rotate")
-        xangle = float(anglexdeg)/180.*np.pi
-        yangle = float(angleydeg)/180.*np.pi
-        zangle = float(anglezdeg)/180.*np.pi
 
-        x = self._original['data']['x']
-        y = self._original['data']['y']
-        z = self._original['data']['z']
+        x = copy.copy(self._original['data']['x'])
+        y = copy.copy(self._original['data']['y'])
+        z = copy.copy(self._original['data']['z'])
         
-        if zangle != 0: # rotate about z
-            rold = np.sqrt(x*x + y*y)
-            phi = np.arctan2(y,x)
-            phi -= zangle
-            x = rold*np.cos(phi)
-            y = rold*np.sin(phi)
-        if yangle != 0: # rotate about y
-            rold = np.sqrt(z*z + x*x)
-            phi = np.arctan2(z,x)
-            phi -= yangle
-            z = rold*np.sin(phi)
-            x = rold*np.cos(phi)
-        if xangle != 0: # rotate about x
-            rold = np.sqrt(y*y + z*z)
-            phi = np.arctan2(z,y)
-            phi -= xangle
-            y = rold*np.cos(phi)
-            z = rold*np.sin(phi)
-            
-        self['data']['x'] = x
-        self['data']['y'] = y
-        self['data']['z'] = z
-
+        self['data']['x'], self['data']['y'], self['data']['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
