@@ -19,6 +19,7 @@ from copy import copy
 
 from lib.scatterplot import ScatterPlot
 from lib.integratedvalueplot import IntegratedValuePlot
+from lib.orientationarrows import OrientationArrows
 
 class InteractivePlot(tk.Frame,object):
     def __init__(self,gui,*args,**kwargs):
@@ -32,6 +33,8 @@ class InteractivePlot(tk.Frame,object):
 
         self.x_cid = None
         self.y_cid = None
+
+        self.orientation = OrientationArrows(self.gui,self.ax)
         
         self.cax = None
         self.colorbar = None
@@ -141,6 +144,17 @@ class InteractivePlot(tk.Frame,object):
             aspect = None
         
         self.reset() # Clear the current plot
+
+        # Update the orientation
+        if self.gui.controls.show_orientation.get():
+            self.orientation.draw()
+        else:
+            self.orientation.clear()
+
+        # If there's no data to plot, stop here
+        if self.gui.data is None:
+            self.canvas.draw_idle()
+            return
 
         # Scatter plot
         if self.draw_type == 'None':
@@ -498,5 +512,3 @@ class InteractivePlot(tk.Frame,object):
             if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
             if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
             if draw: self.canvas.draw_idle()
-
-        

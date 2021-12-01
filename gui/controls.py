@@ -55,6 +55,8 @@ class Controls(tk.Frame,object):
         self.rotation_y = tk.DoubleVar(value=0)
         self.rotation_z = tk.DoubleVar(value=0)
 
+        self.show_orientation = tk.BooleanVar(value=False)
+
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
         # Update button
@@ -82,6 +84,12 @@ class Controls(tk.Frame,object):
         self.rotation_x_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_x,width=5)
         self.rotation_y_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_y,width=5)
         self.rotation_z_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_z,width=5)
+
+        self.orientation_checkbutton = tk.Checkbutton(
+            self.plot_controls_frame,
+            text="Show orientation",
+            variable=self.show_orientation,
+        )
     
     def place_widgets(self):
         if globals.debug > 1: print("controls.place_widgets")
@@ -102,6 +110,8 @@ class Controls(tk.Frame,object):
         self.rotation_z_entry.grid(row=0,column=3)
 
         self.rotations_frame.grid(row=1,column=0,columnspan=2)
+
+        self.orientation_checkbutton.grid(row=2,column=0,columnspan=2,sticky='nws')
         
         self.plot_controls_frame.pack(side='top')
 
@@ -263,7 +273,6 @@ class Controls(tk.Frame,object):
                         
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
-
         
         if (self.gui.interactiveplot.drawn_object is not None and 
             self.saved_state is not None and 
@@ -280,11 +289,12 @@ class Controls(tk.Frame,object):
             self.gui.plotcontrols.toolbar.queued_zoom()
             
         # Perform any rotations necessary
-        self.gui.data.rotate(
-            self.rotation_x.get(),
-            self.rotation_y.get(),
-            self.rotation_z.get(),
-        )
+        if self.gui.data is not None:
+            self.gui.data.rotate(
+                self.rotation_x.get(),
+                self.rotation_y.get(),
+                self.rotation_z.get(),
+            )
         
         # Draw the new plot
         self.gui.interactiveplot.update()
