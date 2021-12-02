@@ -37,9 +37,13 @@ class Controls(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-
+        
         for variable in self.get_variables():
             variable.trace('w',self.on_state_change)
+        
+        self.state_listeners_connected = True
+        
+        self.connect_state_listeners()
         
         #self.caxis_combobox.bind("<<ComboboxSelected>>",self.on_caxis_combobox_selected)
         self.saved_state = None
@@ -73,7 +77,7 @@ class Controls(tk.Frame,object):
         self.axis_controllers = {}
         for axis_name in self.axis_names:
             self.axis_controllers[axis_name] = AxisController(self,axis_name)
-
+            
         # Plot controls
         self.plot_controls_frame = LabelledFrame(self,"Plot Controls",relief='sunken',bd=1)
         self.point_size_label = tk.Label(self.plot_controls_frame,text='Point size (px)')
@@ -115,6 +119,14 @@ class Controls(tk.Frame,object):
         
         self.plot_controls_frame.pack(side='top')
 
+    def connect_state_listeners(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.connect_state_listeners")
+        self.state_listeners_connected = True
+        
+    def disconnect_state_listeners(self,*args,**kwargs):
+        if globals.debug > 1: print('controls.disconnect_state_listeners')
+        self.state_listeners_connected = False
+
     def on_state_change(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_state_change")
         # Compare the current state to the previous state
@@ -123,13 +135,14 @@ class Controls(tk.Frame,object):
         current_state = self.get_state()
         for item in current_state:
             if item not in self.saved_state:
-                self.update_button.configure(state='normal')
+                if globals.debug > 1: print("   ",item)
+                self.update_button.configure(relief='raised',state='normal')
                 break
         else: # No break
             if self.gui.plotcontrols.toolbar.queued_zoom is not None:
-                self.update_button.configure(state='normal')
+                self.update_button.configure(relief='raised',state='normal')
             else:
-                self.update_button.configure(state='disabled')
+                self.update_button.configure(relief='sunken',state='disabled')
 
     def get_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.get_state")
@@ -143,16 +156,18 @@ class Controls(tk.Frame,object):
     def save_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.save_state")
         self.saved_state = self.get_state()
-        self.update_button.configure(state='disabled')
+        self.update_button.configure(relief='sunken',state='disabled')
 
     
     def get_variables(self,*args,**kwargs):
         if globals.debug > 1: print("controls.get_variables")
         variables = []
 
+        variables.append(self.gui.plotcontrols.current_file)
+
         for child in self.get_all_children():
             if hasattr(child,"get_variables"): variables += child.get_variables()
-            
+        
         for name in dir(self):
             attr = getattr(self,name)
             if isinstance(attr,(tk.IntVar,tk.DoubleVar,tk.StringVar,tk.BooleanVar)):
@@ -272,19 +287,30 @@ class Controls(tk.Frame,object):
         return states
                         
     def on_update_button_pressed(self,*args,**kwargs):
+        if not self.state_listeners_connected: return
         if globals.debug > 1: print("controls.on_update_button_pressed")
         
-        if (self.gui.interactiveplot.drawn_object is not None and 
-            self.saved_state is not None and 
-            self.gui.interactiveplot.colorbar_visible):
-            for v,val in self.saved_state:
-                if v is self.caxis_scale:
-                    if val != self.caxis_scale.get():
-                        self.gui.interactiveplot.drawn_object.update_cscale(self.caxis_scale.get())
-                        self.gui.interactiveplot.update_colorbar_label()
+        changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
 
-        self.gui.set_user_controlled(False)
+        # If the data file changed, read the new one
+        if self.gui.plotcontrols.current_file in changed_variables:
+            self.gui.read()
         
+        if self.gui.interactiveplot.drawn_object is not None and self.saved_state is not None:
+            axis_controller_exclusively_changed = None
+            for axis_name, axis_controller in self.axis_controllers.items():
+                axis_variables = axis_controller.get_variables()
+                for variable in changed_variables:
+                    if variable is not axis_controller.value and variable not in axis_variables:
+                        break
+                else:
+                    axis_controller_exclusively_changed = axis_controller
+                    break
+
+            if axis_controller_exclusively_changed is self.axis_controllers['Colorbar']:
+                self.gui.interactiveplot.update_colorbar_label()
+
+        # Perform the queued zoom if there is one
         if self.gui.plotcontrols.toolbar.queued_zoom is not None:
             self.gui.plotcontrols.toolbar.queued_zoom()
             
@@ -298,7 +324,6 @@ class Controls(tk.Frame,object):
         
         # Draw the new plot
         self.gui.interactiveplot.update()
-        self.gui.set_user_controlled(True)
 
         self.save_state()
 
@@ -330,8 +355,24 @@ class Controls(tk.Frame,object):
             self.enable('colorbar limits')
                 
     def connect(self):
+        if globals.debug > 1: print("controls.connect")
         # Connect the controls to the interactiveplot
         ax = self.gui.interactiveplot.ax
         self.axis_controllers['XAxis'].connect(ax.xaxis)
         self.axis_controllers['YAxis'].connect(ax.yaxis)
         self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.cax)
+
+    def get_which_variables_changed_between_states(self,state1,state2):
+        if globals.debug > 1: print("controls.get_which_variables_changed_between_states")
+        # A state is just a list of tkinter variables and their values
+        # [[v0, v0.get()], [v1, v1.get()], ... ]
+
+        result = []
+        for item in state1:
+            if item not in state2 and item[0] not in result:
+                result.append(item[0])
+        for item in state2:
+            if item not in state1 and item[0] not in result:
+                result.append(item[0])
+        
+        return result

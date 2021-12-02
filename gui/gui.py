@@ -70,21 +70,33 @@ class GUI(tk.Frame,object):
         
         self.plotcontrols.next_button.configure(command=self.next_file)
         self.plotcontrols.back_button.configure(command=self.previous_file)
+
+        all_mapped = False
+        while not all_mapped:
+            self.update()
+            for child in self.get_all_children():
+                if child.winfo_exists() == 0:
+                    break
+            else:
+                all_mapped = True
         
-        self.plotcontrols.current_file.trace("w",self.read)
+        #self.plotcontrols.current_file.trace("w",self.read)
         if len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
             self.plotcontrols.current_file.set(sys.argv[1])
+            self.read()
+            self.interactiveplot.update()
+            self.controls.save_state()
+            print(self.interactiveplot.drawn_object._data)
         else:
             self.filenames = []
 
-        # Connect the controls to the interative plot
-        self.controls.connect()
-        
-        self.controls.save_state()
         
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
+
+        self.controls.disconnect_state_listeners()
+        
         N = len(self.get_data('x'))
         found_first = False
         for key,val in self.data['data'].items():
@@ -96,6 +108,8 @@ class GUI(tk.Frame,object):
                     else:
                         self.controls.axis_controllers['YAxis'].value.set(key)
                         break
+        self.controls.update()
+        self.controls.connect_state_listeners()
     
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
@@ -109,6 +123,17 @@ class GUI(tk.Frame,object):
             relief='sunken',
             bd=1,
         )
+        # Wait until the plot becomes visible to proceed
+        self.update_idletasks()
+        self.update()
+            
+        self.plotcontrols = PlotControls(
+            self,
+            self.interactiveplot.canvas,
+            bg='white',
+            relief='sunken',
+            bd=1,
+        )
         self.controls = Controls(
             self,
             width=2*self.dpi, # pixels = inches * dpi
@@ -117,13 +142,7 @@ class GUI(tk.Frame,object):
             padx=5,
             pady=5,
         )
-        self.plotcontrols = PlotControls(
-            self,
-            self.interactiveplot.canvas,
-            bg='white',
-            relief='sunken',
-            bd=1,
-        )
+        
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
         
     def place_widgets(self):
@@ -182,7 +201,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.read")
         self.data = Data(
             read_file(self.plotcontrols.current_file.get()),
-            rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
+            #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
         
 
@@ -217,11 +236,6 @@ class GUI(tk.Frame,object):
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=values)
 
         self.initialize_xy_controls()
-        
-        #self.controls.caxis_combobox.configure(values=values)
-        
-        #self.controls.update_axis_comboboxes(self.data)
-        #self.do_after(100,self.interactiveplot.update,lambda: self.controls.x.get() and self.controls.y.get())
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
@@ -257,7 +271,6 @@ class GUI(tk.Frame,object):
         
         if self.filenames[nextidx] != self.plotcontrols.current_file.get():
             self.plotcontrols.current_file.set(self.filenames[nextidx])
-            self.interactiveplot.update()
 
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
@@ -270,26 +283,29 @@ class GUI(tk.Frame,object):
         
         if self.filenames[nextidx] != self.plotcontrols.current_file.get():
             self.plotcontrols.current_file.set(self.filenames[nextidx])
-            self.interactiveplot.update()
     
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)
 
     def set_preference(self,key,value):
+        if globals.debug > 1: print("gui.set_preference")
         self.preferences[key] = value
 
     def get_preference(self,key):
+        if globals.debug > 1: print("gui.get_preference")
         if key in self.preferences.keys():
             return self.preferences[key]
         else:
             return None
         
     def save_preferences(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.save_preferences")
         with open(self.preferences_file,'w') as f:
             json.dump(self.preferences, f, indent=4)
 
     def load_preferences(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.load_preferences")
         if not os.path.isfile(self.preferences_file): return
         with open(self.preferences_file,'r') as f:
             f.seek(0,2)
@@ -299,6 +315,7 @@ class GUI(tk.Frame,object):
             else: self.preferences = json.load(f)
 
     def update_filenames(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.update_filenames")
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
 
         for filename in os.listdir(tmp_path):
@@ -307,3 +324,11 @@ class GUI(tk.Frame,object):
         
             
                          
+    def get_all_children(self, finList=[], wid=None):
+        #if globals.debug > 1: print("gui.get_all_children")
+        if wid is None: _list = self.winfo_children()
+        else: _list = wid.winfo_children()        
+        for item in _list:
+            finList.append(item)
+            self.get_all_children(finList=finList,wid=item)
+        return finList

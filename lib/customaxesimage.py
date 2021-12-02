@@ -9,7 +9,7 @@ from copy import copy
 import globals
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
@@ -19,14 +19,14 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.aspect = aspect
         
         self._data = copy(data)
-        self.calculate_xypixels()
+        #self.calculate_xypixels()
         
         kwargs['extent'] = list(self._axes.get_xlim())+list(self._axes.get_ylim())
         kwargs['origin'] = 'lower'
         matplotlib.image.AxesImage.__init__(self,self._axes,**kwargs)
+        super(CustomAxesImage,self).set_data([[],[]])
         self._axes.add_image(self)
-        self.threaded = False
-
+        
         self.previous_xlim = self._axes.get_xlim()
         self.previous_ylim = self._axes.get_ylim()
         
@@ -38,8 +38,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
         self.after_id_calculate = None
         
-        self._calculate()
         self.threaded = True
+        if initialize: self._calculate()
 
     def calculate(self,*args,**kwargs):
         # To be created by a child class
@@ -110,6 +110,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         
     def _calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._calculate")
+
+        self.calculate_xypixels()
+        
         self.after_id_calculate = None
         if self.aspect == 'equal': self.equalize_aspect_ratio()
         if not (self.ypixels == self._data.shape[0] and self.xpixels == self._data.shape[1]):
@@ -155,7 +158,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                 elif self.cscale == '^10': new_data = 10.**new_data
         self._data = new_data
         super(CustomAxesImage,self).set_data(new_data)
-        self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")
+        #self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")
 
     def update_cscale(self,cscale):
         if globals.debug > 1: print("customaxesimage.update_cscale")

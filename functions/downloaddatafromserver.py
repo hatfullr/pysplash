@@ -11,6 +11,7 @@ import subprocess
 from lib.threadedtask import ThreadedTask
 from widgets.progressbar import ProgressBar
 #from widgets.tooltip import ToolTip
+import globals
 
 try:
     from subprocess import DEVNULL
@@ -24,19 +25,20 @@ def download_data_from_server(gui):
 
 class DataFromServer(tk.Toplevel,object):
     def __init__(self,gui):
+        if globals.debug > 1: print("datafromserver.__init__")
         # Setup the window
         super(DataFromServer,self).__init__(gui)
         
         self.gui = gui
+        self.gui_root = self.gui.winfo_toplevel()
         
-        root = gui.winfo_toplevel()
         self.pad = 5
-        aspect = root.winfo_screenheight()/root.winfo_screenwidth()
-        self.width = int(root.winfo_screenwidth() / 4)
+        aspect = self.gui_root.winfo_screenheight()/self.gui_root.winfo_screenwidth()
+        self.width = int(self.gui_root.winfo_screenwidth() / 4)
         height = self.width*aspect
 
-        root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        self.tmp_path = os.path.join(root_path,"tmp")
+        gui_root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        self.tmp_path = os.path.join(gui_root_path,"tmp")
 
         
         
@@ -64,9 +66,10 @@ class DataFromServer(tk.Toplevel,object):
         self.canceled = False
         self.subprocess = None
         
-        self.grab_set()
+        #self.grab_set()
 
     def create_variables(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.create_variables")
         # Gather the preferences
         preference = self.gui.get_preference("getdatafromserver") 
         if preference is None:
@@ -81,6 +84,7 @@ class DataFromServer(tk.Toplevel,object):
         self.command_options = tk.StringVar(value='-Cp')
         
     def create_widgets(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.create_widgets")
         # Create widgets
         self.description = ttk.Label(
             self,
@@ -178,6 +182,7 @@ class DataFromServer(tk.Toplevel,object):
 
     
     def place_widgets(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.place_widgets")
         # Place widgets
         self.description.pack(side='top',fill='x',padx=self.pad,pady=(self.pad,0))
     
@@ -205,15 +210,18 @@ class DataFromServer(tk.Toplevel,object):
         self.buttons_frame.pack(side='right', fill='y', pady=(0,self.pad),padx=self.pad)
 
     def close(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.close")
         self.grab_release()
         self.destroy()
         
     def close_soft(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.close_soft")
         self.grab_release()
         self.cancel()
         self.destroy()
         
     def cancel(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.cancel")
         self.canceled = True
 
         self.download_button.configure(relief='raised',text='Download',command=self.download_pressed)
@@ -231,28 +239,34 @@ class DataFromServer(tk.Toplevel,object):
         
 
     def on_scp_button_pressed(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.on_scp_button_pressed")
         self.command_options.set("-Cp")
         
     def on_rsync_button_pressed(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.on_rsync_button_pressed")
         self.command_options.set("-a")
 
     def set_widget_states(self,state):
+        if globals.debug > 1: print("datafromserver.set_widget_states")
         for child in self.server_info_frame.winfo_children():
             if hasattr(child,"configure") and 'state' in child.configure():
                 child.configure(state=state)
         
     def disable_widgets(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.disable_widgets")
         self.set_widget_states('disabled')
         # Don't know why, but the radio buttons don't behave normally
         self.rsync_button.configure(state='disabled')
         self.scp_button.configure(state='disabled')
     def enable_widgets(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.enable_widgets")
         self.set_widget_states('normal')
         # Don't know why, but the radio buttons don't behave normally
         self.rsync_button.configure(state='normal')
         self.scp_button.configure(state='normal')
 
     def download_pressed(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.download_pressed")
         # Save the entries in the gui preferences so they pop up
         # automatically the next time we want to use them
         self.gui.set_preference(
@@ -280,10 +294,10 @@ class DataFromServer(tk.Toplevel,object):
 
         self.canceled = False
         self.download_button.configure(relief='sunken',text="Cancel",command=self.cancel)
-        
+
         # Block until the task has finished
         while self.thread.isAlive():
-            self.update()
+            self.gui_root.update()
 
         if not self.canceled:
             # After getting the file list, start downloading the files
@@ -298,17 +312,15 @@ class DataFromServer(tk.Toplevel,object):
                 self.download_update()
 
             if not self.canceled:
-                # When the thread has finished, return things to normal
-                #self.download_button.configure(relief='raised',state='normal',text='Download')
-                #self.progressbar.set_text("Download complete")
-                #self.update()
-
                 # Now add the downloaded files to the gui file list
-                self.gui.update_filenames()
-
-                self.gui.plotcontrols.current_file.set(self.gui.filenames[0])
-
                 self.close()
+                
+                self.gui.update_filenames()
+                self.gui.plotcontrols.current_file.set(self.gui.filenames[0])
+                self.gui.read()
+                self.gui.interactiveplot.update()
+                self.gui.controls.save_state()
+
                 return
 
         self.subprocess = None
@@ -316,6 +328,7 @@ class DataFromServer(tk.Toplevel,object):
         self.progressbar.configure(value=0)
 
     def download_files(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.download_files")
         cmd = self.command_choice.get()+" "+self.command_options.get()+" "+self.server+":"+self.path.get()+" "+self.tmp_path
         self.subprocess = subprocess.Popen(
             cmd.split(" "),
@@ -326,6 +339,7 @@ class DataFromServer(tk.Toplevel,object):
         self.subprocess.communicate()
                 
     def get_file_list(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.get_file_list")
         # Get the list of files that will be downloaded
         self.progressbar.set_text("Retrieving file list...")
         self.subprocess = subprocess.Popen([
@@ -343,6 +357,7 @@ class DataFromServer(tk.Toplevel,object):
             self.total_size = sum([int(f[0].strip("'")) for f in self.filelist])
 
     def download_update(self,*args,**kwargs):
+        if globals.debug > 1: print("datafromserver.download_update")
         filebasenames = [os.path.basename(filename) for filename in self.filenames]
 
         filesintmp = os.listdir(self.tmp_path)
@@ -375,8 +390,8 @@ class DataFromServer(tk.Toplevel,object):
                 current = progress/float(self.total_size) * 100
                 self.progressbar.configure(value=current)
                 self.progressbar.set_text("Downloading... (%3.2f%%)" % current)
-            
-        self.update()
+
+        self.gui_root.update()
         
         
         

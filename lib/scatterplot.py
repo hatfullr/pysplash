@@ -33,7 +33,7 @@ class ScatterPlot(CustomAxesImage,object):
         self.s = s
 
         self.initializing = True
-        self.set_size(s)
+        #self.set_size(s)
 
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
@@ -46,7 +46,8 @@ class ScatterPlot(CustomAxesImage,object):
         )
         
         self.initializing = False
-
+        
+    """
     def set_size(self,size):
         if globals.debug > 1: print("scatterplot.set_size")
         if isinstance(size,tk.IntVar):
@@ -66,6 +67,7 @@ class ScatterPlot(CustomAxesImage,object):
             if not self.initializing:
                 self.calculate_xypixels()
                 self._calculate()
+    """
     
     def calculate_xypixels(self,*args,**kwargs):
         if globals.debug > 1: print("scatterplot.calculate_xypixels")

@@ -57,30 +57,17 @@ class InteractivePlot(tk.Frame,object):
         self.previous_xlim = None
         self.previous_ylim = None
 
-        self.canvas.draw()
+        #self.canvas.draw()
         
-        self.winfo_toplevel().bind("<<ResizeStarted>>",self.disable_draw)
-        self.winfo_toplevel().bind("<<ResizeStopped>>",self.enable_draw)
-        self.canvas.get_tk_widget().bind("<<DataChanged>>",self.on_data_changed)
+        #self.winfo_toplevel().bind("<<ResizeStarted>>",self.disable_draw)
+        #self.winfo_toplevel().bind("<<ResizeStopped>>",self.enable_draw)
 
         self.keypresshandler = KeyPressHandler(self.canvas)
         self.keypresshandler.connect()
 
         self.keypresshandler.register('t',self.set_time_text)
         
-        #self.toggle_clim_adaptive()
-        
         self.init_after_id = None
-        
-        self.wait_for_init()
-
-    def wait_for_init(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.wait_for_init")
-        if self.init_after_id is not None: self.after_cancel(self.init_after_id)
-        if self.gui.data is None:
-            self.init_after_id = self.after(100,self.wait_for_init)
-        else:
-            self.initialize_drawn_object()
     
     def initialize_drawn_object(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.initialize_drawn_object")
@@ -115,18 +102,6 @@ class InteractivePlot(tk.Frame,object):
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
 
-    def enable_draw(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.enable_draw")
-        self.draw_enabled = True
-        
-    def disable_draw(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.disable_draw")
-        self.draw_enabled = False
-
-    def draw(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.draw")
-        if self.draw_enabled: self.canvas.draw_idle()
-
     def set_draw_type(self,new_draw_type):
         if globals.debug > 1: print("interactiveplot.set_draw_type")
         self.draw_type = new_draw_type
@@ -141,6 +116,8 @@ class InteractivePlot(tk.Frame,object):
         if globals.debug > 1:
             print("interactiveplot.update")
             print("    self.ax = ",self.ax)
+
+        self.gui.set_user_controlled(False)
         x = self.gui.controls.axis_controllers['XAxis'].value.get()
         y = self.gui.controls.axis_controllers['YAxis'].value.get()
         if x in ['x','y','z'] and y in ['x','y','z']:
@@ -157,6 +134,7 @@ class InteractivePlot(tk.Frame,object):
         # If there's no data to plot, stop here
         if self.gui.data is None:
             self.canvas.draw_idle()
+            self.gui.set_user_controlled(True)
             return
 
         
@@ -171,7 +149,7 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.get_display_data(y),
             )
             kwargs = dict(
-                s=self.gui.controls.point_size,
+                s=self.gui.controls.point_size.get(),
                 aspect=aspect,
             )
 
@@ -263,8 +241,6 @@ class InteractivePlot(tk.Frame,object):
             )
 
 
-        
-
         # If the plot we are going to make is the same as the plot already
         # on the canvas, then don't draw a new one
         if self.drawn_object is not None:
@@ -273,6 +249,8 @@ class InteractivePlot(tk.Frame,object):
                 self.previous_xlim[1] == xmax and
                 self.previous_ylim[0] == ymin and
                 self.previous_ylim[1] == ymax):
+
+                kwargs['initialize'] = False
                 
                 if len(args) == len(self.previous_args):
                     for arg in args:
@@ -292,6 +270,12 @@ class InteractivePlot(tk.Frame,object):
                                 if key not in keys or self.previous_kwargs[key] != val:
                                     break
                             else:
+                                self.gui.set_user_controlled(True)
+                                print("   all args and kwargs were the same as the previous plot")
+                                print("   ",args)
+                                print("   ",self.previous_args)
+                                print("   ",kwargs)
+                                print("   ",self.previous_kwargs)
                                 return
 
         # We only get here if the plot we are going to draw won't be
@@ -306,11 +290,26 @@ class InteractivePlot(tk.Frame,object):
             #if self.gui.controls.caxis_adaptive_limits.get():
             #    self.connect_clim()
 
+        
+        if self.drawn_object is None:
+            first_plot = True
+            kwargs['initialize'] = True
+        else:
+            first_plot = False
+            self.reset() # Clear the current plot
             
-        self.reset() # Clear the current plot
         self.drawn_object = method(*args,**kwargs)
-
-
+        
+        if globals.use_multiprocessing_on_scatter_plots:
+            if self.drawn_object.thread is None:
+                raise RuntimeError("Failed to spawn thread to draw the plot")
+            else:
+                # Block until the plot is finished drawing
+                while self.drawn_object.thread.isAlive():
+                    self.update()
+                # Connect the controls to the interative plot
+                self.gui.controls.connect()
+                self.controls.save_state()
         
         # After creation
         if self.draw_type != 'None':
@@ -325,13 +324,15 @@ class InteractivePlot(tk.Frame,object):
         yadaptive = self.gui.controls.axis_controllers['YAxis'].is_adaptive.get()
         cadaptive = self.gui.controls.axis_controllers['Colorbar'].is_adaptive.get()
 
-        if xadaptive and yadaptive: self.reset_data_xylim(draw=False)
-        elif xadaptive: self.reset_data_xlim(draw=False)
-        elif yadaptive: self.reset_data_ylim(draw=False)
+        if xadaptive and yadaptive: self.reset_data_xylim(which='both',draw=False)
+        elif xadaptive: self.reset_data_xylim(which='xlim',draw=False)
+        elif yadaptive: self.reset_data_xylim(which='ylim',draw=False)
             
-        self.canvas.draw_idle()
+        self.canvas.draw()
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
+
+        self.gui.set_user_controlled(True)
         
 
     def on_point_size_changed(self,*args,**kwargs):
@@ -464,56 +465,6 @@ class InteractivePlot(tk.Frame,object):
         if self.cax_cid is not None:
             self.cax.callbacks.disconnect(self.cax_cid)
             self.cax_cid = None
-
-    def update_controls_xlim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.update_controls_xlim")
-        xlim = self.ax.get_xlim()
-        self.gui.controls.xaxis_limits_low.set(xlim[0])
-        self.gui.controls.xaxis_limits_high.set(xlim[1])
-
-    def update_controls_ylim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.update_controls_ylim")
-        ylim = self.ax.get_ylim()
-        self.gui.controls.yaxis_limits_low.set(ylim[0])
-        self.gui.controls.yaxis_limits_high.set(ylim[1])
-
-    """
-    def toggle_xlim_adaptive(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.toggle_xlim_adaptive")
-        if self.gui.controls.xaxis_adaptive_limits.get(): # Turn on adaptive limits
-            self.update_controls_xlim()
-            self.x_cid = self.ax.callbacks.connect("xlim_changed",self.update_controls_xlim)
-        else: # Turn off adaptive limits
-            if self.x_cid is not None:
-                self.ax.callbacks.disconnect(self.x_cid)
-                self.x_cid = None
-
-    def toggle_ylim_adaptive(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.toggle_ylim_adaptive")
-        if self.gui.controls.yaxis_adaptive_limits.get(): # Turn on adaptive limits
-            self.update_controls_ylim()
-            self.y_cid = self.ax.callbacks.connect("ylim_changed",self.update_controls_ylim)
-        else: # Turn off adaptive limits
-            if self.y_cid is not None:
-                self.ax.callbacks.disconnect(self.y_cid)
-                self.y_cid = None
-    """
-    """
-    def toggle_clim_adaptive(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.toggle_clim_adaptive")
-        if self.gui.controls.caxis_adaptive_limits.get(): # Turn off adaptive limits
-            self.disconnect_clim()
-            # Set the user's entry boxes to be the current clim
-            if self.colorbar_visible:
-                clim = self.cax.get_ylim()
-                self.gui.controls.caxis_limits_low.set(clim[0])
-                self.gui.controls.caxis_limits_high.set(clim[1])
-        else: # Turn on adaptive limits
-            if self.cax is not None:
-                self.connect_clim()
-                self.update_colorbar_clim()
-                self.canvas.draw_idle()
-    """
     
     def on_data_changed(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.on_data_changed")
@@ -549,15 +500,8 @@ class InteractivePlot(tk.Frame,object):
         ymargin = self.ax.margins()[1]
         dy = (ymax-ymin)*ymargin
         return (ymin-dy, ymax+dy)
-                      
-    
-    def reset_data_xlim(self,*args,**kwargs):
-        self.ax.set_xlim(self.get_data_xlim())
-    
-    def reset_data_ylim(self,*args,**kwargs):
-        self.ax.set_ylim(self.get_data_ylim())
 
-    def reset_data_xylim(self,draw=True):
+    def reset_data_xylim(self,which='both',draw=True):
         if hasattr(self.gui, "data"):
             new_xlim = np.array(self.get_data_xlim())
             new_ylim = np.array(self.get_data_ylim())
@@ -567,6 +511,9 @@ class InteractivePlot(tk.Frame,object):
             xlim = np.array(self.ax.get_xlim())
             ylim = np.array(self.ax.get_ylim())
 
-            if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
-            if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
+            if which in ['xlim','both']:
+                if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
+            if which in ['ylim','both']:
+                if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
             if draw: self.canvas.draw_idle()
+

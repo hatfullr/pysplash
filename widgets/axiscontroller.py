@@ -50,7 +50,7 @@ class AxisController(LabelledFrame,object):
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
-        self.value = tk.StringVar()
+        self.value = tk.StringVar(value='None')
         self.scale = tk.StringVar(value='linear')
         self.limits_low = tk.DoubleVar()
         self.limits_high = tk.DoubleVar()
@@ -62,6 +62,7 @@ class AxisController(LabelledFrame,object):
             self,
             state='readonly',
             width=0,
+            values=[self.value.get()],
             textvariable=self.value,
         )
         
