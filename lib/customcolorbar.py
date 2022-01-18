@@ -31,8 +31,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         # Get the color data in the plot
         for child in self._ax.get_children():
             if isinstance(child, AxesImage):
-                #print(dir(child))
-                print(child._data)
                 data = child._data
                 vmin = np.nanmin(data[np.isfinite(data)])
                 vmax = np.nanmax(data[np.isfinite(data)])
