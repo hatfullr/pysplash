@@ -7,9 +7,11 @@ import matplotlib.image
 import numpy as np
 from copy import copy
 import globals
+from collections import OrderedDict
+from lib.customcolorbar import CustomColorbar
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
@@ -17,29 +19,45 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.yscale = yscale
         self.cscale = cscale
         self.aspect = aspect
+        #self.colorbar = colorbar
+
+        self.data_is_image = False
+        if hasattr(data,"is_image"):
+            if data.is_image:
+                self.data_is_image = True
+                if 'extent' not in data.keys() or 'image' not in data.keys():
+                    raise ValueError("Your OrderedDict is missing the keyword 'extent'")
+            self._data = copy(data['image'])
+            extent = data['extent']
+        else:
+            self._data = copy(data)            
+            extent = list(self._axes.get_xlim())+list(self._axes.get_ylim())
         
-        self._data = copy(data)
-        #self.calculate_xypixels()
-        
-        kwargs['extent'] = list(self._axes.get_xlim())+list(self._axes.get_ylim())
         kwargs['origin'] = 'lower'
-        matplotlib.image.AxesImage.__init__(self,self._axes,**kwargs)
-        super(CustomAxesImage,self).set_data([[],[]])
+        matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,**kwargs)
+        self._extent = extent
+        
+        
+        if self.data_is_image:
+            super(CustomAxesImage,self).set_data(self._data)
+        else:
+            super(CustomAxesImage,self).set_data([[],[]])
         self._axes.add_image(self)
-        
-        self.previous_xlim = self._axes.get_xlim()
-        self.previous_ylim = self._axes.get_ylim()
-        
-        self.thread = None
-        
-        self._extent = kwargs['extent']
 
-        self._connect()
-
-        self.after_id_calculate = None
+        self.colorbar = colorbar
         
-        self.threaded = True
-        if initialize: self._calculate()
+        if not self.data_is_image:
+            self.previous_xlim = self._axes.get_xlim()
+            self.previous_ylim = self._axes.get_ylim()
+        
+            self.thread = None
+
+            self._connect()
+
+            self.after_id_calculate = None
+        
+            self.threaded = True
+            if initialize: self._calculate()
 
     def calculate(self,*args,**kwargs):
         # To be created by a child class
@@ -57,12 +75,13 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
     def _connect(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._connect")
-        self.cids = [
-            self._axes.callbacks.connect('xlim_changed',self.wait_to_calculate),
-            self._axes.callbacks.connect('ylim_changed',self.wait_to_calculate),
-            self._axes.get_figure().callbacks.connect('dpi_changed',self.calculate_xypixels),
-            self._axes.callbacks.connect('resize_event',self.calculate_xypixels),
-        ]
+        if not self.data_is_image:
+            self.cids = [
+                self._axes.callbacks.connect('xlim_changed',self.wait_to_calculate),
+                self._axes.callbacks.connect('ylim_changed',self.wait_to_calculate),
+                self._axes.get_figure().callbacks.connect('dpi_changed',self.calculate_xypixels),
+                self._axes.callbacks.connect('resize_event',self.calculate_xypixels),
+            ]
     def _disconnect(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._disconnect")
         for cid in self.cids:
@@ -73,9 +92,11 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if globals.debug > 1: print("customaxesimage.remove")
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
-        self._disconnect()
+        
+        if not self.data_is_image: self._disconnect()
         super(CustomAxesImage,self).remove(*args,**kwargs)
-                
+
+    
     def equalize_aspect_ratio(self,xlim=None,ylim=None):
         if globals.debug > 1: print("customaxesimage.equalize_aspect_ratio")
         flag = False
@@ -93,13 +114,14 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         else:
             ylim = [cy-0.5*dx,cy+0.5*dx]
         if flag:
-            self._axes.set_xlim(xlim)
-            self._axes.set_ylim(ylim)
+            # I don't know why, but these lines break everything.
+            #self._axes.set_xlim(xlim)
+            #self._axes.set_ylim(ylim)
             self._connect()
-            self._axes.get_figure().canvas.draw_idle()
         else:
             return xlim, ylim
-        
+    
+    
     def calculate_xypixels(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.calculate_xypixels")
         fig = self._axes.get_figure()
@@ -139,8 +161,17 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._unscaled_data = copy(self._data)
         self.set_data(self._data)
         self.after_calculate()
-        self._axes.get_figure().canvas.draw_idle()
-
+        
+        if self.colorbar is not None:
+            if isinstance(self.colorbar, CustomColorbar):
+                self.colorbar.update_limits()
+            else:
+                raise Exception("Cannot update limits of a colorbar that is not of type 'CustomColorbar'. Got type '"+type(self.colorbar)+"'")
+        
+        canvas = self._axes.get_figure().canvas
+        canvas.get_tk_widget().update_idletasks()
+        canvas.draw_idle()
+    
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change
     def wait_to_calculate(self,*args,**kwargs):
@@ -158,7 +189,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                 elif self.cscale == '^10': new_data = 10.**new_data
         self._data = new_data
         super(CustomAxesImage,self).set_data(new_data)
-        #self._axes.get_figure().canvas.get_tk_widget().event_generate("<<DataChanged>>")
 
     def update_cscale(self,cscale):
         if globals.debug > 1: print("customaxesimage.update_cscale")

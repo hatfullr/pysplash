@@ -11,6 +11,16 @@ class Data(collections.OrderedDict,object):
 
         for key,val in data.items():
             self[key] = val
+
+        self.is_image = False
+            
+        dkeys = self.keys()
+        if 'image' in dkeys or 'extent' in dkeys:
+            if 'image' in dkeys and 'extent' in dkeys:
+                self.is_image = True
+                return
+            else:
+                raise ValueError("Must have keys 'image' and 'extent' as keys in the OrderedDict returned by read_file")
         
         # Save the state of the data prior to any modifications
         self._original = copy.deepcopy(data)
@@ -26,13 +36,22 @@ class Data(collections.OrderedDict,object):
         
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
-        self.__init__(self._original)
+        if not self.is_image: self.__init__(self._original)
         
     def rotate(self,anglexdeg,angleydeg,anglezdeg):
         if globals.debug > 1: print("data.rotate")
 
-        x = copy.copy(self._original['data']['x'])
-        y = copy.copy(self._original['data']['y'])
-        z = copy.copy(self._original['data']['z'])
+        if not self.is_image:
+            x = copy.copy(self._original['data']['x'])
+            y = copy.copy(self._original['data']['y'])
+            z = copy.copy(self._original['data']['z'])
         
-        self['data']['x'], self['data']['y'], self['data']['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
+            self['data']['x'], self['data']['y'], self['data']['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
+
+    def xlim(self,*args,**kwargs):
+        if globals.debug > 1: print("data.xlim")
+        return np.array([np.nanmin(self['data']['x']), np.nanmax(self['data']['x'])]) * self.display_units['x']
+    
+    def ylim(self,*args,**kwargs):
+        if globals.debug > 1: print("data.ylim")
+        return np.array([np.nanmin(self['data']['y']), np.nanmax(self['data']['y'])]) * self.display_units['y']

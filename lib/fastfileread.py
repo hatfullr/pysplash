@@ -561,13 +561,14 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
 
     # We need to read all the headers first no matter what, so that we know if
     # ncooling=0 or not for each file.
+    if not isinstance(filenames,(list,tuple,np.ndarray)): filenames = [filenames]
     
     filesizes = np.zeros(len(filenames),dtype=int)
     for i,filename in enumerate(filenames):
         with open(filename,'rb') as f:
             f.seek(0,2)
             filesizes[i] = f.tell()
-    
+
     headers = FastFileRead(
         filenames,
         footer=filesizes-header_size,
@@ -576,6 +577,8 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
         key=key,
         **kwargs
     )
+
+    
 
     data_formats = [None]*len(filenames)
     data_column_names = [None]*len(filenames)
@@ -587,15 +590,18 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
         else:
             data_formats[i] = data_format + ',f8,f8'
             data_column_names[i] = data_names
-
+            
     data = FastFileRead(
         filenames,
-        header=1,
+        header=header_size,
         binary_format=data_formats,
         offset=4,
         key=key,
         **kwargs
     )
+
+    for i in range(len(filenames)):
+        data[i].dtype.names = data_column_names[i]
     
     if return_headers: return data, headers
     else: return data

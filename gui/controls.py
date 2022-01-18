@@ -27,6 +27,7 @@ class Controls(tk.Frame,object):
         style.map('TCombobox', selectforeground=[('readonly', 'black')])
         style.map('TCombobox', fieldbackground=[('disabled',self.gui["bg"])])
 
+        # Order is important
         self.axis_names = [
             'XAxis',
             'YAxis',
@@ -45,9 +46,12 @@ class Controls(tk.Frame,object):
         
         self.connect_state_listeners()
         
-        #self.caxis_combobox.bind("<<ComboboxSelected>>",self.on_caxis_combobox_selected)
+        self.axis_controllers[self.axis_names[2]].combobox.bind("<<ComboboxSelected>>",self.on_colorbar_combobox_selected)
+        
         self.saved_state = None
         self.previous_state = None
+
+        self.save_state()
 
         
     def create_variables(self):
@@ -166,7 +170,8 @@ class Controls(tk.Frame,object):
         variables.append(self.gui.plotcontrols.current_file)
 
         for child in self.get_all_children():
-            if hasattr(child,"get_variables"): variables += child.get_variables()
+            if hasattr(child,"get_variables"):
+                variables += child.get_variables()
         
         for name in dir(self):
             attr = getattr(self,name)
@@ -195,23 +200,10 @@ class Controls(tk.Frame,object):
         self.xaxis_combobox.config(values=keys)
         self.yaxis_combobox.config(values=keys)
 
-    def on_caxis_combobox_selected(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.on_caxis_combobox_selected")
-        self.change_colorbar_type()
-        if self.c.get() == 'None':
-            self.disable('colorbar')
-            self.enable(self.point_size_entry)
-        else:
-            self.enable('colorbar')
-            self.disable(self.point_size_entry)
-        
-    def change_colorbar_type(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.change_colorbar_type")
-        self.gui.interactiveplot.set_draw_type(self.c.get())
-        if self.c.get() == "Column density":
-            self.x.set('x')
-            self.y.set('y')
-        if self.c.get() != 'None': self.enable('colorbar')
+    def on_colorbar_combobox_selected(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.on_colorbar_combobox_selected")
+        c = self.axis_controllers[self.axis_names[2]].value.get()
+        self.gui.interactiveplot.set_draw_type(c)
     
     def get_all_children(self, finList=[], wid=None):
         #if globals.debug > 1: print("controls.get_all_children")
@@ -221,48 +213,28 @@ class Controls(tk.Frame,object):
             finList.append(item)
             self.get_all_children(finList=finList,wid=item)
         return finList
-            
-    def disable(self,group,temporarily=False):
+
+    
+    def disable(self,temporarily=False):
         if globals.debug > 1: print("controls.disable")
-
-        if isinstance(group,str):
-            if group == 'all': children = self.get_all_children()
-            elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
-            elif group == 'xaxis limits': children = [self.xaxis_limits_entry_low,self.xaxis_limits_entry_high]
-            elif group == 'yaxis limits': children = [self.yaxis_limits_entry_low,self.yaxis_limits_entry_high]
-            elif group == 'colorbar': children = self.get_all_children(wid=self.caxis_frame)
-            elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
-        else: # Assume this is a widget
-            children = group
-
+        
+        children = self.get_all_children()
         if temporarily: self.previous_state = self.get_widget_state(children)
         else: self.previous_state = None
         
         self.set_widget_state(children,'disabled')
 
-    def enable(self,group):
+    def enable(self):
         if globals.debug > 1: print("controls.enable")
         if self.previous_state is not None:
             for widget,state in self.previous_state:
                 widget.configure(state=state)
             self.previous_state = None
         else:
-            if isinstance(group,str):
-                if group == 'all': children = self.get_all_children()
-                elif group == 'axes': children = self.get_all_children(wid=self.xaxis_frame)
-                elif group == 'xaxis limits': children = [self.xaxis_limits_entry_low,self.xaxis_limits_entry_high]
-                elif group == 'yaxis limits': children = [self.yaxis_limits_entry_low,self.yaxis_limits_entry_high]
-                elif group == 'colorbar':
-                    children = self.get_all_children(wid=self.caxis_frame)
-                    # Don't enable the colorbar limits entries if we are using adaptive limits
-                    if self.caxis_limits_entry_low in children: children.remove(self.caxis_limits_entry_low)
-                    if self.caxis_limits_entry_high in children: children.remove(self.caxis_limits_entry_high)
-                elif group == 'colorbar limits': children = [self.caxis_limits_entry_low,self.caxis_limits_entry_high]
-            else: # Assume this is a widget
-                children = group
-            
+            children = self.get_all_children()
             self.set_widget_state(children,'normal')
-
+    
+    
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("controls.set_widget_state")
         if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
@@ -296,6 +268,7 @@ class Controls(tk.Frame,object):
         if self.gui.plotcontrols.current_file in changed_variables:
             self.gui.read()
         
+        """
         if self.gui.interactiveplot.drawn_object is not None and self.saved_state is not None:
             axis_controller_exclusively_changed = None
             for axis_name, axis_controller in self.axis_controllers.items():
@@ -309,11 +282,16 @@ class Controls(tk.Frame,object):
 
             if axis_controller_exclusively_changed is self.axis_controllers['Colorbar']:
                 self.gui.interactiveplot.update_colorbar_label()
-
+        """
+        
         # Perform the queued zoom if there is one
         if self.gui.plotcontrols.toolbar.queued_zoom is not None:
+            # Turn off adaptive limits on both the x and y axes if needed
+            for name in self.axis_names[:2]:
+                if self.axis_controllers[name].is_adaptive.get():
+                    self.axis_controllers[name].limits_adaptive_button.command()
             self.gui.plotcontrols.toolbar.queued_zoom()
-            
+                
         # Perform any rotations necessary
         if self.gui.data is not None:
             self.gui.data.rotate(
@@ -321,46 +299,30 @@ class Controls(tk.Frame,object):
                 self.rotation_y.get(),
                 self.rotation_z.get(),
             )
-        
+
+        # Update the axis 
+        #for axis_name, axis_controller in self.axis_controllers.items():
+        #    if axis_controller.axis is not None:
+        #        axis_controller.axis.set_label(axis_controller.label.get())
+        #        self.gui.interactiveplot.canvas.draw()
+        #    else:
+        #        print("BAD")
+            
         # Draw the new plot
         self.gui.interactiveplot.update()
-
+        
         self.save_state()
 
-
-    def toggle_adaptive_xlim(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.toggle_adaptive_xlim")
-        self.gui.interactiveplot.toggle_xlim_adaptive()
-        if self.xaxis_adaptive_limits.get():
-            self.disable('xaxis limits')
-        else:
-            self.enable('xaxis limits')
-
-    def toggle_adaptive_ylim(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.toggle_adaptive_ylim")
-        self.gui.interactiveplot.toggle_ylim_adaptive()
-        if self.yaxis_adaptive_limits.get():
-            self.disable('yaxis limits')
-        else:
-            self.enable('yaxis limits')
-        
-        
-    def toggle_adaptive_clim(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.toggle_adaptive_clim")
-        if self.gui.interactiveplot.colorbar_visible:
-            self.gui.interactiveplot.toggle_clim_adaptive()
-        if self.caxis_adaptive_limits.get():
-            self.disable('colorbar limits')
-        else:
-            self.enable('colorbar limits')
-                
     def connect(self):
         if globals.debug > 1: print("controls.connect")
         # Connect the controls to the interactiveplot
         ax = self.gui.interactiveplot.ax
         self.axis_controllers['XAxis'].connect(ax.xaxis)
         self.axis_controllers['YAxis'].connect(ax.yaxis)
-        self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.cax)
+        if self.gui.interactiveplot.colorbar.side in ['right','left']:
+            self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.colorbar.cax.yaxis)
+        else:
+            self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.colorbar.cax.xaxis)
 
     def get_which_variables_changed_between_states(self,state1,state2):
         if globals.debug > 1: print("controls.get_which_variables_changed_between_states")

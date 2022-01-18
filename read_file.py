@@ -28,6 +28,14 @@ It is assumed that particles with u=0 are special
 particles that will not contribute to the column 
 density (StarSmasher default).
 
+VISUALIZING PRE-COMPUTED IMAGE DATA:
+If you just want to view data from an output file that
+is already organized as an image (a 2D array of data),
+simply have read_data return an OrderedDict with two
+keys: 'image' and 'extent', where 'image' is the 2D
+data and 'extent' is the bounding box of that data.
+See the function "fluxcal_teff" below for an example.
+
 The default file read protocol is set to read out*.sph
 files from StarSmasher output.
 
@@ -89,6 +97,7 @@ def read_file(filename):
         ],
         "fluxcal" : [
             ["fluxcal*.track*",fluxcal_track],
+            ["teffs*.dat*",fluxcal_teff],
         ],
     }
     
@@ -367,3 +376,19 @@ def fluxcal_track(filename):
         
     return to_return
 
+# teffs*.dat files from FluxCal
+def fluxcal_teff(filename):
+    data = OrderedDict()
+    with open(filename,'r') as f:
+        header = f.readline().split()
+    xmin = float(header[0])
+    dx = float(header[1])
+    Nx = int(header[2])
+    ymin = float(header[3])
+    dy = float(header[4])
+    Ny = int(header[5])
+
+    data['image'] = np.loadtxt(filename,skiprows=1)
+    data['extent'] = [xmin,xmin+dx*Nx,ymin,ymin+dy*Ny]
+
+    return data

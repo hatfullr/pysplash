@@ -46,7 +46,9 @@ class AxisController(LabelledFrame,object):
             self.limits_low,
             self.limits_high,
             self.is_adaptive,
+            self.label,
         ]
+    
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
@@ -55,6 +57,7 @@ class AxisController(LabelledFrame,object):
         self.limits_low = tk.DoubleVar()
         self.limits_high = tk.DoubleVar()
         self.is_adaptive = tk.BooleanVar(value=False)
+        self.label = tk.StringVar()
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_widgets")
@@ -65,8 +68,18 @@ class AxisController(LabelledFrame,object):
             values=[self.value.get()],
             textvariable=self.value,
         )
+
+        self.label_and_scale_frame = tk.Frame(self)
+
+        self.label_frame = tk.Frame(self.label_and_scale_frame)
+        self.label_label = tk.Label(self.label_frame,text="Label")
+        self.label_entry = tk.Entry(
+            self.label_frame,
+            textvariable=self.label,
+            width=11,
+        )
         
-        self.scale_buttons_frame = tk.Frame(self)
+        self.scale_buttons_frame = tk.Frame(self.label_and_scale_frame)
         self.linear_button = tk.Radiobutton(
             self.scale_buttons_frame,
             text="linear",
@@ -119,13 +132,19 @@ class AxisController(LabelledFrame,object):
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")
         self.combobox.pack(side='top',fill='x')
+
+        self.label_entry.pack(side='right')
+        self.label_label.pack(side='right')
+        self.label_frame.pack(side='left')
         
         self.pow10_button.pack(side='right')
         self.log_button.pack(side='right')
         self.linear_button.pack(side='right')
-        self.scale_buttons_frame.pack(side='top',fill='x')
-
+        self.scale_buttons_frame.pack(side='right',fill='x')
+        
         self.limits_frame.columnconfigure(1,weight=1)
+
+        self.label_and_scale_frame.pack(side='top',fill='x')
         
         self.limits_adaptive_button.pack(side='right')
         self.limits_entry_high.pack(side='right')
@@ -136,12 +155,17 @@ class AxisController(LabelledFrame,object):
     def connect(self,axis):
         if globals.debug > 1: print("axiscontroller.connect")
         self.axis=axis
+        canvas = self.axis.get_figure().canvas
         if axis is not None:
-            self.axis.axes.get_figure().canvas.draw()
-        self.update_limits()
-
+            if isinstance(axis, XAxis):
+                self.axis.callbacks.connect("xlim_changed",self.update_limits)
+            elif isinstance(axis, YAxis):
+                self.axis.callbacks.connect("ylim_changed",self.update_limits)
+            
+            canvas.mpl_connect("draw_event", self.update_labels)
+        
     def set_widget_state(self,widgets,state):
-        if globals.debug > 1: print("controls.set_widget_state")
+        if globals.debug > 1: print("axiscontroller.set_widget_state")
         if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
         for widget in widgets:
             if 'state' in widget.configure():
@@ -172,6 +196,7 @@ class AxisController(LabelledFrame,object):
     def update_limits(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.update_limits")
         if self.axis is None: return
+
         limits = self.axis.get_view_interval()
         low = self.limits_low.get()
         high = self.limits_high.get()
@@ -185,6 +210,16 @@ class AxisController(LabelledFrame,object):
             self.log_button.configure(state='disabled')
         else:
             self.log_button.configure(state='normal')
+
+    def update_labels(self,*args,**kwargs):
+        if globals.debug > 1: print("axiscontroller.update_labels")
+        
+        if self.axis.get_label_text() != self.label.get():
+            parent_ax = self.axis.axes
+            if isinstance(self.axis, XAxis):
+                parent_ax.set_xlabel(self.label.get())
+            elif isinstance(self.axis, YAxis):
+                parent_ax.set_ylabel(self.label.get())
         
     def toggle_adaptive(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.toggle_adaptive")

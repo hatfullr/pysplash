@@ -79,18 +79,35 @@ class GUI(tk.Frame,object):
                     break
             else:
                 all_mapped = True
+
+        
         
         #self.plotcontrols.current_file.trace("w",self.read)
         if len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
             self.plotcontrols.current_file.set(sys.argv[1])
             self.read()
+            
+            # Set the x and y limits
+            xmargin, ymargin = self.interactiveplot.ax.margins()
+            xlim = self.data.xlim()
+            ylim = self.data.ylim()
+            dx = (xlim[1]-xlim[0])*xmargin
+            dy = (ylim[1]-ylim[0])*ymargin
+            self.interactiveplot.ax.set_xlim(xlim[0]-dx,xlim[1]+dx)
+            self.interactiveplot.ax.set_ylim(ylim[0]-dy,ylim[1]+dy)
+            
             self.interactiveplot.update()
-            self.controls.save_state()
-            print(self.interactiveplot.drawn_object._data)
         else:
             self.filenames = []
 
+        self.controls.connect()
+
+        # Turn on adaptive limits in x and y initially
+        for name in self.controls.axis_names[:2]:
+            self.controls.axis_controllers[name].limits_adaptive_button.command()
+        
+        self.controls.save_state()
         
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
@@ -180,10 +197,10 @@ class GUI(tk.Frame,object):
     def set_user_controlled(self,value):
         if globals.debug > 1: print("gui.set_user_controlled")
         if value:
-            self.controls.enable('all')
+            self.controls.enable()
             self.plotcontrols.enable('all')
         else:
-            self.controls.disable('all',temporarily=True)
+            self.controls.disable(temporarily=True)
             self.plotcontrols.disable('all')
         self.user_controlled = value
     def get_user_controlled(self):
@@ -203,7 +220,9 @@ class GUI(tk.Frame,object):
             read_file(self.plotcontrols.current_file.get()),
             #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
-        
+
+        if self.data.is_image:
+            return
 
         
         # Make sure the data has the required keys for scatter plots
@@ -242,6 +261,8 @@ class GUI(tk.Frame,object):
         if self.data is None:
             return None
         else:
+            if self.data.is_image:
+                return self.data
             data = copy.copy(self.data['data'][key])
             if key == 'h': return data*globals.compact_support
             else: return data
