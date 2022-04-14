@@ -233,8 +233,8 @@ def fluxcal_track(filename):
         header=1,
         parallel=False,
         verbose=debug > 1,
-    )[0]
-
+    )
+    
     to_return = {
         'data'           : OrderedDict(),
         'display_units'  : OrderedDict(),
