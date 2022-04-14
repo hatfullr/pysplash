@@ -12,8 +12,10 @@ from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
 from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
+from gui.customtoolbar import CustomToolbar
 import numpy as np
 import globals
+import inspect # Remove me
 
 class Controls(tk.Frame,object):
     def __init__(self,gui,*args,**kwargs):
@@ -283,6 +285,30 @@ class Controls(tk.Frame,object):
             if axis_controller_exclusively_changed is self.axis_controllers['Colorbar']:
                 self.gui.interactiveplot.update_colorbar_label()
         """
+
+        # Check if the user changed any of the x or y axis limits
+        ax = self.gui.interactiveplot.ax
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        user_xmin = self.axis_controllers['XAxis'].limits_low.get()
+        user_xmax = self.axis_controllers['XAxis'].limits_high.get()
+        user_ymin = self.axis_controllers['YAxis'].limits_low.get()
+        user_ymax = self.axis_controllers['YAxis'].limits_high.get()
+        if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
+            # If there is a queued zoom, cancel it, then fire it to remove the rubberband and do normal behavior
+            self.gui.plotcontrols.toolbar._zoom_info = None
+            self.gui.plotcontrols.toolbar.queued_zoom()
+
+            flag = self.gui.interactiveplot.drawn_object is not None
+            if flag: self.gui.interactiveplot.drawn_object._disconnect()
+            
+            # Now set the new axis limits
+            ax.set_xlim(user_xmin, user_xmax)
+            ax.set_ylim(user_ymin, user_ymax)
+
+            if flag: self.gui.interactiveplot.drawn_object._connect()
+            
+            
         
         # Perform the queued zoom if there is one
         if self.gui.plotcontrols.toolbar.queued_zoom is not None:

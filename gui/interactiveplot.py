@@ -231,7 +231,6 @@ class InteractivePlot(tk.Frame,object):
                 self.previous_xlim[1] == xmax and
                 self.previous_ylim[0] == ymin and
                 self.previous_ylim[1] == ymax):
-
                 kwargs['initialize'] = False
                 
                 if len(args) == len(self.previous_args):
