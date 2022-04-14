@@ -82,6 +82,7 @@ to_return = {
 from collections import OrderedDict
 
 from lib.fastfileread import FastFileRead
+from lib.fastfileread import read_starsmasher
 import numpy as np
 from globals import debug
 import os.path
@@ -116,110 +117,6 @@ def read_file(filename):
 
 # For out*.sph files from StarSmasher
 def starsmasher(filename):
-    header_names = [
-        'ntot',
-        'nnopt',
-        'hco',
-        'hfloor',
-        'sep0',
-        'tf',
-        'dtout',
-        'nout',
-        'nit',
-        't',
-        'nav',
-        'alpha',
-        'beta',
-        'tjumpahead',
-        'ngr',
-        'nrelax',
-        'trelax',
-        'dt',
-        'omega2',
-        'ncooling',
-        'erad',
-        'ndisplace',
-        'displacex',
-        'displacey',
-        'displacez',
-    ]
-
-    header_format = [
-        'i4', # ntot
-        'i4', # nnopt
-        'f8', # hco
-        'f8', # hfloor
-        'f8', # sep0
-        'f8', # tf
-        'f8', # dtout
-        'i4', # nout
-        'i4', # nit
-        'f8', # t
-        'i4', # nav
-        'f8', # alpha
-        'f8', # beta
-        'f8', # tjumpahead
-        'i4', # ngr
-        'i4', # nrelax
-        'f8', # trelax
-        'f8', # dt
-        'f8', # omega2
-        'i4', # ncooling
-        'f8', # erad
-        'i4', # ndisplace
-        'f8', # displacex
-        'f8', # displacey
-        'f8', # displacez
-    ]
-
-    data_names = [
-        'x',
-        'y',
-        'z',
-        'm',
-        'h',
-        'rho',
-        'vx',
-        'vy',
-        'vz',
-        'vxdot',
-        'vydot',
-        'vzdot',
-        'u',
-        'udot',
-        'grpot',
-        'meanmolecular',
-        'cc',
-        'divv',
-        # These are present only when ncooling!=0
-        'ueq',
-        'tthermal',
-    ]
-
-    data_format = [
-        'f8', # x
-        'f8', # y
-        'f8', # z
-        'f8', # m
-        'f8', # h
-        'f8', # rho
-        'f8', # vx
-        'f8', # vy
-        'f8', # vz
-        'f8', # vxdot
-        'f8', # vydot
-        'f8', # vzdot
-        'f8', # u
-        'f8', # udot
-        'f8', # grpot
-        'f8', # meanmolecular
-        'f4', # cc
-        'f8', # divv
-        # These are present only when ncooling!=0
-        'f8', # ueq
-        'f8', # tthermal
-    ]
-
     munit = 1.9891e33
     runit = 6.9599e10
     gravconst = 6.67390e-8
@@ -249,6 +146,9 @@ def starsmasher(filename):
         1., # divv
         eunit, # ueq
         1., # tthermal
+        1., # opacity (already in cgs)
+        1., # uraddot (already in cgs)
+        1., # temperature
     ]
 
     physical_units = [
@@ -272,51 +172,24 @@ def starsmasher(filename):
         1., # divv
         eunit, # ueq
         1., # tthermal
+        1., # opacity
+        1., # uraddot
+        1., # temperature
     ]
 
-    header_format = '<'+','.join(header_format)
-
-    header_size = sum([header_format.count(str(num))*num for num in range(64)]) + 8 # +8 for newline
+    data, header = read_starsmasher(filename, return_headers=True)
     
-    with open(filename,'rb') as f:
-        f.seek(0,2)
-        filesize = f.tell()
-
-    header = FastFileRead(
-        filename,
-        footer=filesize-header_size,
-        binary_format=header_format,
-        offset=4,
-        parallel=False,
-    )[0]
-
-    header.dtype.names = header_names
-    if header['ncooling'] == 0:
-        data_names = data_names[:-2]
-        data_format = data_format[:-2]
-
-    data_format = '<'+','.join(data_format)
-
-    data = FastFileRead(
-        filename,
-        header=header_size,
-        binary_format=data_format,
-        offset=4,
-        parallel=False,
-        verbose=debug > 1,
-    )[0]
-    data.dtype.names = data_names
-
     to_return = {
         'data'           : OrderedDict(),
         'display_units'  : OrderedDict(),
         'physical_units' : OrderedDict(),
     }
-    for i,dname in enumerate(data_names):
+    
+    for i,dname in enumerate(data._data.dtype.names):
         to_return['data'][dname] = data[dname]
         to_return['display_units'][dname] = display_units[i]
         to_return['physical_units'][dname] = physical_units[i]
-    to_return['data']['t'] = header['t'][0]
+    to_return['data']['t'] = header._data['t'][0]
     to_return['display_units']['t'] = tunit / 3600. / 24. # In days
     to_return['physical_units']['t'] = tunit
     

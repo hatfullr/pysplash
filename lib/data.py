@@ -50,8 +50,12 @@ class Data(collections.OrderedDict,object):
 
     def xlim(self,*args,**kwargs):
         if globals.debug > 1: print("data.xlim")
-        return np.array([np.nanmin(self['data']['x']), np.nanmax(self['data']['x'])]) * self.display_units['x']
+        x = self['data']['x']
+        x = x[np.isfinite(x)]
+        return np.array([np.nanmin(x), np.nanmax(x)]) * self.display_units['x']
     
     def ylim(self,*args,**kwargs):
         if globals.debug > 1: print("data.ylim")
-        return np.array([np.nanmin(self['data']['y']), np.nanmax(self['data']['y'])]) * self.display_units['y']
+        y = self['data']['y']
+        y = y[np.isfinite(y)]
+        return np.array([np.nanmin(y), np.nanmax(y)]) * self.display_units['y']

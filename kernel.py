@@ -60,7 +60,7 @@ def setupintegratedkernel():
 
 
 # For testing
-"""
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
@@ -80,4 +80,4 @@ if __name__ == "__main__":
     
     plt.plot(uprime,y)
     plt.show()
-"""
+
