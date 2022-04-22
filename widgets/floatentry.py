@@ -7,6 +7,7 @@ else:
     import tkinter as tk
     from tkinter import ttk
     from widgets.flashingentry import FlashingEntry
+import numpy as np
 
 # The only difference is we don't allow the user to type
 # anything that isn't a float
@@ -47,14 +48,20 @@ class FloatEntry(FlashingEntry,object):
         return True
 
     
-    # Override the set method so that we try to fit the text within the widget,
-    # but only to a minimum size of "0.0"
+    # Try to fit the text within the widget, but only to a minimum size of "0.0"
     def format_text(self, *args, **kwargs):
         # Technically this function gets called 2 times, but I am not sure why.
         # This should not affect the result of the function, though
-
         number = self.textvariable.get()
-        width = self.cget('width')
+        total_width = max(3, self.cget('width'))
 
-        self._textvariable.set((("%-"+str(width)+"G") % number).strip())
+        # Test the generic conversion
+        testtext = "%-G" % number
         
+        precision = 0
+        if "." in testtext:
+            decimalplace = testtext.index(".")
+            precision = total_width - testtext.index(".")
+            
+        self._textvariable.set("%-.*G" % (precision,number))
+
