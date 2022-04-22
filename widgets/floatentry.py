@@ -11,52 +11,50 @@ else:
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='key',disallowed_values=[],**kwargs):
+    def __init__(self,master,validate='focusout',disallowed_values=[],**kwargs):
         self.disallowed_values = disallowed_values
-        self.special_characters = ["e","E","d","D","+","-",".",","]
+        self.special_characters = [["."],["E"],["+","-"]]
+        self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
-        super(FloatEntry,self).__init__(master,**kwargs)
+        self._textvariable = tk.StringVar()
+        self.textvariable = kwargs.pop('textvariable')
+        
+        super(FloatEntry,self).__init__(master,textvariable=self._textvariable,**kwargs)
         self.configure(
             validate=validate,
             validatecommand=(self.register(self.validatecommand),'%P'),
         )
-        self.focusbinding = None
-        self.doing_focus_out_validate = False
         
-    def validatecommand(self,newtext):
-        # Allow the entry to be empty
+        if self.textvariable:
+            self.tvtrace_id = self.textvariable.trace("w", self.format_text)
+
+
+    def validatecommand(self, newtext):
+        # Allow empty text
         if not newtext: return True
 
-        if not self.doing_focus_out_validate:
-            # If the entry has any special characters in it, switch behavior
-            # from validation on user typing to validation on losing focus.
-            if self.focusbinding is None and any([c in newtext for c in self.special_characters]):
-                self.focusbinding = self.bind("<FocusOut>", self.on_focus_out)
-
-            if self.focusbinding is not None: return True
-
-        newtext = newtext.replace("d","e").replace("D","E").replace(",",".") # Weird europeans!
-            
-        # Disallow anything else that would cause any problem
-        try:
-            float(newtext)
-        except:
-            self.flash()
-            return False
-
-        if float(newtext) in self.disallowed_values:
-            self.flash()
-            return False
+        # Reformat the text so it is in a regular format for us to check
+        testtext = newtext.replace("d","e").replace("D","E").strip()
+        testtext = testtext.replace(",",".") # Weird Europeans!
         
+        try:
+            float(testtext)
+        except ValueError:
+            self.flash()
+            return False
+
+        self._textvariable.set(testtext)
         return True
 
-    def on_focus_out(self, event):
-        # Run the validation command when we lose focus. If it fails, then
-        # reset the focus to this widget until the user fixes the problem
-        self.doing_focus_out_validate = True
-        if self.validate():
-            self.unbind("<FocusOut>",self.focusbinding)
-            self.focusbinding = None
-        else: self.focus_set()
+    
+    # Override the set method so that we try to fit the text within the widget,
+    # but only to a minimum size of "0.0"
+    def format_text(self, *args, **kwargs):
+        # Technically this function gets called 2 times, but I am not sure why.
+        # This should not affect the result of the function, though
 
-        self.doing_focus_out_validate = False
+        number = self.textvariable.get()
+        width = self.cget('width')
+
+        self._textvariable.set((("%-"+str(width)+"G") % number).strip())
+        
