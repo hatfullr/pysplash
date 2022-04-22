@@ -296,8 +296,8 @@ class Controls(tk.Frame,object):
         user_ymax = self.axis_controllers['YAxis'].limits_high.get()
         if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
             # If there is a queued zoom, cancel it, then fire it to remove the rubberband and do normal behavior
-            self.gui.plotcontrols.toolbar._zoom_info = None
             if self.gui.plotcontrols.toolbar.queued_zoom:
+                self.gui.plotcontrols.toolbar._zoom_info = None
                 self.gui.plotcontrols.toolbar.queued_zoom()
 
             flag = self.gui.interactiveplot.drawn_object is not None
