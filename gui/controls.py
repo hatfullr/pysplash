@@ -263,6 +263,13 @@ class Controls(tk.Frame,object):
     def on_update_button_pressed(self,*args,**kwargs):
         if not self.state_listeners_connected: return
         if globals.debug > 1: print("controls.on_update_button_pressed")
+
+        # We do the following update step to make sure focus has been released from the
+        # entry widgets. Otherwise, we do not register any change in the entry widgets.
+        # Send the focus to the root widget
+        self.winfo_toplevel().focus_set()
+        # Update the focus
+        self.update()
         
         changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
 
@@ -294,6 +301,7 @@ class Controls(tk.Frame,object):
         user_xmax = self.axis_controllers['XAxis'].limits_high.get()
         user_ymin = self.axis_controllers['YAxis'].limits_low.get()
         user_ymax = self.axis_controllers['YAxis'].limits_high.get()
+        #print(xmin, user_xmin)
         if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
             # If there is a queued zoom, cancel it, then fire it to remove the rubberband and do normal behavior
             if self.gui.plotcontrols.toolbar.queued_zoom:

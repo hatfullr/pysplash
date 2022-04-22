@@ -32,9 +32,6 @@ class AxisController(LabelledFrame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.previous_limits_low_value = self.limits_low.get()
-        self.previous_limits_high_value = self.limits_high.get()
-
         self.previous_scale = self.scale.get()
 
         self.scale.trace('w',self.on_scale_changed)
@@ -236,9 +233,7 @@ class AxisController(LabelledFrame,object):
             # Disable the limit entries
             self.limits_entry_low.configure(state='disabled')
             self.limits_entry_high.configure(state='disabled')
-
-            self.previous_limits_low_value = self.limits_low.get()
-            self.previous_limits_high_value = self.limits_high.get()
+            
             self.update_limits()
             
         else: # Turn off adaptive limits
@@ -249,15 +244,12 @@ class AxisController(LabelledFrame,object):
             self.limits_entry_low.configure(state='normal')
             self.limits_entry_high.configure(state='normal')
 
-            self.limits_low.set(self.previous_limits_low_value)
-            self.limits_high.set(self.previous_limits_high_value)
-
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
 
-        if not self.is_adaptive.get():
-            self.previous_limits_low = self.limits_low.get()
-            self.previous_limits_high = self.limits_high.get()
+        #if not self.is_adaptive.get():
+        #    self.previous_limits_low = self.limits_low.get()
+        #    self.previous_limits_high = self.limits_high.get()
         
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:

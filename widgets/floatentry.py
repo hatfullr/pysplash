@@ -44,6 +44,7 @@ class FloatEntry(FlashingEntry,object):
             self.flash()
             return False
 
+        self.textvariable.set(float(testtext))
         self._textvariable.set(testtext)
         return True
 
