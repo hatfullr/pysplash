@@ -34,6 +34,9 @@ class Data(collections.OrderedDict,object):
         if rotations is not None:
             self.rotate(rotations[0],rotations[1],rotations[2])
         
+        # Assume linear data initially
+        self.scale = 'linear'
+        
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
         if not self.is_image: self.__init__(self._original)

@@ -21,6 +21,7 @@ import copy
 import os.path
 import json
 import os
+import numpy as np
 
 class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
@@ -105,7 +106,7 @@ class GUI(tk.Frame,object):
 
         # Turn on adaptive limits in x and y initially
         for name in self.controls.axis_names[:2]:
-            self.controls.axis_controllers[name].limits_adaptive_button.command()
+            self.controls.axis_controllers[name].adaptive_on()
         
         self.controls.save_state()
         
@@ -276,7 +277,21 @@ class GUI(tk.Frame,object):
 
     def get_display_data(self,key):
         if globals.debug > 1: print("gui.get_display_data")
-        return self.get_data(key)*self.get_display_units(key)
+        d = self.get_data(key)*self.get_display_units(key)
+
+        # Check to see if the key matches
+        xaxis = self.controls.axis_controllers['XAxis'].value.get()
+        yaxis = self.controls.axis_controllers['YAxis'].value.get()
+        if key == xaxis:
+            controller = self.controls.axis_controllers['XAxis']
+        elif key == yaxis:
+            controller = self.controls.axis_controllers['YAxis']
+
+        scale = controller.scale.get()
+        if scale == 'log10': d = np.log10(d)
+        elif scale == '^10': d = 10**d
+        
+        return d
     def get_physical_data(self,key):
         if globals.debug > 1: print("gui.get_physical_data")
         return self.get_data(key)*self.get_physical_units(key)

@@ -22,6 +22,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         #self.toolbar.home = self.new_home
 
         self.queued_zoom = None
+        self.zoom_event = None
         
         self.configure(**kwargs)
 
@@ -45,22 +46,35 @@ class CustomToolbar(NavigationToolbar2Tk):
         return b
 
 
-    def on_queued_zoom(self,event):
+    def on_queued_zoom(self):
         flag = False
         if self.gui.interactiveplot.drawn_object is not None: flag = True
 
         if flag: self.gui.interactiveplot.drawn_object._disconnect()
             
-        super(CustomToolbar,self).release_zoom(event)
+        super(CustomToolbar,self).release_zoom(self.zoom_event)
 
         if flag: self.gui.interactiveplot.drawn_object._connect()
+
+        # Clear the zoom event after we have completed the zoom
+        self.zoom_event = None
+        self.queued_zoom = None
+
+    def cancel_queued_zoom(self, *args, **kwargs):
+        # Cancel a queued zoom
+        if self.queued_zoom:
+            # Remove the zoom information
+            self._zoom_info = None
+            # Fire the zoom event to trick Matplotlib into removing the rubberband
+            self.queued_zoom()
     
     def release_zoom(self,event):
         self.queued_zoom = None
         if sys.version_info.major < 3: # Python2
             for zoom_id in self._ids_zoom:
                 self.canvas.mpl_disconnect(zoom_id)
-            self.queued_zoom = lambda event=event: self.on_queued_zoom(event)
+            self.zoom_event = event
+            self.queued_zoom = self.on_queued_zoom
         else: # Python3
             if self._zoom_info is not None:
                 if isinstance(self._zoom_info,dict):
@@ -72,7 +86,8 @@ class CustomToolbar(NavigationToolbar2Tk):
                 else:
                     raise ValueError("Problem with the matplotlib zoom function. Please submit a bug report on GitHub with your current version of matplotlib.")
                 self.canvas.mpl_disconnect(cid)
-                self.queued_zoom = lambda event=event: self.on_queued_zoom(event)
+                self.zoom_event = event
+                self.queued_zoom = self.on_queued_zoom
         if self.queued_zoom is not None:
             self.gui.controls.save_state()
             self.gui.controls.on_state_change()

@@ -12,6 +12,7 @@ from widgets.switchbutton import SwitchButton
 from matplotlib.axis import XAxis, YAxis
 import globals
 import numpy as np
+from matplotlib.scale import FuncScale
 
 class AxisController(LabelledFrame,object):
     def __init__(self,master,text,relief='sunken',bd=1,**kwargs):
@@ -35,6 +36,8 @@ class AxisController(LabelledFrame,object):
         self.previous_scale = self.scale.get()
 
         self.scale.trace('w',self.on_scale_changed)
+        self.limits_low.trace('w',self.update_scale_buttons)
+        self.limits_high.trace('w',self.update_scale_buttons)
 
     def get_variables(self,*args,**kwargs):
         return [
@@ -123,7 +126,8 @@ class AxisController(LabelledFrame,object):
             self.limits_frame,
             text="Adaptive",
             variable=self.is_adaptive,
-            command=self.toggle_adaptive,
+            #command=self.toggle_adaptive,
+            command=(self.adaptive_on, self.adaptive_off),
         )
 
     def place_widgets(self,*args,**kwargs):
@@ -202,8 +206,13 @@ class AxisController(LabelledFrame,object):
         if high != round(limits[1],len(str(high))):
             self.limits_high.set(limits[1])
 
-        #if self.is_adaptive.get():
-        if self.scale != 'log10' and any(limits <= 0):
+    def update_scale_buttons(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
+
+        limits = [self.limits_low.get(), self.limits_high.get()]
+        # Allow negative values if we are in the log10 scale, but if we are in
+        # any other scale then disable the log10 button
+        if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
             self.log_button.configure(state='disabled')
         else:
             self.log_button.configure(state='normal')
@@ -217,12 +226,65 @@ class AxisController(LabelledFrame,object):
                 parent_ax.set_xlabel(self.label.get())
             elif isinstance(self.axis, YAxis):
                 parent_ax.set_ylabel(self.label.get())
+
+
+    def adaptive_on(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.adaptive_on")
+
+        # If we receive arguments then it's the user who pressed the button to call this event.
+        # Otherwise, it is an internal call and so we should simulate a button press
+        if not args:
+            self.limits_adaptive_button.command()
         
+        # Disable the limit entries
+        self.limits_entry_low.configure(state='disabled')
+        self.limits_entry_high.configure(state='disabled')
+        
+        if self.axis:
+            if(isinstance(self.axis,XAxis)):
+                self.limits_cid = self.axis.axes.callbacks.connect("xlim_changed",self.update_limits)
+            elif(isinstance(self.axis,YAxis)):
+                self.limits_cid = self.axis.axes.callbacks.connect("ylim_changed",self.update_limits)
+            else:
+                raise ValueError("Unsupported axis type "+type(self.axis))
+            self.update_limits()
+
+        
+
+    def adaptive_off(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.adaptive_off")
+
+        # If we receive arguments then it's the user who pressed the button to call this event.
+        # Otherwise, it is an internal call and so we should simulate a button press
+        if not args:
+            self.limits_adaptive_button.command()
+        
+        # Enable the limit entries
+        self.limits_entry_low.configure(state='normal')
+        self.limits_entry_high.configure(state='normal')
+
+        if self.axis and self.limits_cid:
+            self.axis.axes.callbacks.disconnect(self.limits_cid)
+            self.limits_cid = None
+
+    # Simulate the Adaptive button being pressed
+    def toggle_adaptive(self, *args, **kwargs):
+        self.limits_adaptive_button.command()
+            
+    """
     def toggle_adaptive(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.toggle_adaptive")
         if self.axis is None: return
-        
-        if self.is_adaptive.get(): # Turn on adaptive limits
+
+        if self.is_adaptive.get(): # Turn off adaptive limits
+            if self.limits_cid is not None:
+                self.axis.axes.callbacks.disconnect(self.limits_cid)
+                self.limits_cid = None
+
+            self.limits_entry_low.configure(state='normal')
+            self.limits_entry_high.configure(state='normal')
+            
+        else: # Turn on adaptive limits
             if(isinstance(self.axis,XAxis)):
                 self.limits_cid = self.axis.axes.callbacks.connect("xlim_changed",self.update_limits)
             elif(isinstance(self.axis,YAxis)):
@@ -235,22 +297,10 @@ class AxisController(LabelledFrame,object):
             self.limits_entry_high.configure(state='disabled')
             
             self.update_limits()
-            
-        else: # Turn off adaptive limits
-            if self.limits_cid is not None:
-                self.axis.axes.callbacks.disconnect(self.limits_cid)
-                self.limits_cid = None
-
-            self.limits_entry_low.configure(state='normal')
-            self.limits_entry_high.configure(state='normal')
-
+    """
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
 
-        #if not self.is_adaptive.get():
-        #    self.previous_limits_low = self.limits_low.get()
-        #    self.previous_limits_high = self.limits_high.get()
-        
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             if self.previous_scale == 'linear':
@@ -260,7 +310,7 @@ class AxisController(LabelledFrame,object):
                 else: # Must be ^10
                     self.limits_low.set(10**(self.limits_low.get()))
                     self.limits_high.set(10**(self.limits_high.get()))
-            elif self.previous_Scale == 'log10':
+            elif self.previous_scale == 'log10':
                 if current_scale == 'linear':
                     self.limits_low.set(10**(self.limits_low.get()))
                     self.limits_high.set(10**(self.limits_high.get()))
@@ -274,3 +324,5 @@ class AxisController(LabelledFrame,object):
                 else: # Must be log10
                     self.limits_low.set(np.log10(np.log10(self.limits_low.get())))
                     self.limits_high.set(np.log10(np.log10(self.limits_high.get())))
+
+            self.previous_scale = current_scale

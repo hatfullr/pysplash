@@ -32,11 +32,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         else:
             self._data = copy(data)            
             extent = list(self._axes.get_xlim())+list(self._axes.get_ylim())
-        
+            
         kwargs['origin'] = 'lower'
         matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,**kwargs)
         self._extent = extent
-        
         
         if self.data_is_image:
             super(CustomAxesImage,self).set_data(self._data)

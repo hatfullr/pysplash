@@ -17,18 +17,26 @@ class SwitchButton(tk.Button,object):
         super(SwitchButton,self).__init__(self.master,command=self.command,relief=relief,**kwargs)
         
         self._command = command
+
+        self.variable.trace('w',self.on_variable_changed)
     
-    def command(self,*args,**kwargs):
+    def on_variable_changed(self, *args, **kwargs):
+        # Make the button relief always follow exactly the state of the variable
+        variable = self.variable.get()
+        self.configure(relief='sunken' if variable else 'raised')
+        
         if self.cget('state') != 'disabled':
             if not hasattr(self._command,"__len__"): command = [self._command,self._command]
             else: command = self._command
-            relief = self.cget('relief')
-            if relief == 'raised':
-                self.configure(relief='sunken')
-                self.variable.set(True)
-                if command[0] is not None: command[0](*args,**kwargs)
-            else:
-                self.configure(relief='raised')
-                self.variable.set(False)
-                if command[1] is not None: command[1](*args,**kwargs)
+            
+            if variable: # Variable has just been set from False to True
+                if command[0] is not None: command[0](*args, **kwargs)
+            # Variable has just been set from True to False
+            elif command[1] is not None: command[1](*args, **kwargs)
+
+    def command(self,*args,**kwargs):
+        if self.cget('state') != 'disabled':
+            # Flip the variable, setting off chain of events in on_variable_changed
+            self.variable.set(not self.variable.get())
+    
         

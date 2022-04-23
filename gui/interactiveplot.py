@@ -136,8 +136,10 @@ class InteractivePlot(tk.Frame,object):
             return
 
         
-        
-        
+        kwargs = {}
+        kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
+        kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
+
         # Scatter plot
         if self.draw_type == 'None':
             if self.gui.data.is_image:
@@ -146,9 +148,7 @@ class InteractivePlot(tk.Frame,object):
                     self.ax,
                     self.gui.data,
                 )
-                kwargs = dict(
-                    aspect=aspect,
-                )
+                kwargs['aspect'] = aspect
                 self.reset_data_xylim()
                 self.colorbar.show()
             else:
@@ -158,10 +158,8 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_data(x),
                     self.gui.get_display_data(y),
                 )
-                kwargs = dict(
-                    s=self.gui.controls.point_size.get(),
-                    aspect=aspect,
-                )
+                kwargs['s'] = self.gui.controls.point_size.get()
+                kwargs['aspect'] = aspect
 
         else: # It will be some form of IntegratedValue plot
             if self.draw_type == 'Column density':
@@ -206,18 +204,11 @@ class InteractivePlot(tk.Frame,object):
                 ]
             )
 
-            xaxis_controller = self.gui.controls.axis_controllers['XAxis']
-            yaxis_controller = self.gui.controls.axis_controllers['YAxis']
-            caxis_controller = self.gui.controls.axis_controllers['Colorbar']
+            kwargs['cmap'] = self.colorbar.cmap
+            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            kwargs['aspect'] = aspect
+            kwargs['colorbar'] = self.colorbar
 
-            kwargs = dict(
-                cmap=self.colorbar.cmap,
-                xscale=xaxis_controller.scale.get(),
-                yscale=yaxis_controller.scale.get(),
-                cscale=caxis_controller.scale.get(),
-                aspect=aspect,
-                colorbar=self.colorbar,
-            )
             self.colorbar.show()
 
 

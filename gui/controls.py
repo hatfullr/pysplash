@@ -13,6 +13,7 @@ from widgets.switchbutton import SwitchButton
 from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
 from gui.customtoolbar import CustomToolbar
+from matplotlib.axis import XAxis, YAxis
 import numpy as np
 import globals
 import inspect # Remove me
@@ -276,6 +277,12 @@ class Controls(tk.Frame,object):
         # If the data file changed, read the new one
         if self.gui.plotcontrols.current_file in changed_variables:
             self.gui.read()
+
+        # Update the x and y scales of the data
+        #self.gui.data.set_xscale(self.axis_controllers['XAxis'].scale.get())
+        #self.gui.data.set_yscale(self.axis_controllers['YAxis'].scale.get())
+
+        #print(self.gui.data.scale)
         
         """
         if self.gui.interactiveplot.drawn_object is not None and self.saved_state is not None:
@@ -303,10 +310,8 @@ class Controls(tk.Frame,object):
         user_ymax = self.axis_controllers['YAxis'].limits_high.get()
         #print(xmin, user_xmin)
         if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
-            # If there is a queued zoom, cancel it, then fire it to remove the rubberband and do normal behavior
-            if self.gui.plotcontrols.toolbar.queued_zoom:
-                self.gui.plotcontrols.toolbar._zoom_info = None
-                self.gui.plotcontrols.toolbar.queued_zoom()
+            # Cancel any queued zoom
+            self.gui.plotcontrols.toolbar.cancel_queued_zoom()
 
             flag = self.gui.interactiveplot.drawn_object is not None
             if flag: self.gui.interactiveplot.drawn_object._disconnect()
@@ -323,10 +328,9 @@ class Controls(tk.Frame,object):
         if self.gui.plotcontrols.toolbar.queued_zoom is not None:
             # Turn off adaptive limits on both the x and y axes if needed
             for name in self.axis_names[:2]:
-                if self.axis_controllers[name].is_adaptive.get():
-                    self.axis_controllers[name].limits_adaptive_button.command()
+                self.axis_controllers[names].adaptive_off()
             self.gui.plotcontrols.toolbar.queued_zoom()
-                
+        
         # Perform any rotations necessary
         if self.gui.data is not None:
             self.gui.data.rotate(
