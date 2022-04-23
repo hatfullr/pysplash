@@ -12,8 +12,8 @@ import numpy as np
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',disallowed_values=[],**kwargs):
-        self.disallowed_values = disallowed_values
+    def __init__(self,master,validate='focusout',extra_validatecommands=[],**kwargs):
+        self.extra_validatecommands = extra_validatecommands
         self.special_characters = [["."],["E"],["+","-"]]
         self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
@@ -35,18 +35,22 @@ class FloatEntry(FlashingEntry,object):
         if not newtext: return True
 
         # Reformat the text so it is in a regular format for us to check
-        testtext = newtext.replace("d","e").replace("D","E").strip()
-        testtext = testtext.replace(",",".") # Weird Europeans!
+        newtext = newtext.replace("d","e").replace("D","E").strip()
+        newtext = newtext.replace(",",".") # Weird Europeans!
         
         try:
-            float(testtext)
+            float(newtext)
         except ValueError:
             self.flash()
             return False
 
-        self.textvariable.set(float(testtext))
-        self._textvariable.set(testtext)
-        return True
+        if all([command(newtext) for command in self.extra_validatecommands]):
+            self.textvariable.set(float(newtext))
+            self._textvariable.set(newtext)
+            return True
+        else:
+            self.flash()
+            return False
 
     
     # Try to fit the text within the widget, but only to a minimum size of "0.0"
