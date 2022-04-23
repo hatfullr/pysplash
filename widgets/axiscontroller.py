@@ -9,6 +9,7 @@ else:
 from widgets.labelledframe import LabelledFrame
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
+import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
 import numpy as np
@@ -179,7 +180,7 @@ class AxisController(LabelledFrame,object):
                         widget.configure(state=state)
 
     def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("controls.get_all_children")
+        if globals.debug > 1: print("axiscontroller.get_all_children")
         if wid is None: _list = self.winfo_children()
         else: _list = wid.winfo_children()        
         for item in _list:
@@ -209,13 +210,16 @@ class AxisController(LabelledFrame,object):
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
 
-        limits = [self.limits_low.get(), self.limits_high.get()]
-        # Allow negative values if we are in the log10 scale, but if we are in
-        # any other scale then disable the log10 button
-        if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
-            self.log_button.configure(state='disabled')
-        else:
-            self.log_button.configure(state='normal')
+        # Only do this if we are not using adaptive limits
+        if not self.is_adaptive.get():
+        
+            limits = [self.limits_low.get(), self.limits_high.get()]
+            # Allow negative values if we are in the log10 scale, but if we are in
+            # any other scale then disable the log10 button
+            if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
+                self.log_button.configure(state='disabled')
+            else:
+                self.log_button.configure(state='normal')
 
     def update_labels(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.update_labels")
@@ -239,6 +243,11 @@ class AxisController(LabelledFrame,object):
         # Disable the limit entries
         self.limits_entry_low.configure(state='disabled')
         self.limits_entry_high.configure(state='disabled')
+
+        # Enable all the scale buttons
+        self.linear_button.configure(state='normal')
+        self.log_button.configure(state='normal')
+        self.pow10_button.configure(state='normal')
         
         if self.axis:
             if(isinstance(self.axis,XAxis)):
@@ -263,66 +272,97 @@ class AxisController(LabelledFrame,object):
         self.limits_entry_low.configure(state='normal')
         self.limits_entry_high.configure(state='normal')
 
+        # Disable log10 depending on the values of the limits
+        limits = [self.limits_low.get(), self.limits_high.get()]
+        if self.scale.get() != "log10" and any([l <= 0 for l in limits]):
+            self.log_button.configure(state='disabled')
+
         if self.axis and self.limits_cid:
             self.axis.axes.callbacks.disconnect(self.limits_cid)
             self.limits_cid = None
-
-    # Simulate the Adaptive button being pressed
-    def toggle_adaptive(self, *args, **kwargs):
-        self.limits_adaptive_button.command()
-            
-    """
-    def toggle_adaptive(self,*args,**kwargs):
-        if globals.debug > 1: print("axiscontroller.toggle_adaptive")
-        if self.axis is None: return
-
-        if self.is_adaptive.get(): # Turn off adaptive limits
-            if self.limits_cid is not None:
-                self.axis.axes.callbacks.disconnect(self.limits_cid)
-                self.limits_cid = None
-
-            self.limits_entry_low.configure(state='normal')
-            self.limits_entry_high.configure(state='normal')
-            
-        else: # Turn on adaptive limits
-            if(isinstance(self.axis,XAxis)):
-                self.limits_cid = self.axis.axes.callbacks.connect("xlim_changed",self.update_limits)
-            elif(isinstance(self.axis,YAxis)):
-                self.limits_cid = self.axis.axes.callbacks.connect("ylim_changed",self.update_limits)
-            else:
-                raise ValueError("Unsupported axis type "+type(self.axis))
-            
-            # Disable the limit entries
-            self.limits_entry_low.configure(state='disabled')
-            self.limits_entry_high.configure(state='disabled')
-            
-            self.update_limits()
-    """
+    
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
+
+        low = self.limits_low.get()
+        high = self.limits_high.get()
 
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             if self.previous_scale == 'linear':
                 if current_scale == 'log10':
-                    self.limits_low.set(np.log10(self.limits_low.get()))
-                    self.limits_high.set(np.log10(self.limits_high.get()))
+                    self.limits_low.set(np.log10(low))
+                    self.limits_high.set(np.log10(high))
                 else: # Must be ^10
-                    self.limits_low.set(10**(self.limits_low.get()))
-                    self.limits_high.set(10**(self.limits_high.get()))
+                    self.limits_low.set(10**(low))
+                    self.limits_high.set(10**(high))
             elif self.previous_scale == 'log10':
+                # If we are switching off of log10 then it's possible that the limits
+                # could be nan. If this is the case, then we need to recalculate that
+                # bound if possible
+                #re_low = None
+                #re_high = None
+                #if np.isnan(low) and np.isnan(high): re_low, re_high = self.recalculate_limit(which='both')
+                #elif np.isnan(low): re_low = self.recalculate_limit(which='low')
+                #elif np.isnan(high): re_high = self.recalculate_limit(which='high')
                 if current_scale == 'linear':
-                    self.limits_low.set(10**(self.limits_low.get()))
-                    self.limits_high.set(10**(self.limits_high.get()))
+                    self.limits_low.set(10**low)
+                    self.limits_high.set(10**high)
+                    #if re_low: self.limits_low.set(re_low)
+                    #else: self.limits_low.set(10**(low))
+                    #if re_high: self.limits_high.set(re_high)
+                    #else: self.limits_high.set(10**(high))
                 else: # Must be ^10
-                    self.limits_low.set(10**(10**(self.limits_low.get())))
-                    self.limits_high.set(10**(10**(self.limits_high.get())))
+                    self.limits_low.set(10**(10**low))
+                    self.limits_high.set(10**(10**high))
+                    #if re_low: self.limits_low.set(10**re_low)
+                    #else: self.limits_low.set(10**(10**(low)))
+                    #if re_high: self.limits_high.set(10**re_high)
+                    #else: self.limits_high.set(10**(10**(high)))
             elif self.previous_scale == '^10':
                 if current_scale == 'linear':
-                    self.limits_low.set(np.log10(self.limits_low.get()))
-                    self.limits_high.set(np.log10(self.limits_high.get()))
+                    self.limits_low.set(np.log10(low))
+                    self.limits_high.set(np.log10(high))
                 else: # Must be log10
-                    self.limits_low.set(np.log10(np.log10(self.limits_low.get())))
-                    self.limits_high.set(np.log10(np.log10(self.limits_high.get())))
+                    self.limits_low.set(np.log10(np.log10(low)))
+                    self.limits_high.set(np.log10(np.log10(high)))
 
             self.previous_scale = current_scale
+
+    def recalculate_limit(self, which='both'):
+        if globals.debug > 1: print("axiscontroller.recalculate_limit")
+
+        if which not in ['low', 'high', 'both']:
+            raise ValueError("Keyword 'which' must be one of 'low', 'high', or 'both'. Received ",which)
+        
+        if self.axis:
+            # Try to access the root "gui" widget. If we are not able to
+            # access it, or if we are not a child of such a widget, then
+            # don't do anything here.
+            widget = None
+            for child in self.winfo_toplevel().winfo_children():
+                if isinstance(child, gui.gui.GUI):
+                    widget = child
+                    break
+            else:
+                return
+            
+            # If we do find the GUI widget, access its data to recalculate
+            # the limits
+
+            # First figure out which axis we are
+            if isinstance(self.axis, XAxis):
+                choice = 0
+                which2 = 'xlim'
+            elif isinstance(self.axis, YAxis):
+                choice = 1
+                which2 = 'ylim'
+            else: raise TypeError("Unsupported axis type found for axis ",self.axis)
+
+            new_lims = widget.interactiveplot.calculate_data_xylim(which = which2)[choice]
+            if which == 'low': return new_lims[0]
+            elif which == 'high': return new_lims[1]
+            else: return new_lims
+            
+            
+            

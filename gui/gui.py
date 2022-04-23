@@ -271,27 +271,28 @@ class GUI(tk.Frame,object):
     def get_display_units(self,key):
         if globals.debug > 1: print("gui.get_display_units")
         return self.data['display_units'][key]
+    
     def get_physical_units(self,key):
         if globals.debug > 1: print("gui.get_physical_units")
         return self.data['physical_units'][key]
 
-    def get_display_data(self,key):
+    def get_display_data(self,key,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
         d = self.get_data(key)*self.get_display_units(key)
+        if scaled:
+            # Check to see if the key matches
+            xaxis = self.controls.axis_controllers['XAxis'].value.get()
+            yaxis = self.controls.axis_controllers['YAxis'].value.get()
+            if key == xaxis:
+                controller = self.controls.axis_controllers['XAxis']
+            elif key == yaxis:
+                controller = self.controls.axis_controllers['YAxis']
 
-        # Check to see if the key matches
-        xaxis = self.controls.axis_controllers['XAxis'].value.get()
-        yaxis = self.controls.axis_controllers['YAxis'].value.get()
-        if key == xaxis:
-            controller = self.controls.axis_controllers['XAxis']
-        elif key == yaxis:
-            controller = self.controls.axis_controllers['YAxis']
-
-        scale = controller.scale.get()
-        if scale == 'log10': d = np.log10(d)
-        elif scale == '^10': d = 10**d
-        
+            scale = controller.scale.get()
+            if scale == 'log10': d = np.log10(d)
+            elif scale == '^10': d = 10**d
         return d
+    
     def get_physical_data(self,key):
         if globals.debug > 1: print("gui.get_physical_data")
         return self.get_data(key)*self.get_physical_units(key)

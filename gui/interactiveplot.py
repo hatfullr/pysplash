@@ -271,6 +271,11 @@ class InteractivePlot(tk.Frame,object):
                 # Block until the plot is finished drawing
                 while self.drawn_object.thread.isAlive():
                     self.update()
+
+                # Update the controls' axis limits
+                for axis_controller in self.controls.axis_controllers:
+                    axis_controller.update_limits()
+
                 # Connect the controls to the interative plot
                 #self.gui.controls.connect()
                 self.controls.save_state()
@@ -290,16 +295,29 @@ class InteractivePlot(tk.Frame,object):
             yadaptive = self.gui.controls.axis_controllers['YAxis'].is_adaptive.get()
             cadaptive = self.gui.controls.axis_controllers['Colorbar'].is_adaptive.get()
 
-            if xadaptive and yadaptive: self.reset_data_xylim(which='both',draw=False)
-            elif xadaptive: self.reset_data_xylim(which='xlim',draw=False)
-            elif yadaptive: self.reset_data_xylim(which='ylim',draw=False)
+            controls_xlimits = [
+                self.gui.controls.axis_controllers['XAxis'].limits_low.get(),
+                self.gui.controls.axis_controllers['XAxis'].limits_high.get(),
+            ]
+            controls_ylimits = [
+                self.gui.controls.axis_controllers['YAxis'].limits_low.get(),
+                self.gui.controls.axis_controllers['YAxis'].limits_high.get(),
+            ]
+            
+            if ((xadaptive or np.nan in controls_xlimits) and
+                (yadaptive or np.nan in controls_ylimits)): self.reset_data_xylim(which='both',draw=False)
+            elif xadaptive or np.nan in controls_xlimits: self.reset_data_xylim(which='xlim',draw=False)
+            elif yadaptive or np.nan in controls_ylimits: self.reset_data_xylim(which='ylim',draw=False)
             
         #self.canvas.draw_idle()
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
 
         self.gui.set_user_controlled(True)
+
+
         
+                    
 
     def on_point_size_changed(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.on_point_size_changed")
@@ -456,14 +474,14 @@ class InteractivePlot(tk.Frame,object):
     """
     
     def get_data_xlim(self,*args,**kwargs):
-        x = self.gui.get_display_data(self.gui.controls.axis_controllers['XAxis'].value.get())
+        x = self.gui.get_display_data(self.gui.controls.axis_controllers['XAxis'].value.get(), scaled = False)
         xmin = np.amin(x)
         xmax = np.amax(x)
         xmargin = self.ax.margins()[0]
         dx = (xmax-xmin)*xmargin
         return (xmin-dx, xmax+dx)
     def get_data_ylim(self,*args,**kwargs):
-        y = self.gui.get_display_data(self.gui.controls.axis_controllers['YAxis'].value.get())
+        y = self.gui.get_display_data(self.gui.controls.axis_controllers['YAxis'].value.get(), scaled = False)
         ymin = np.amin(y)
         ymax = np.amax(y)
         ymargin = self.ax.margins()[1]
@@ -471,24 +489,42 @@ class InteractivePlot(tk.Frame,object):
         return (ymin-dy, ymax+dy)
 
     def reset_data_xylim(self,which='both',draw=True):
+        if globals.debug > 1: print("interactiveplot.reset_data_xylim")
+        
+        new_xlim, new_ylim = self.calculate_data_xylim(which=which)
+
+        xlim = np.array(self.ax.get_xlim())
+        ylim = np.array(self.ax.get_ylim())
+        
+        if None not in new_xlim:
+            if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
+        if None not in new_ylim:
+            if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
+
+        self.gui.controls.axis_controllers['XAxis'].update_limits()
+        self.gui.controls.axis_controllers['YAxis'].update_limits()
+            
+        if draw: self.canvas.draw_idle()
+        
+    def calculate_data_xylim(self, which='both'):
+        if globals.debug > 1: print("interactiveplot.calculate_data_xylim")
+
+        if which not in ['xlim', 'ylim', 'both']:
+            raise ValueError("Keyword 'which' must be one of 'xlim', 'ylim', or 'both'. Received ",which)
+
+        new_xlim = [None, None]
+        new_ylim = [None, None]
+        
         if hasattr(self.gui, "data"):
             if self.gui.data.is_image:
-                if which in ['xlim','both']:
-                    self.ax.set_xlim(self.gui.data['extent'][:2])
-                if which in ['ylim','both']:
-                    self.ax.set_ylim(self.gui.data['extent'][-2:])
+                new_xlim = self.gui.data['extent'][:2]
+                new_ylim = self.gui.data['extent'][-2:]
             else:
                 new_xlim = np.array(self.get_data_xlim())
                 new_ylim = np.array(self.get_data_ylim())
                 if self.drawn_object is not None:
                     if self.drawn_object.aspect == 'equal':
                         new_xlim, new_ylim = self.drawn_object.equalize_aspect_ratio(xlim=new_xlim,ylim=new_ylim)
-                xlim = np.array(self.ax.get_xlim())
-                ylim = np.array(self.ax.get_ylim())
-
-                if which in ['xlim','both']:
-                    if any(np.abs((new_xlim-xlim)/xlim) > 0.001): self.ax.set_xlim(new_xlim)
-                if which in ['ylim','both']:
-                    if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
-            if draw: self.canvas.draw_idle()
-
+        if which == 'xlim': return new_xlim, [None, None]
+        elif which == 'ylim': return [None, None], new_ylim
+        else: return new_xlim, new_ylim

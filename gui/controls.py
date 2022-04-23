@@ -315,12 +315,21 @@ class Controls(tk.Frame,object):
 
             flag = self.gui.interactiveplot.drawn_object is not None
             if flag: self.gui.interactiveplot.drawn_object._disconnect()
+
+            if np.isnan(user_xmin): user_xmin = None
+            if np.isnan(user_xmax): user_xmax = None
+            if np.isnan(user_ymin): user_ymin = None
+            if np.isnan(user_ymax): user_ymax = None
             
             # Now set the new axis limits
             ax.set_xlim(user_xmin, user_xmax)
             ax.set_ylim(user_ymin, user_ymax)
 
+            
+            
             if flag: self.gui.interactiveplot.drawn_object._connect()
+
+            
             
             
         
@@ -328,7 +337,7 @@ class Controls(tk.Frame,object):
         if self.gui.plotcontrols.toolbar.queued_zoom is not None:
             # Turn off adaptive limits on both the x and y axes if needed
             for name in self.axis_names[:2]:
-                self.axis_controllers[names].adaptive_off()
+                self.axis_controllers[name].adaptive_off()
             self.gui.plotcontrols.toolbar.queued_zoom()
         
         # Perform any rotations necessary
@@ -349,6 +358,12 @@ class Controls(tk.Frame,object):
             
         # Draw the new plot
         self.gui.interactiveplot.update()
+
+        # Update the user's limits if they got changed above
+        #self.gui.interactiveplot.fig.canvas.draw_idle()
+        #print(self.gui.interactiveplot.ax.get_ylim())
+        #for axis_controller in [self.axis_controllers['XAxis'], self.axis_controllers['YAxis']]:
+        #    axis_controller.update_limits()
         
         self.save_state()
 

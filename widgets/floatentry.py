@@ -57,6 +57,7 @@ class FloatEntry(FlashingEntry,object):
     def format_text(self, *args, **kwargs):
         # Technically this function gets called 2 times, but I am not sure why.
         # This should not affect the result of the function, though
+        #print(self.textvariable.get())
         number = self.textvariable.get()
         total_width = max(3, self.cget('width'))
 
