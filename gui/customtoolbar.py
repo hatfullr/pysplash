@@ -1,3 +1,11 @@
+import sys
+if sys.version_info.major < 3:
+    import Tkinter as tk
+    from tkFont import Font as tkFont
+else:
+    import tkinter as tk
+    import tkinter.font as tkFont
+
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 import numpy as np
@@ -12,14 +20,12 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Subplots', u'', u'subplots', u'configure_subplots'),
             (u'Save', u'', u'filesave', u'save_figure'),
             )
-        self.master = master
         self.gui = gui
         self.canvas = canvas
         self.toolbar = NavigationToolbar2Tk
         self.toolbar._old_Button = self.toolbar._Button
         self.toolbar._Button = self._new_Button
-        self.toolbar.__init__(self,self.canvas,self.master)
-        #self.toolbar.home = self.new_home
+        self.toolbar.__init__(self,self.canvas,master)
 
         self.queued_zoom = None
         self.zoom_event = None
@@ -27,28 +33,39 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.configure(**kwargs)
 
         # Remove the "x=... y=..." labels
-        for child in self.children:
-            if type(child).__name__ == 'Label':
+        for child in self.winfo_children():
+            if isinstance(child, tk.Label):
                 child.pack_forget()
+
+        self.toolbar.set_message = self.set_xy_message
 
     def home(self,*args,**kwargs):
         self.gui.interactiveplot.reset_data_xylim()
-                
+
+    def set_xy_message(self, *args, **kwargs):
+        for arg in args:
+            if isinstance(arg, str):
+                self.gui.interactiveplot.xycoords.set(arg)
+                break
+        else:
+            self.gui.interactiveplot.xycoords.set("")
+        
     def _new_Button(self, *args, **kwargs):
         b = self._old_Button(*args, **kwargs)
         # It expects dpi=100, but we have a different dpi. Because stuff is
         # stupid, we have to first increase the image size then decrease it
         # using integers.
         try:
-            image = b._ntimage
-            image = image.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
-            image = image.subsample(100,100)
+            #image = b._ntimage
+            b._ntimage = b._ntimage.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
+            b._ntimage = b._ntimage.subsample(100,100)
+            b.config(height=b._ntimage.height(),image=b._ntimage)
         except AttributeError:
-            image = b._ntimage._PhotoImage__photo
-            image = image.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
-            image = image.subsample(100,100)
-        self.height = b._ntimage.height()
-        b.config(height=self.height,image=b._ntimage)
+            print("In here")
+            #image = b._ntimage._PhotoImage__photo
+            b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
+            b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.subsample(100,100)
+            b.config(height=b._ntimage._PhotoImage__photo.height(),image=b._ntimage._PhotoImage__photo)
         return b
 
 

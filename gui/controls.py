@@ -148,7 +148,7 @@ class Controls(tk.Frame,object):
                 self.update_button.configure(relief='raised',state='normal')
                 break
         else: # No break
-            if self.gui.plotcontrols.toolbar.queued_zoom is not None:
+            if self.gui.plottoolbar.toolbar.queued_zoom is not None:
                 self.update_button.configure(relief='raised',state='normal')
             else:
                 self.update_button.configure(relief='sunken',state='disabled')
@@ -172,7 +172,7 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.get_variables")
         variables = []
 
-        variables.append(self.gui.plotcontrols.current_file)
+        variables.append(self.gui.filecontrols.current_file)
 
         for child in self.get_all_children():
             if hasattr(child,"get_variables"):
@@ -277,7 +277,7 @@ class Controls(tk.Frame,object):
         changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
 
         # If the data file changed, read the new one
-        if self.gui.plotcontrols.current_file in changed_variables:
+        if self.gui.filecontrols.current_file in changed_variables:
             self.gui.read()
 
         # Update the x and y scales of the data
@@ -313,7 +313,7 @@ class Controls(tk.Frame,object):
         #print(xmin, user_xmin)
         if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
             # Cancel any queued zoom
-            self.gui.plotcontrols.toolbar.cancel_queued_zoom()
+            self.gui.plottoolber.toolbar.cancel_queued_zoom()
 
             flag = self.gui.interactiveplot.drawn_object is not None
             if flag: self.gui.interactiveplot.drawn_object._disconnect()
@@ -336,11 +336,11 @@ class Controls(tk.Frame,object):
             
         
         # Perform the queued zoom if there is one
-        if self.gui.plotcontrols.toolbar.queued_zoom is not None:
+        if self.gui.plottoolbar.toolbar.queued_zoom is not None:
             # Turn off adaptive limits on both the x and y axes if needed
             for name in self.axis_names[:2]:
                 self.axis_controllers[name].adaptive_off()
-            self.gui.plotcontrols.toolbar.queued_zoom()
+            self.gui.plottoolbar.toolbar.queued_zoom()
         
         # Perform any rotations necessary
         if self.gui.data is not None:

@@ -22,11 +22,11 @@ from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 
 class InteractivePlot(tk.Frame,object):
-    def __init__(self,gui,*args,**kwargs):
+    def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
         self.gui = gui
 
-        super(InteractivePlot,self).__init__(self.gui,*args,**kwargs)
+        super(InteractivePlot,self).__init__(master,*args,**kwargs)
 
         self.fig = Figure(figsize=(6,6),dpi=int(self.gui.dpi))
         self.ax = self.fig.add_subplot(111)

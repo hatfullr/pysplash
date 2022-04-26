@@ -2,19 +2,20 @@ import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
     from tkFont import Font as tkFont
-    from plotcontrols import PlotControls
+    from filecontrols import FileControls
     from interactiveplot import InteractivePlot
     from controls import Controls
 else:
     import tkinter as tk
     import tkinter.font as tkFont
-    from gui.plotcontrols import PlotControls
+    from gui.filecontrols import FileControls
     from gui.interactiveplot import InteractivePlot
     from gui.controls import Controls
 
 from lib.data import Data
 from read_file import read_file
 import globals
+from gui.customtoolbar import CustomToolbar
 from widgets.menubar import MenuBar
 from functions.make_rotation_movie import make_rotation_movie
 import copy
@@ -67,10 +68,10 @@ class GUI(tk.Frame,object):
 
         
 
-        self.plotcontrols.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
+        #self.plottoolbar.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
-        self.plotcontrols.next_button.configure(command=self.next_file)
-        self.plotcontrols.back_button.configure(command=self.previous_file)
+        self.filecontrols.next_button.configure(command=self.next_file)
+        self.filecontrols.back_button.configure(command=self.previous_file)
 
         all_mapped = False
         while not all_mapped:
@@ -83,10 +84,10 @@ class GUI(tk.Frame,object):
 
         
         
-        #self.plotcontrols.current_file.trace("w",self.read)
+        #self.filecontrols.current_file.trace("w",self.read)
         if len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
-            self.plotcontrols.current_file.set(sys.argv[1])
+            self.filecontrols.current_file.set(sys.argv[1])
             self.read()
             
             # Set the x and y limits
@@ -136,7 +137,9 @@ class GUI(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
         self.menubar = MenuBar(self.window,self)
+        self.left_frame = tk.Frame(self)
         self.interactiveplot = InteractivePlot(
+            self.left_frame,
             self,
             relief='sunken',
             bd=1,
@@ -144,9 +147,12 @@ class GUI(tk.Frame,object):
         # Wait until the plot becomes visible to proceed
         self.update_idletasks()
         self.update()
-            
-        self.plotcontrols = PlotControls(
-            self,
+
+        self.under_plot_frame = tk.Frame(self.left_frame)
+        self.plottoolbar = CustomToolbar(self.under_plot_frame,self,self.interactiveplot.canvas)
+        
+        self.filecontrols = FileControls(
+            self.under_plot_frame,
             self.interactiveplot.canvas,
             bg='white',
             relief='sunken',
@@ -165,27 +171,18 @@ class GUI(tk.Frame,object):
         
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
-        self.interactiveplot.grid(
-            row=0,
-            column=0,
-            sticky='news',
-        )
-        self.plotcontrols.grid(
-            row=1,
-            column=0,
-            sticky='new',
-        )
-        self.controls.grid(
-            row=0,
-            column=1,
-            sticky='ns',
-            rowspan=2,
-        )
+
+        self.interactiveplot.pack(side='top',fill='both',expand=True)
+
+        self.plottoolbar.pack(side='left')
+        self.filecontrols.pack(side='left',fill='x',expand=True)
+        self.under_plot_frame.pack(side='top',fill='x',expand=True)
+
+        self.controls.pack(side='right',fill='both')
+        self.left_frame.pack(side='right',fill='both',expand=True)
+
         self.message_label.place(rely=1,relx=1,anchor="se")
         self.pack(fill='both',expand=True)
-
-        self.columnconfigure(0,weight=1)
-        self.rowconfigure(0,weight=1)
 
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")
@@ -199,10 +196,10 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.set_user_controlled")
         if value:
             self.controls.enable()
-            self.plotcontrols.enable('all')
+            self.filecontrols.enable('all')
         else:
             self.controls.disable(temporarily=True)
-            self.plotcontrols.disable('all')
+            self.filecontrols.disable('all')
         self.user_controlled = value
     def get_user_controlled(self):
         if globals.debug > 1: print("gui.get_user_controlled")
@@ -218,7 +215,7 @@ class GUI(tk.Frame,object):
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
         self.data = Data(
-            read_file(self.plotcontrols.current_file.get()),
+            read_file(self.filecontrols.current_file.get()),
             #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
 
@@ -299,27 +296,27 @@ class GUI(tk.Frame,object):
     
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
-        skip_amount = int(self.plotcontrols.skip_amount.get())
+        skip_amount = int(self.filecontrols.skip_amount.get())
         #filenames = sys.argv[1:]
 
-        idx = self.filenames.index(self.plotcontrols.current_file.get())
+        idx = self.filenames.index(self.filecontrols.current_file.get())
         nextidx = min(idx+skip_amount,len(self.filenames)-1)
-        if nextidx == len(self.filenames)-1: self.plotcontrols.skip_amount.set(1)
+        if nextidx == len(self.filenames)-1: self.filecontrols.skip_amount.set(1)
         
-        if self.filenames[nextidx] != self.plotcontrols.current_file.get():
-            self.plotcontrols.current_file.set(self.filenames[nextidx])
+        if self.filenames[nextidx] != self.filecontrols.current_file.get():
+            self.filecontrols.current_file.set(self.filenames[nextidx])
 
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
-        skip_amount = int(self.plotcontrols.skip_amount.get())
+        skip_amount = int(self.filecontrols.skip_amount.get())
         #filenames = sys.argv[1:]
         
-        idx = self.filenames.index(self.plotcontrols.current_file.get())
+        idx = self.filenames.index(self.filecontrols.current_file.get())
         nextidx = max(idx-skip_amount,0)
-        if nextidx == 0: self.plotcontrols.skip_amount.set(1)
+        if nextidx == 0: self.filecontrols.skip_amount.set(1)
         
-        if self.filenames[nextidx] != self.plotcontrols.current_file.get():
-            self.plotcontrols.current_file.set(self.filenames[nextidx])
+        if self.filenames[nextidx] != self.filecontrols.current_file.get():
+            self.filecontrols.current_file.set(self.filenames[nextidx])
     
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")

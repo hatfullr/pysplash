@@ -2,20 +2,21 @@ import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
     from tkFont import Font as tkFont
-    from customtoolbar import CustomToolbar
+    #from customtoolbar import CustomToolbar
 else:
     import tkinter as tk
     import tkinter.font as tkFont
-    from gui.customtoolbar import CustomToolbar
+    #from gui.customtoolbar import CustomToolbar
 import globals
+from widgets.integerentry import IntegerEntry
 
-class PlotControls(tk.Frame,object):
+class FileControls(tk.Frame,object):
     def __init__(self,gui,canvas,bg='white',*args,**kwargs):
-        if globals.debug > 1: print("plotcontrols.__init__")
+        if globals.debug > 1: print("filecontrols.__init__")
         self.gui = gui
         self.canvas = canvas
         self.bg = bg
-        super(PlotControls,self).__init__(self.gui,*args,bg=self.bg,**kwargs)
+        super(FileControls,self).__init__(self.gui,*args,bg=self.bg,**kwargs)
         
         self.create_variables()
         self.create_widgets()
@@ -26,31 +27,32 @@ class PlotControls(tk.Frame,object):
         self.skip_amount.set(1)
     
     def create_variables(self):
-        if globals.debug > 1: print("plotcontrols.create_variables")
+        if globals.debug > 1: print("filecontrols.create_variables")
         self.skip_amount = tk.StringVar()
         self.current_file = tk.StringVar()
         self.current_file_displayed = tk.StringVar()
         
     def create_widgets(self):
-        if globals.debug > 1: print("plotcontrols.create_widgets")
-        self.toolbar = CustomToolbar(self,self.gui,self.canvas,bg=self.bg)
+        if globals.debug > 1: print("filecontrols.create_widgets")
+        #self.toolbar = CustomToolbar(self,self.gui,self.canvas,bg=self.bg)
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
         self.back_button = tk.Button(self,text="<<",width=2,height=1,padx=5,pady=5)
-        self.skip_amount_entry = tk.Entry(self,textvariable=self.skip_amount,width=5)
+        self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount) #tk.Entry(self,textvariable=self.skip_amount,width=5)
         self.next_button = tk.Button(self,text=">>",width=2,height=1,padx=5,pady=5)
         
     def place_widgets(self):
-        if globals.debug > 1: print("plotcontrols.place_widgets")
-        self.toolbar.grid(row=0,column=0)
+        if globals.debug > 1: print("filecontrols.place_widgets")
+        #self.toolbar.grid(row=0,column=0)
         self.current_file_label.grid(row=0,column=1,sticky='ew')
         self.back_button.grid(row=0,column=2)
-        self.skip_amount_entry.grid(row=0,column=3)
+        self.skip_amount_entry.grid(row=0,column=3,sticky='news')
         self.next_button.grid(row=0,column=4)
 
-        self.columnconfigure(1,weight=1)
+        self.columnconfigure(1,weight=4)
+        self.columnconfigure(3,weight=1)
 
     def set_current_file_displayed(self,*args,**kwargs):
-        if globals.debug > 1: print("plotcontrols.set_current_file_displayed")
+        if globals.debug > 1: print("filecontrols.set_current_file_displayed")
         padx = self.current_file_label.cget('padx')
         text = self.current_file.get()
         allowed_width = self.current_file_label.winfo_width() - 2*padx
@@ -73,7 +75,7 @@ class PlotControls(tk.Frame,object):
         self.current_file_displayed.set(text)
 
     def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("plotcontrols.get_all_children")
+        if globals.debug > 1: print("filecontrols.get_all_children")
         if wid is None: _list = self.winfo_children()
         else: _list = wid.winfo_children()        
         for item in _list:
@@ -82,21 +84,21 @@ class PlotControls(tk.Frame,object):
         return finList
             
     def disable(self,group):
-        if globals.debug > 1: print("plotcontrols.disable")
+        if globals.debug > 1: print("filecontrols.disable")
         if group == 'all': children = self.get_all_children()
         elif group == 'toolbar': children = self.get_all_children(wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         self.set_state(children,'disabled')
 
     def enable(self,group):
-        if globals.debug > 1: print("plotcontrols.enable")
+        if globals.debug > 1: print("filecontrols.enable")
         if group == 'all': children = self.get_all_children()
         elif group == 'toolbar': children = self.get_all_children(wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         self.set_state(children,'normal')
 
     def set_state(self,widgets,state):
-        if globals.debug > 1: print("plotcontrols.set_state")
+        if globals.debug > 1: print("filecontrols.set_state")
         for widget in widgets:
             if 'state' in widget.configure():
                 widget.configure(state=state)
