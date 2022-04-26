@@ -87,14 +87,15 @@ class Controls(tk.Frame,object):
             
         # Plot controls
         self.plot_controls_frame = LabelledFrame(self,"Plot Controls",relief='sunken',bd=1)
-        self.point_size_label = tk.Label(self.plot_controls_frame,text='Point size (px)')
-        self.point_size_entry = IntegerEntry(self.plot_controls_frame,textvariable=self.point_size,disallowed_values=[0])
+        self.point_size_frame = tk.Frame(self.plot_controls_frame)
+        self.point_size_label = tk.Label(self.point_size_frame,text='Point size (px)')
+        self.point_size_entry = IntegerEntry(self.point_size_frame,textvariable=self.point_size,disallowed_values=[0])
 
         self.rotations_frame = tk.Frame(self.plot_controls_frame)
         self.rotation_label = tk.Label(self.rotations_frame,text="Rotation (x,y,z deg)")
-        self.rotation_x_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_x,width=5)
-        self.rotation_y_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_y,width=5)
-        self.rotation_z_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_z,width=5)
+        self.rotation_x_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_x)
+        self.rotation_y_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_y)
+        self.rotation_z_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_z)
 
         self.orientation_checkbutton = tk.Checkbutton(
             self.plot_controls_frame,
@@ -112,19 +113,20 @@ class Controls(tk.Frame,object):
             axis_controller.pack(side='top',fill='x')
 
         # Plot controls
-        self.point_size_label.grid(row=0,column=0)
-        self.point_size_entry.grid(row=0,column=1)
-        
-        self.rotation_label.grid(row=0,column=0)
-        self.rotation_x_entry.grid(row=0,column=1)
-        self.rotation_y_entry.grid(row=0,column=2)
-        self.rotation_z_entry.grid(row=0,column=3)
+        self.point_size_label.pack(side='left')
+        self.point_size_entry.pack(side='left',fill='x',expand=True)
+        self.point_size_frame.pack(side='top',fill='x',expand=True)
 
-        self.rotations_frame.grid(row=1,column=0,columnspan=2)
+        self.rotation_label.pack(side='left')
+        self.rotation_x_entry.pack(side='left',fill='x',expand=True)
+        self.rotation_y_entry.pack(side='left',fill='x',expand=True)
+        self.rotation_z_entry.pack(side='left',fill='x',expand=True)
 
-        self.orientation_checkbutton.grid(row=2,column=0,columnspan=2,sticky='nws')
+        self.rotations_frame.pack(side='top',fill='x',expand=True)
+
+        self.orientation_checkbutton.pack(side='top',fill='x',expand=True)
         
-        self.plot_controls_frame.pack(side='top')
+        self.plot_controls_frame.pack(side='top',fill='x')
 
     def connect_state_listeners(self,*args,**kwargs):
         if globals.debug > 1: print("controls.connect_state_listeners")

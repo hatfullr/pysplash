@@ -291,17 +291,17 @@ class InteractivePlot(tk.Frame,object):
             self.previous_args = args
             self.previous_kwargs = kwargs            
         
-            xadaptive = self.gui.controls.axis_controllers['XAxis'].is_adaptive.get()
-            yadaptive = self.gui.controls.axis_controllers['YAxis'].is_adaptive.get()
-            cadaptive = self.gui.controls.axis_controllers['Colorbar'].is_adaptive.get()
+            xadaptive = self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get()
+            yadaptive = self.gui.controls.axis_controllers['YAxis'].limits.adaptive.get()
+            cadaptive = self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()
 
             controls_xlimits = [
-                self.gui.controls.axis_controllers['XAxis'].limits_low.get(),
-                self.gui.controls.axis_controllers['XAxis'].limits_high.get(),
+                self.gui.controls.axis_controllers['XAxis'].limits.low.get(),
+                self.gui.controls.axis_controllers['XAxis'].limits.high.get(),
             ]
             controls_ylimits = [
-                self.gui.controls.axis_controllers['YAxis'].limits_low.get(),
-                self.gui.controls.axis_controllers['YAxis'].limits_high.get(),
+                self.gui.controls.axis_controllers['YAxis'].limits.low.get(),
+                self.gui.controls.axis_controllers['YAxis'].limits.high.get(),
             ]
             
             if ((xadaptive or np.nan in controls_xlimits) and
@@ -422,13 +422,13 @@ class InteractivePlot(tk.Frame,object):
                 self.colorbar.norm = matplotlib.colors.Normalize(vmin=vmin,vmax=vmax)
                 self.colorbar.draw_all()
                 # Update the values in the control panel
-                self.gui.controls.caxis_limits_low.set(vmin)
-                self.gui.controls.caxis_limits_high.set(vmax)
+                self.gui.controls.caxis_limits.low.set(vmin)
+                self.gui.controls.caxis_limits.high.set(vmax)
         else:
             # Make sure the colorbar limits match what is in the controls panel
             ylim = [
-                self.gui.controls.caxis_limits_low.get(),
-                self.gui.controls.caxis_limits_high.get(),
+                self.gui.controls.caxis_limits.low.get(),
+                self.gui.controls.caxis_limits.high.get(),
             ]
             if ylim[0] != self.cax.get_ylim()[0] or ylim[1] != self.cax.get_ylim()[1]:
                 data = self.drawn_object._data

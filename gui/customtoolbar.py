@@ -36,11 +36,17 @@ class CustomToolbar(NavigationToolbar2Tk):
                 
     def _new_Button(self, *args, **kwargs):
         b = self._old_Button(*args, **kwargs)
-        # It expects dpi=100, but we have a different dpi. Because shit is
+        # It expects dpi=100, but we have a different dpi. Because stuff is
         # stupid, we have to first increase the image size then decrease it
         # using integers.
-        b._ntimage = b._ntimage.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
-        b._ntimage = b._ntimage.subsample(100,100)
+        try:
+            image = b._ntimage
+            image = image.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
+            image = image.subsample(100,100)
+        except AttributeError:
+            image = b._ntimage._PhotoImage__photo
+            image = image.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
+            image = image.subsample(100,100)
         self.height = b._ntimage.height()
         b.config(height=self.height,image=b._ntimage)
         return b

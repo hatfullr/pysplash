@@ -6,15 +6,13 @@ else:
 
 class SwitchButton(tk.Button,object):
     def __init__(self,master,command=(None,None),variable=None,relief='raised',**kwargs):
-        self.master = master
-
         # False for not-pressed and True for pressed
         if variable is None: self.variable = tk.BooleanVar(value=False)
         else: self.variable = variable
 
         if self.variable.get(): relief='sunken'
         
-        super(SwitchButton,self).__init__(self.master,command=self.command,relief=relief,**kwargs)
+        super(SwitchButton,self).__init__(master,command=self.command,relief=relief,**kwargs)
         
         self._command = command
 
