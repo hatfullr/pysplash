@@ -6,10 +6,8 @@ else:
     import tkinter as tk
     import tkinter.ttk as ttk
 
-#from widgets.labelledframe import LabelledFrame
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
-#import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
 import numpy as np
@@ -60,18 +58,9 @@ class AxisLimits(tk.LabelFrame,object):
     def place_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.place_widgets")
 
-        #self.columnconfigure(0, weight=0)
-        #self.columnconfigure(1, weight=0)
-
-        #self.entry_low.grid(row=0,column=0,sticky='ew')
-        #self.entry_high.grid(row=0,column=1,sticky='ew')
-        #self.adaptive_button.grid(row=0,column=2)
-        
-        self.adaptive_button.pack(side='right')
-        self.entry_low.pack(side='right',fill='x',expand=True)
-        self.entry_high.pack(side='right',fill='x',expand=True)
-
-        
+        self.entry_low.pack(side='left',fill='x',expand=True)
+        self.entry_high.pack(side='left',fill='x',expand=True)
+        self.adaptive_button.pack(side='left')
 
     def get_all_children(self, finList=[], wid=None):
         if globals.debug > 1: print("axislimits.get_all_children")
@@ -110,20 +99,21 @@ class AxisLimits(tk.LabelFrame,object):
                 self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
             elif isinstance(axis, YAxis):
                 self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
-            
-            #self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
 
     def on_axis_limits_changed(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.on_axis_limits_changed")
         if self.axis is None: return
         
         limits = self.axis.get_view_interval()
-        low = self.low.get()
-        high = self.high.get()
-        if low != round(limits[0],len(str(low))):
-            self.low.set(limits[0])
-        if high != round(limits[1],len(str(high))):
-            self.high.set(limits[1])
+        self.low.set(limits[0])
+        self.high.set(limits[1])
+
+        #low = self.low.get()
+        #high = self.high.get()
+        #if low != round(limits[0],len(str(low))):
+        #    self.low.set(limits[0])
+        #if high != round(limits[1],len(str(high))):
+        #    self.high.set(limits[1])
 
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
