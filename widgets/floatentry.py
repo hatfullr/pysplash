@@ -18,7 +18,7 @@ class FloatEntry(FlashingEntry,object):
         self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         self._textvariable = tk.StringVar()
-        self.textvariable = kwargs.pop('textvariable')
+        self.textvariable = kwargs.pop('textvariable', None)
         
         super(FloatEntry,self).__init__(master,textvariable=self._textvariable,**kwargs)
         self.configure(
@@ -64,10 +64,10 @@ class FloatEntry(FlashingEntry,object):
         # Test the generic conversion
         testtext = "%-G" % number
         
-        precision = 0
+        precision = 1
         if "." in testtext:
             decimalplace = testtext.index(".")
-            precision = total_width - testtext.index(".")
+            precision = max(precision, total_width - testtext.index("."))
             
         self._textvariable.set("%-.*G" % (precision,number))
 

@@ -93,13 +93,24 @@ class AxisLimits(tk.LabelFrame,object):
                         
     def connect(self,axis):
         if globals.debug > 1: print("axislimits.connect")
-        self.axis=axis
-        if axis is not None:
+        if axis:
+            self.axis=axis
             if isinstance(axis, XAxis):
                 self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
             elif isinstance(axis, YAxis):
                 self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
+            else:
+                raise ValueError("Unsupported axis type "+type(self.axis))
+            
+            # Update the entry widgets
+            self.on_axis_limits_changed()
 
+    def disconnect(self):
+        if globals.debug > 1: print("axislimits.disconnect")
+        if self.axis and self.cid:
+            self.axis.axes.callbacks.disconnect(self.cid)
+            self.cid = None
+            
     def on_axis_limits_changed(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.on_axis_limits_changed")
         if self.axis is None: return
@@ -127,15 +138,7 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.configure(state='disabled')
         self.entry_high.configure(state='disabled')
         
-        if self.axis:
-            if(isinstance(self.axis,XAxis)):
-                self.cid = self.axis.axes.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
-            elif(isinstance(self.axis,YAxis)):
-                self.cid = self.axis.axes.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
-            else:
-                raise ValueError("Unsupported axis type "+type(self.axis))
-            # Update the entry widgets
-            self.on_axis_limits_changed()
+        self.connect(self.axis)
 
     def adaptive_off(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_off")
@@ -149,6 +152,4 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.configure(state='normal')
         self.entry_high.configure(state='normal')
 
-        if self.axis and self.cid:
-            self.axis.axes.callbacks.disconnect(self.cid)
-            self.cid = None
+        self.disconnect()

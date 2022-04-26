@@ -13,6 +13,7 @@ from widgets.switchbutton import SwitchButton
 from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
 from gui.customtoolbar import CustomToolbar
+from gui.plotcontrols import PlotControls
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 import globals
@@ -86,22 +87,7 @@ class Controls(tk.Frame,object):
             self.axis_controllers[axis_name] = AxisController(self,axis_name)
             
         # Plot controls
-        self.plot_controls_frame = LabelledFrame(self,"Plot Controls",relief='sunken',bd=1)
-        self.point_size_frame = tk.Frame(self.plot_controls_frame)
-        self.point_size_label = tk.Label(self.point_size_frame,text='Point size (px)')
-        self.point_size_entry = IntegerEntry(self.point_size_frame,textvariable=self.point_size,disallowed_values=[0])
-
-        self.rotations_frame = tk.Frame(self.plot_controls_frame)
-        self.rotation_label = tk.Label(self.rotations_frame,text="Rotation (x,y,z deg)")
-        self.rotation_x_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_x)
-        self.rotation_y_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_y)
-        self.rotation_z_entry = FloatEntry(self.rotations_frame,textvariable=self.rotation_z)
-
-        self.orientation_checkbutton = tk.Checkbutton(
-            self.plot_controls_frame,
-            text="Show orientation",
-            variable=self.show_orientation,
-        )
+        self.plotcontrols = PlotControls(self)
     
     def place_widgets(self):
         if globals.debug > 1: print("controls.place_widgets")
@@ -113,20 +99,7 @@ class Controls(tk.Frame,object):
             axis_controller.pack(side='top',fill='x')
 
         # Plot controls
-        self.point_size_label.pack(side='left')
-        self.point_size_entry.pack(side='left',fill='x',expand=True)
-        self.point_size_frame.pack(side='top',fill='x',expand=True)
-
-        self.rotation_label.pack(side='left')
-        self.rotation_x_entry.pack(side='left',fill='x',expand=True)
-        self.rotation_y_entry.pack(side='left',fill='x',expand=True)
-        self.rotation_z_entry.pack(side='left',fill='x',expand=True)
-
-        self.rotations_frame.pack(side='top',fill='x',expand=True)
-
-        self.orientation_checkbutton.pack(side='top',fill='x',expand=True)
-        
-        self.plot_controls_frame.pack(side='top',fill='x')
+        self.plotcontrols.pack(side='top',fill='x')
 
     def connect_state_listeners(self,*args,**kwargs):
         if globals.debug > 1: print("controls.connect_state_listeners")
@@ -148,7 +121,7 @@ class Controls(tk.Frame,object):
                 self.update_button.configure(relief='raised',state='normal')
                 break
         else: # No break
-            if self.gui.plottoolbar.toolbar.queued_zoom is not None:
+            if self.gui.plottoolbar.queued_zoom is not None:
                 self.update_button.configure(relief='raised',state='normal')
             else:
                 self.update_button.configure(relief='sunken',state='disabled')
@@ -306,14 +279,14 @@ class Controls(tk.Frame,object):
         ax = self.gui.interactiveplot.ax
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-        user_xmin = self.axis_controllers['XAxis'].limits_low.get()
-        user_xmax = self.axis_controllers['XAxis'].limits_high.get()
-        user_ymin = self.axis_controllers['YAxis'].limits_low.get()
-        user_ymax = self.axis_controllers['YAxis'].limits_high.get()
+        user_xmin = self.axis_controllers['XAxis'].limits.low.get()
+        user_xmax = self.axis_controllers['XAxis'].limits.high.get()
+        user_ymin = self.axis_controllers['YAxis'].limits.low.get()
+        user_ymax = self.axis_controllers['YAxis'].limits.high.get()
         #print(xmin, user_xmin)
         if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
             # Cancel any queued zoom
-            self.gui.plottoolber.toolbar.cancel_queued_zoom()
+            self.gui.plottoolbar.cancel_queued_zoom()
 
             flag = self.gui.interactiveplot.drawn_object is not None
             if flag: self.gui.interactiveplot.drawn_object._disconnect()
@@ -336,11 +309,11 @@ class Controls(tk.Frame,object):
             
         
         # Perform the queued zoom if there is one
-        if self.gui.plottoolbar.toolbar.queued_zoom is not None:
+        if self.gui.plottoolbar.queued_zoom:
             # Turn off adaptive limits on both the x and y axes if needed
             for name in self.axis_names[:2]:
-                self.axis_controllers[name].adaptive_off()
-            self.gui.plottoolbar.toolbar.queued_zoom()
+                self.axis_controllers[name].limits.adaptive_off()
+            self.gui.plottoolbar.queued_zoom()
         
         # Perform any rotations necessary
         if self.gui.data is not None:

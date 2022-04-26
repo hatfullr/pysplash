@@ -124,7 +124,7 @@ class InteractivePlot(tk.Frame,object):
             aspect = None
         
         # Update the orientation
-        if self.gui.controls.show_orientation.get():
+        if self.gui.controls.plotcontrols.show_orientation.get():
             self.orientation.draw()
         else:
             self.orientation.clear()
@@ -158,7 +158,7 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_data(x),
                     self.gui.get_display_data(y),
                 )
-                kwargs['s'] = self.gui.controls.point_size.get()
+                kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
 
         else: # It will be some form of IntegratedValue plot
@@ -322,7 +322,7 @@ class InteractivePlot(tk.Frame,object):
     def on_point_size_changed(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.on_point_size_changed")
         if isinstance(self.drawn_object,ScatterPlot):
-            self.drawn_object.set_size(self.gui.controls.point_size)
+            self.drawn_object.set_size(self.gui.controls.plotcontrols.point_size)
 
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")
