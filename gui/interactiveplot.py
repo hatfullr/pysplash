@@ -130,7 +130,7 @@ class InteractivePlot(tk.Frame,object):
             self.orientation.clear()
 
         # If there's no data to plot, stop here
-        if self.gui.data is None:
+        if not self.gui.data:
             self.canvas.draw_idle()
             self.gui.set_user_controlled(True)
             return
@@ -274,7 +274,7 @@ class InteractivePlot(tk.Frame,object):
 
                 # Update the controls' axis limits
                 for axis_controller in self.controls.axis_controllers:
-                    axis_controller.update_limits()
+                    axis_controller.limits.on_axis_limits_changed()
 
                 # Connect the controls to the interative plot
                 #self.gui.controls.connect()
@@ -501,8 +501,8 @@ class InteractivePlot(tk.Frame,object):
         if None not in new_ylim:
             if any(np.abs((new_ylim-ylim)/ylim) > 0.001): self.ax.set_ylim(new_ylim)
 
-        self.gui.controls.axis_controllers['XAxis'].update_limits()
-        self.gui.controls.axis_controllers['YAxis'].update_limits()
+        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
+        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
             
         if draw: self.canvas.draw_idle()
         
@@ -515,7 +515,7 @@ class InteractivePlot(tk.Frame,object):
         new_xlim = [None, None]
         new_ylim = [None, None]
         
-        if hasattr(self.gui, "data"):
+        if hasattr(self.gui, "data") and self.gui.data:
             if self.gui.data.is_image:
                 new_xlim = self.gui.data['extent'][:2]
                 new_ylim = self.gui.data['extent'][-2:]

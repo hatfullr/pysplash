@@ -14,11 +14,11 @@ import sys
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self,master,gui,canvas,**kwargs):
         self.toolitems = (
-            (u'Home', u'', u'home', u'home'),
-            (u'Pan', u'', u'move', u'pan'),
-            (u'Zoom', u'', u'zoom_to_rect', u'zoom'),
-            (u'Subplots', u'', u'subplots', u'configure_subplots'),
-            (u'Save', u'', u'filesave', u'save_figure'),
+            (u'Home', u'Reset original view', u'home', u'home'),
+            (u'Pan', u'Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect', u'move', u'pan'),
+            (u'Zoom', u'Zoom to rectangle\nx/y fixes axis', u'zoom_to_rect', u'zoom'),
+            (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
+            (u'Save', u'Save the figure', u'filesave', u'save_figure'),
             )
         self.gui = gui
         self.canvas = canvas
@@ -38,9 +38,24 @@ class CustomToolbar(NavigationToolbar2Tk):
                 child.pack_forget()
 
         self.toolbar.set_message = self.set_xy_message
-
+        
     def home(self,*args,**kwargs):
-        self.gui.interactiveplot.reset_data_xylim()
+        # Turn off adaptive limits on the X and Y axes
+        # Reset the view
+        super(CustomToolbar, self).home(*args, **kwargs)
+
+        # Update the axis limits in the GUI
+        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
+        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
+
+        # Turn off adaptive limits
+        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
+        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
+        
+        # Update the plot
+        self.gui.interactiveplot.update()
+        
+        #self.gui.interactiveplot.reset_data_xylim()
 
     def set_xy_message(self, *args, **kwargs):
         for arg in args:
@@ -76,12 +91,20 @@ class CustomToolbar(NavigationToolbar2Tk):
         if flag: self.gui.interactiveplot.drawn_object._disconnect()
             
         super(CustomToolbar,self).release_zoom(self.zoom_event)
-
+        
         if flag: self.gui.interactiveplot.drawn_object._connect()
-
+        
         # Clear the zoom event after we have completed the zoom
         self.zoom_event = None
         self.queued_zoom = None
+
+        # Update the axis limits in the GUI
+        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
+        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
+
+        # Turn off adaptive limits
+        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
+        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
 
     def cancel_queued_zoom(self, *args, **kwargs):
         # Cancel a queued zoom

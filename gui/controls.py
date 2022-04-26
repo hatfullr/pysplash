@@ -299,8 +299,6 @@ class Controls(tk.Frame,object):
             # Now set the new axis limits
             ax.set_xlim(user_xmin, user_xmax)
             ax.set_ylim(user_ymin, user_ymax)
-
-            
             
             if flag: self.gui.interactiveplot.drawn_object._connect()
 
@@ -310,9 +308,6 @@ class Controls(tk.Frame,object):
         
         # Perform the queued zoom if there is one
         if self.gui.plottoolbar.queued_zoom:
-            # Turn off adaptive limits on both the x and y axes if needed
-            for name in self.axis_names[:2]:
-                self.axis_controllers[name].limits.adaptive_off()
             self.gui.plottoolbar.queued_zoom()
         
         # Perform any rotations necessary
