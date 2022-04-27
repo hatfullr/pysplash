@@ -8,6 +8,7 @@ else:
 
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
+import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
 import numpy as np
@@ -115,10 +116,12 @@ class AxisLimits(tk.LabelFrame,object):
         if globals.debug > 1: print("axislimits.on_axis_limits_changed")
         if self.axis is None: return
         
-        limits = self.axis.get_view_interval()
-        self.low.set(limits[0])
-        self.high.set(limits[1])
+        self.set_limits(self.axis.get_view_interval())
 
+    def set_limits(self, newlimits):
+        if globals.debug > 1: print("axislimits.set_limits")
+        self.low.set(newlimits[0])
+        self.high.set(newlimits[1])
         #low = self.low.get()
         #high = self.high.get()
         #if low != round(limits[0],len(str(low))):
@@ -129,27 +132,34 @@ class AxisLimits(tk.LabelFrame,object):
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
 
-        # If we receive arguments then it's the user who pressed the button to call this event.
-        # Otherwise, it is an internal call and so we should simulate a button press
-        if not args:
-            self.adaptive_button.command()
+        self.adaptive.set(True)
         
         # Disable the limit entries
         self.entry_low.configure(state='disabled')
         self.entry_high.configure(state='disabled')
+
         
-        self.connect(self.axis)
+        # Set the limit entries to be the data's true, total limits
+        if self.axis:
+            # Try to locate the GUI widget
+            for child in self.winfo_toplevel().winfo_children():
+                if isinstance(child, gui.gui.GUI):
+                    if isinstance(self.axis, XAxis):
+                        newlim, dummy = child.interactiveplot.calculate_data_xylim(which='xlim')
+                    elif isinstance(self.axis, YAxis):
+                        dummy, newlim = child.interactiveplot.calculate_data_xylim(which='ylim')
+                    else:
+                        raise Exception("Unrecognized axis type",type(self.axis))
+                    if None not in newlim: self.set_limits(newlim)
+                    break
+        
+            
 
     def adaptive_off(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_off")
-
-        # If we receive arguments then it's the user who pressed the button to call this event.
-        # Otherwise, it is an internal call and so we should simulate a button press
-        if not args:
-            self.adaptive_button.command()
+        
+        self.adaptive.set(False)
         
         # Enable the limit entries
         self.entry_low.configure(state='normal')
         self.entry_high.configure(state='normal')
-
-        self.disconnect()

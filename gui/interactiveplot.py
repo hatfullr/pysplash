@@ -516,15 +516,29 @@ class InteractivePlot(tk.Frame,object):
         new_ylim = [None, None]
         
         if hasattr(self.gui, "data") and self.gui.data:
-            if self.gui.data.is_image:
-                new_xlim = self.gui.data['extent'][:2]
-                new_ylim = self.gui.data['extent'][-2:]
-            else:
-                new_xlim = np.array(self.get_data_xlim())
-                new_ylim = np.array(self.get_data_ylim())
-                if self.drawn_object is not None:
-                    if self.drawn_object.aspect == 'equal':
-                        new_xlim, new_ylim = self.drawn_object.equalize_aspect_ratio(xlim=new_xlim,ylim=new_ylim)
+            x = self.gui.controls.axis_controllers['XAxis'].value.get()
+            y = self.gui.controls.axis_controllers['YAxis'].value.get()
+            xdata = self.gui.get_display_data(x)
+            ydata = self.gui.get_display_data(y)
+            xdata = xdata[np.isfinite(xdata)]
+            ydata = ydata[np.isfinite(ydata)]
+            new_xlim = [np.nanmin(xdata), np.nanmax(xdata)]
+            new_ylim = [np.nanmin(ydata), np.nanmax(ydata)]
+            
+            #if self.gui.data.is_image:
+            #    new_xlim = self.gui.data['extent'][:2]
+            #    new_ylim = self.gui.data['extent'][-2:]
+            #else:
+            #    new_xlim = np.array(self.get_data_xlim())
+            #    new_ylim = np.array(self.get_data_ylim())
+            #    if self.drawn_object is not None:
+            #        if self.drawn_object.aspect == 'equal':
+            #            new_xlim, new_ylim = self.drawn_object.equalize_aspect_ratio(xlim=new_xlim,ylim=new_ylim)
+        else:
+            # Get the home view and use its limits as the new limits
+            xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
+            new_xlim = [xmin, xmax]
+            new_ylim = [ymin, ymax]
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim
         else: return new_xlim, new_ylim

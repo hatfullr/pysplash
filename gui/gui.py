@@ -106,8 +106,8 @@ class GUI(tk.Frame,object):
         self.controls.connect()
 
         # Turn on adaptive limits in x and y initially
-        for name in self.controls.axis_names[:2]:
-            self.controls.axis_controllers[name].limits.adaptive_on()
+        #for name in self.controls.axis_names[:2]:
+        #    self.controls.axis_controllers[name].limits.adaptive_on()
         
         self.controls.save_state()
         

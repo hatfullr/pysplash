@@ -2,10 +2,12 @@ from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
     import ttk
+    from tkFont import Font as tkFont
     from flashingentry import FlashingEntry
 else:
     import tkinter as tk
     from tkinter import ttk
+    import tkinter.font as tkFont
     from widgets.flashingentry import FlashingEntry
 import numpy as np
 
@@ -59,15 +61,22 @@ class FloatEntry(FlashingEntry,object):
         # This should not affect the result of the function, though
         #print(self.textvariable.get())
         number = self.textvariable.get()
-        total_width = max(3, self.cget('width'))
+        fontname = str(self.cget('font'))
+        if version_info.major < 3:
+            font = tkFont(name=fontname, exists=True)
+        else:
+            font = tkFont.nametofont(fontname)
+        width = int(self.winfo_width() / font.measure("A"))
+        #print(width)
+        #total_width = max(3, self.cget('width'))
 
         # Test the generic conversion
-        testtext = "%-G" % number
+        #testtext = "%-G" % number
         
-        precision = 1
-        if "." in testtext:
-            decimalplace = testtext.index(".")
-            precision = max(precision, total_width - testtext.index("."))
+        #precision = 1
+        #if "." in testtext:
+        #    decimalplace = testtext.index(".")
+        #    precision = max(precision, total_width - testtext.index("."))
             
-        self._textvariable.set("%-.*G" % (precision,number))
+        self._textvariable.set("%-*.*G" % (width,width-2,number))
 

@@ -57,6 +57,23 @@ class CustomToolbar(NavigationToolbar2Tk):
         
         #self.gui.interactiveplot.reset_data_xylim()
 
+    def get_home_xylimits(self, *args, **kwargs):
+        # Simulate a Home button press, but without drawing the plot. Return
+        # the resulting x-y limits as xmin, xmax, ymin, ymax
+        # https://github.com/matplotlib/matplotlib/blob/223b2b13d67f0be0e64898b9d3ca191f56dc6f82/lib/matplotlib/backend_bases.py
+        # https://github.com/matplotlib/matplotlib/blob/c6c7ec1978c22ae2c704555a873d0ec6e1e2eaa8/lib/matplotlib/axes/_base.py
+        self._nav_stack.home()
+        self.set_history_buttons()
+        nav_info = self._nav_stack()
+        if nav_info is not None:
+            # Retrieve all items at once to avoid any risk of GC deleting an Axes
+            # while in the middle of the loop below.
+            items = list(nav_info.items())
+            for ax, (view, (pos_orig, pos_active)) in items:
+                if ax is self.gui.interactiveplot.ax:
+                    return view
+        return None, None, None, None
+        
     def set_xy_message(self, *args, **kwargs):
         for arg in args:
             if isinstance(arg, str):
