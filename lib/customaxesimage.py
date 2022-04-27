@@ -44,14 +44,15 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._axes.add_image(self)
 
         self.colorbar = colorbar
+
+        self.cids = None
         
         if not self.data_is_image:
             self.previous_xlim = self._axes.get_xlim()
             self.previous_ylim = self._axes.get_ylim()
         
             self.thread = None
-
-            self._connect()
+            #self._connect()
 
             self.after_id_calculate = None
         
@@ -75,17 +76,26 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _connect(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._connect")
         if not self.data_is_image:
+            print("Connecting")
+            if self.cids: self._disconnect()
             self.cids = [
                 self._axes.callbacks.connect('xlim_changed',self.wait_to_calculate),
                 self._axes.callbacks.connect('ylim_changed',self.wait_to_calculate),
                 self._axes.get_figure().callbacks.connect('dpi_changed',self.calculate_xypixels),
                 self._axes.callbacks.connect('resize_event',self.calculate_xypixels),
             ]
+            
     def _disconnect(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._disconnect")
-        for cid in self.cids:
-            for obj in [self._axes,self._axes.get_figure()]:
-                obj.callbacks.disconnect(cid)
+        if self.cids:
+            self._axes.callbacks.disconnect(self.cids[0])
+            self._axes.callbacks.disconnect(self.cids[1])
+            self._axes.get_figure().callbacks.disconnect(self.cids[2])
+            self._axes.callbacks.disconnect(self.cids[3])
+            self.cids = None
+        #for cid in self.cids:
+        #    for obj in [self._axes,self._axes.get_figure()]:
+        #        obj.callbacks.disconnect(cid)
 
     def remove(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.remove")
@@ -102,7 +112,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if xlim is None and ylim is None: flag = True
         
         if flag:
-            self._disconnect()
+            #self._disconnect()
             xlim,ylim = self._axes.get_xlim(),self._axes.get_ylim()
         dx = xlim[1]-xlim[0]
         dy = ylim[1]-ylim[0]
@@ -116,7 +126,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             # I don't know why, but these lines break everything.
             #self._axes.set_xlim(xlim)
             #self._axes.set_ylim(ylim)
-            self._connect()
+            #self._connect()
+            pass
         else:
             return xlim, ylim
     
@@ -134,7 +145,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
         self.calculate_xypixels()
         
-        self.after_id_calculate = None
+        #self.after_id_calculate = None
         if self.aspect == 'equal': self.equalize_aspect_ratio()
         if not (self.ypixels == self._data.shape[0] and self.xpixels == self._data.shape[1]):
             self._data = np.resize(self._data,(self.ypixels,self.xpixels)) # Fills new entries with 0
@@ -170,14 +181,23 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         canvas = self._axes.get_figure().canvas
         canvas.get_tk_widget().update_idletasks()
         canvas.draw_idle()
+        self.after_id_calculate = None
     
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change
     def wait_to_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.wait_to_calculate")
-        if self.after_id_calculate is not None:
+        print(self,"wait to calculate",self.after_id_calculate, args,kwargs)
+        if not self.after_id_calculate:
+            self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
+        else:
             self.after_cancel(self.after_id_calculate)
-        self.after_id_calculate = self.after(1000,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
+            self.after_id_calculate = None
+            
+        
+        #if self.after_id_calculate is not None:
+        #    self.after_cancel(self.after_id_calculate)
+        #self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
 
     def set_data(self,new_data,scaled=True):
         if globals.debug > 1: print("customaxesimage.set_data")

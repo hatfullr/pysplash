@@ -110,7 +110,7 @@ class InteractivePlot(tk.Frame,object):
             self.drawn_object.remove()
             self.drawn_object = None
     
-    def update(self,*args,**kwargs):
+    def update(self,*args, **kwargs):
         if globals.debug > 1:
             print("interactiveplot.update")
             print("    self.ax = ",self.ax)
@@ -122,12 +122,6 @@ class InteractivePlot(tk.Frame,object):
             aspect = 'equal'
         else:
             aspect = None
-        
-        # Update the orientation
-        if self.gui.controls.plotcontrols.show_orientation.get():
-            self.orientation.draw()
-        else:
-            self.orientation.clear()
 
         # If there's no data to plot, stop here
         if not self.gui.data:
@@ -211,7 +205,8 @@ class InteractivePlot(tk.Frame,object):
 
             self.colorbar.show()
 
-
+        changed_args = False
+        
         # If the plot we are going to make is the same as the plot already
         # on the canvas, then don't draw a new one
         if self.drawn_object is not None and self.previous_args is not None:
@@ -225,15 +220,17 @@ class InteractivePlot(tk.Frame,object):
                 kwargs['initialize'] = False
                 
                 if len(args) == len(self.previous_args):
+                    # We break out of this for-loop if any of the current arguments
+                    # have changed compared to the previous arguments
                     for arg in args:
                         for prev_arg in self.previous_args:
                             try:
-                                if arg == prev_arg:
-                                    break
+                                if arg == prev_arg: break
                             except ValueError:
                                 if np.array_equal(arg,prev_arg):
                                     break
                         else:
+                            changed_args = True
                             break
                     else: # The args are the same as before
                         keys = self.previous_kwargs.keys()
@@ -254,13 +251,16 @@ class InteractivePlot(tk.Frame,object):
         # the same as the previous plot
         
         
-        
         if self.drawn_object is None:
-            first_plot = True
             kwargs['initialize'] = True
+
+        if changed_args: self.reset() # Clear the current plot
+
+        # Update the orientation
+        if self.gui.controls.plotcontrols.show_orientation.get():
+            self.orientation.draw()
         else:
-            first_plot = False
-            self.reset() # Clear the current plot
+            self.orientation.clear()
 
         self.drawn_object = method(*args,**kwargs)
         
@@ -270,7 +270,7 @@ class InteractivePlot(tk.Frame,object):
             else:
                 # Block until the plot is finished drawing
                 while self.drawn_object.thread.isAlive():
-                    self.update()
+                    self.winfo_toplevel().update()
 
                 # Update the controls' axis limits
                 for axis_controller in self.controls.axis_controllers:
@@ -314,6 +314,7 @@ class InteractivePlot(tk.Frame,object):
         self.previous_ylim = self.ax.get_ylim()
 
         self.gui.set_user_controlled(True)
+
 
 
         

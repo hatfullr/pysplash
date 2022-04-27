@@ -45,14 +45,10 @@ class CustomToolbar(NavigationToolbar2Tk):
         super(CustomToolbar, self).home(*args, **kwargs)
 
         # Update the axis limits in the GUI
-        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
-        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
-
-        # Turn off adaptive limits
-        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
-        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
+        self.update_GUI_axis_limits()
         
         # Update the plot
+        self.gui.interactiveplot.reset()
         self.gui.interactiveplot.update()
         
         #self.gui.interactiveplot.reset_data_xylim()
@@ -105,23 +101,18 @@ class CustomToolbar(NavigationToolbar2Tk):
         flag = False
         if self.gui.interactiveplot.drawn_object is not None: flag = True
 
-        if flag: self.gui.interactiveplot.drawn_object._disconnect()
+        #if flag: self.gui.interactiveplot.drawn_object._disconnect()
             
         super(CustomToolbar,self).release_zoom(self.zoom_event)
         
-        if flag: self.gui.interactiveplot.drawn_object._connect()
+        #if flag: self.gui.interactiveplot.drawn_object._connect()
         
         # Clear the zoom event after we have completed the zoom
         self.zoom_event = None
         self.queued_zoom = None
 
         # Update the axis limits in the GUI
-        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
-        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
-
-        # Turn off adaptive limits
-        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
-        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
+        self.update_GUI_axis_limits()
 
     def cancel_queued_zoom(self, *args, **kwargs):
         # Cancel a queued zoom
@@ -130,7 +121,15 @@ class CustomToolbar(NavigationToolbar2Tk):
             self._zoom_info = None
             # Fire the zoom event to trick Matplotlib into removing the rubberband
             self.queued_zoom()
-    
+
+    def update_GUI_axis_limits(self, *args, **kwargs):
+        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
+        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
+
+        # Turn off adaptive limits
+        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
+        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
+            
     def release_zoom(self,event):
         self.queued_zoom = None
         if sys.version_info.major < 3: # Python2
@@ -156,3 +155,12 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.gui.controls.on_state_change()
 
 
+
+    def release_pan(self, *args, **kwargs):
+        super(CustomToolbar, self).release_pan(*args, **kwargs)
+
+        # Update the axis limits in the GUI
+        self.update_GUI_axis_limits()
+
+        self.gui.interactiveplot.reset()
+        self.gui.interactiveplot.update()

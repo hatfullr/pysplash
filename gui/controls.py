@@ -289,7 +289,7 @@ class Controls(tk.Frame,object):
             self.gui.plottoolbar.cancel_queued_zoom()
 
             flag = self.gui.interactiveplot.drawn_object is not None
-            if flag: self.gui.interactiveplot.drawn_object._disconnect()
+            #if flag: self.gui.interactiveplot.drawn_object._disconnect()
 
             if np.isnan(user_xmin): user_xmin = None
             if np.isnan(user_xmax): user_xmax = None
@@ -300,7 +300,7 @@ class Controls(tk.Frame,object):
             ax.set_xlim(user_xmin, user_xmax)
             ax.set_ylim(user_ymin, user_ymax)
             
-            if flag: self.gui.interactiveplot.drawn_object._connect()
+            #if flag: self.gui.interactiveplot.drawn_object._connect()
 
             
             
