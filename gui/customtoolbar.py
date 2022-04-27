@@ -84,13 +84,10 @@ class CustomToolbar(NavigationToolbar2Tk):
         # stupid, we have to first increase the image size then decrease it
         # using integers.
         try:
-            #image = b._ntimage
             b._ntimage = b._ntimage.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
             b._ntimage = b._ntimage.subsample(100,100)
             b.config(height=b._ntimage.height(),image=b._ntimage)
         except AttributeError:
-            print("In here")
-            #image = b._ntimage._PhotoImage__photo
             b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
             b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.subsample(100,100)
             b.config(height=b._ntimage._PhotoImage__photo.height(),image=b._ntimage._PhotoImage__photo)
