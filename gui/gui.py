@@ -131,7 +131,7 @@ class GUI(tk.Frame,object):
                         break
         self.controls.update()
         self.controls.connect_state_listeners()
-    
+
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
@@ -256,7 +256,6 @@ class GUI(tk.Frame,object):
             if key not in ckeys: break
         else: values.append("Optical depth")
 
-        
         # Update the axis controllers
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':

@@ -178,6 +178,14 @@ def starsmasher(filename):
     ]
 
     data, header = read_starsmasher(filename, return_headers=True)
+
+    # Correct some common header names
+    names = list(data._data.dtype.names)
+    if "hp" in names:
+        names[names.index("hp")] = "h"
+    if "am" in names:
+        names[names.index("am")] = "m"
+    data._data.dtype.names = tuple(names)
     
     to_return = {
         'data'           : OrderedDict(),
