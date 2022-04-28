@@ -5,6 +5,7 @@ if version_info.major < 3:
 else:
     import tkinter as tk
     from tkinter import ttk
+from widgets.autosizeentry import AutoSizeEntry
     
 class FlashingEntry(ttk.Entry,object):
     def __init__(self,master,borderwidth=1,flash_color='red',width=0,**kwargs):
@@ -15,8 +16,7 @@ class FlashingEntry(ttk.Entry,object):
         self.container = tk.Frame(master,borderwidth=borderwidth)
         super(FlashingEntry,self).__init__(self.container,width=width,**kwargs)
         super(FlashingEntry,self).pack(expand=True,fill='both')
-
-        self.bind("<Configure>", self.on_configure)
+        #self.bind("<Configure>", self.on_configure)
 
     def pack(self,*args,**kwargs):
         self.container.pack(*args,**kwargs)
@@ -26,7 +26,7 @@ class FlashingEntry(ttk.Entry,object):
 
     def grid(self,*args,**kwargs):
         self.container.grid(*args,**kwargs)
-
+    
     def on_configure(self, *args, **kwargs):
         # Automagically expand the entry widget to fill the frame
         if self.cget('width') == 0:
@@ -37,7 +37,7 @@ class FlashingEntry(ttk.Entry,object):
                 relx=0.,
                 rely=0.,
             )
-
+    
     def flash(self,time=1000):
         if not self.flashing:
             self.flashing = True

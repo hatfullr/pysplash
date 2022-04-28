@@ -17,6 +17,8 @@ from read_file import read_file
 import globals
 from gui.customtoolbar import CustomToolbar
 from widgets.menubar import MenuBar
+from gui.menubar.functionsmenubar import FunctionsMenuBar
+from gui.menubar.datamenubar import DataMenuBar
 from functions.make_rotation_movie import make_rotation_movie
 import copy
 import os.path
@@ -54,7 +56,7 @@ class GUI(tk.Frame,object):
         self.dpi = self.window.winfo_fpixels('1i')
 
         super(GUI,self).__init__(self.window)
-
+        
         self.data = None
         
         self.preferences = {}
@@ -137,6 +139,15 @@ class GUI(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
         self.menubar = MenuBar(self.window,self)
+        self.menubar.add_cascade(
+            label="Functions",
+            menu=FunctionsMenuBar(self.menubar,self),
+        )
+        self.menubar.add_cascade(
+            label="Data",
+            menu=DataMenuBar(self.menubar,self),
+        )
+        
         self.left_frame = tk.Frame(self)
         self.interactiveplot = InteractivePlot(
             self.left_frame,

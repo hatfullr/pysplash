@@ -34,7 +34,7 @@ class DataFromServer(tk.Toplevel,object):
         
         self.pad = 5
         aspect = self.gui_root.winfo_screenheight()/self.gui_root.winfo_screenwidth()
-        self.width = int(self.gui_root.winfo_screenwidth() / 4)
+        self.width = int(self.gui_root.winfo_screenwidth() / 6)
         height = self.width*aspect
 
         gui_root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -161,9 +161,9 @@ class DataFromServer(tk.Toplevel,object):
 
         self.progressbar = ProgressBar(
             self,
-            orient='horizontal',
+            #orient='horizontal',
             maximum=100,
-            mode='determinate'
+            #mode='determinate'
         )
 
 
@@ -183,7 +183,6 @@ class DataFromServer(tk.Toplevel,object):
     
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("datafromserver.place_widgets")
-        # Place widgets
         self.description.pack(side='top',fill='x',padx=self.pad,pady=(self.pad,0))
     
         self.server_username_label.grid(row=0,column=0,sticky='nes')
@@ -204,7 +203,7 @@ class DataFromServer(tk.Toplevel,object):
         self.server_info_frame.columnconfigure(1,weight=1)
         self.server_info_frame.pack(side='top',padx=self.pad,pady=(0,self.pad))
         
-        self.progressbar.pack(side='left',fill='x',expand=True,padx=(self.pad,0),pady=0)
+        self.progressbar.pack(anchor='center',side='left',fill='both',expand=True,padx=(self.pad,0),pady=(0,self.pad))
         self.download_button.pack(side='right')
         self.close_button.pack(side='right')
         self.buttons_frame.pack(side='right', fill='y', pady=(0,self.pad),padx=self.pad)
@@ -316,7 +315,7 @@ class DataFromServer(tk.Toplevel,object):
                 self.close()
                 
                 self.gui.update_filenames()
-                self.gui.plotcontrols.current_file.set(self.gui.filenames[0])
+                self.gui.filecontrols.current_file.set(self.gui.filenames[0])
                 self.gui.read()
                 self.gui.interactiveplot.update()
                 self.gui.controls.save_state()
