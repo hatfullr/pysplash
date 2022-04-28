@@ -157,7 +157,7 @@ class Controls(tk.Frame,object):
                 variables.append(attr)
         return variables
     
-    
+    """
     def update_axis_comboboxes(self,data):
         if globals.debug > 1: print("controls.update_axis_comboboxes")
         # Update the values in the comboboxes with the keys in data
@@ -177,6 +177,13 @@ class Controls(tk.Frame,object):
         
         self.xaxis_combobox.config(values=keys)
         self.yaxis_combobox.config(values=keys)
+
+        # Both rho and u are required for column density plots
+        keys = ["None"]
+        for data_key in ['rho','u']:
+            keys.append("Column density")
+        self.caxis_combobox.config(values=keys)
+    """
 
     def on_colorbar_combobox_selected(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_colorbar_combobox_selected")
