@@ -5,7 +5,6 @@ if version_info.major < 3:
 else:
     import tkinter as tk
     from tkinter import ttk
-from widgets.autosizeentry import AutoSizeEntry
     
 class FlashingEntry(ttk.Entry,object):
     def __init__(self,master,borderwidth=1,flash_color='red',width=0,**kwargs):
