@@ -16,7 +16,7 @@ class FlashingEntry(ttk.Entry,object):
         self.container = tk.Frame(master,borderwidth=borderwidth)
         super(FlashingEntry,self).__init__(self.container,width=width,**kwargs)
         super(FlashingEntry,self).pack(expand=True,fill='both')
-        #self.bind("<Configure>", self.on_configure)
+        self.bind("<Configure>", self.on_configure)
 
     def pack(self,*args,**kwargs):
         self.container.pack(*args,**kwargs)

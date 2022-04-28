@@ -198,10 +198,10 @@ class DataFromServer(tk.Toplevel,object):
         self.command_choice_frame.grid(row=3,column=1,sticky='nws')
 
         self.command_options_label.grid(row=4,column=0,sticky='nes')
-        self.command_options_entry.grid(row=4,column=1,sticky='nws')
+        self.command_options_entry.grid(row=4,column=1,sticky='news')
         
         self.server_info_frame.columnconfigure(1,weight=1)
-        self.server_info_frame.pack(side='top',padx=self.pad,pady=(0,self.pad))
+        self.server_info_frame.pack(side='top',padx=self.pad,pady=(0,self.pad),fill='x',expand=True)
         
         self.progressbar.pack(anchor='center',side='left',fill='both',expand=True,padx=(self.pad,0),pady=(0,self.pad))
         self.download_button.pack(side='right')
