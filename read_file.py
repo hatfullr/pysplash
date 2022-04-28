@@ -242,6 +242,14 @@ def fluxcal_track(filename):
         parallel=False,
         verbose=debug > 1,
     )
+
+    # Correct some common header names
+    names = list(data._data.dtype.names)
+    if "hp" in names:
+        names[names.index("hp")] = "h"
+    if "am" in names:
+        names[names.index("am")] = "m"
+    data._data.dtype.names = tuple(names)
     
     to_return = {
         'data'           : OrderedDict(),
