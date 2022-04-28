@@ -317,6 +317,7 @@ class DataFromServer(tk.Toplevel,object):
                 self.gui.update_filenames()
                 self.gui.filecontrols.current_file.set(self.gui.filenames[0])
                 self.gui.read()
+                self.gui.interactiveplot.reset()
                 self.gui.interactiveplot.update()
                 self.gui.controls.save_state()
 

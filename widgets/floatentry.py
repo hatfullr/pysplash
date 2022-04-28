@@ -78,5 +78,5 @@ class FloatEntry(FlashingEntry,object):
         #    decimalplace = testtext.index(".")
         #    precision = max(precision, total_width - testtext.index("."))
             
-        self._textvariable.set("%-*.*G" % (width,width-2,number))
+        self._textvariable.set(("%-*.*G" % (width,width-2,number)).strip())
 

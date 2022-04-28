@@ -29,18 +29,33 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.update_limits")
 
         # Get the color data in the plot
+        axesimage = self.find_axesimage()
+        if axesimage:
+            vmin, vmax = self.calculate_limits()
+            self.norm = matplotlib.colors.Normalize(
+                vmin=vmin,
+                vmax=vmax,
+            )
+            axesimage.set_clim(vmin,vmax)
+            self.draw_all()
+
+    def find_axesimage(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.find_axesimage")
         for child in self._ax.get_children():
             if isinstance(child, AxesImage):
-                data = child._data
-                vmin = np.nanmin(data[np.isfinite(data)])
-                vmax = np.nanmax(data[np.isfinite(data)])
-                self.norm = matplotlib.colors.Normalize(
-                    vmin=vmin,
-                    vmax=vmax,
-                )
-                child.set_clim(vmin,vmax)
-                self.draw_all()
-                return
+                return child
+        return None
+        
+    def calculate_limits(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.calculate_limits")
+        # Get the color data in the plot
+        axesimage = self.find_axesimage()
+        if axesimage:
+            data = axesimage._data
+            vmin = np.nanmin(data[np.isfinite(data)])
+            vmax = np.nanmax(data[np.isfinite(data)])
+            return [vmin, vmax]
+        return [None, None]
 
     def connect_show(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.connect_show")

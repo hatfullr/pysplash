@@ -34,8 +34,8 @@ class AxisLimits(tk.LabelFrame,object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.create_variables")
-        self.low = tk.DoubleVar()
-        self.high = tk.DoubleVar()
+        self.low = tk.DoubleVar(value=0.)
+        self.high = tk.DoubleVar(value=0.)
         self.adaptive = tk.BooleanVar(value=False)
 
     def create_widgets(self, *args, **kwargs):
@@ -100,8 +100,6 @@ class AxisLimits(tk.LabelFrame,object):
                 self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
             elif isinstance(axis, YAxis):
                 self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
-            else:
-                raise ValueError("Unsupported axis type "+type(self.axis))
             
             # Update the entry widgets
             self.on_axis_limits_changed()
@@ -115,7 +113,6 @@ class AxisLimits(tk.LabelFrame,object):
     def on_axis_limits_changed(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.on_axis_limits_changed")
         if self.axis is None: return
-        
         self.set_limits(self.axis.get_view_interval())
 
     def set_limits(self, newlimits):
@@ -144,12 +141,16 @@ class AxisLimits(tk.LabelFrame,object):
             # Try to locate the GUI widget
             for child in self.winfo_toplevel().winfo_children():
                 if isinstance(child, gui.gui.GUI):
-                    if isinstance(self.axis, XAxis):
-                        newlim, dummy = child.interactiveplot.calculate_data_xylim(which='xlim')
-                    elif isinstance(self.axis, YAxis):
-                        dummy, newlim = child.interactiveplot.calculate_data_xylim(which='ylim')
+                    # Check if this axis is the colorbar
+                    if self.axis.axes is child.interactiveplot.colorbar.cax:
+                        newlim = child.interactiveplot.colorbar.calculate_limits()
+                    # This axis is either the x or y axes of the main plot (not the colorbar)
                     else:
-                        raise Exception("Unrecognized axis type",type(self.axis))
+                        if isinstance(self.axis, XAxis):
+                            newlim, dummy = child.interactiveplot.calculate_data_xylim(which='xlim')
+                        elif isinstance(self.axis, YAxis):
+                            dummy, newlim = child.interactiveplot.calculate_data_xylim(which='ylim')
+                            
                     if None not in newlim: self.set_limits(newlim)
                     break
         

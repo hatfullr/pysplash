@@ -334,6 +334,7 @@ class Controls(tk.Frame,object):
         #        print("BAD")
             
         # Draw the new plot
+        self.gui.interactiveplot.reset()
         self.gui.interactiveplot.update()
 
         # Update the user's limits if they got changed above

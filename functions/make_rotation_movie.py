@@ -28,6 +28,7 @@ def make_rotation_movie(gui):
 
         print(i,nframes,anglex,anglez)
         gui.data.rotate(anglex,0,anglez)
+        gui.interactiveplot.reset()
         gui.interactiveplot.update()
 
         if ((anglex%10 == 0 and anglez == 0) or

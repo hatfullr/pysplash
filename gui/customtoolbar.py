@@ -120,12 +120,9 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.queued_zoom()
 
     def update_GUI_axis_limits(self, *args, **kwargs):
-        self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
-        self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
-
-        # Turn off adaptive limits
-        self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
-        self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
+        for axis_controller in self.gui.controls.axis_controllers.values():
+            axis_controller.limits.on_axis_limits_changed()
+            axis_controller.limits.adaptive_off()
             
     def release_zoom(self,event):
         self.queued_zoom = None
