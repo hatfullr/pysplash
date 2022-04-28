@@ -333,7 +333,7 @@ class FastFileRead(object):
                     cols = cols[arg[1]]
                 else:
                     # User is doing multiple column retrieval
-                    for a in arg[1]: # Make sure this column exists in every file we want to retrieve
+                    for a in arg[1:]: # Make sure this column exists in every file we want to retrieve
                         if isinstance(a,int):
                             for i,(f,n) in enumerate(zip(files,names)):
                                 try: f[n[a]]
