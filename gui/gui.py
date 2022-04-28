@@ -159,7 +159,7 @@ class GUI(tk.Frame,object):
         self.update_idletasks()
         self.update()
 
-        self.under_plot_frame = tk.Frame(self.left_frame)
+        self.under_plot_frame = tk.Frame(self.left_frame,relief='sunken',bd=1)
         self.plottoolbar = CustomToolbar(self.under_plot_frame,self,self.interactiveplot.canvas)
         
         self.filecontrols = FileControls(
