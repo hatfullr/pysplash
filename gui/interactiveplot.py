@@ -130,7 +130,6 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.data,
                 )
                 kwargs['aspect'] = aspect
-                self.reset_data_xylim()
                 self.colorbar.show()
             else:
                 method = ScatterPlot
@@ -141,6 +140,7 @@ class InteractivePlot(tk.Frame,object):
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
+                self.colorbar.hide()
 
         else: # It will be some form of IntegratedValue plot
             if self.draw_type == 'Column density':
@@ -199,14 +199,12 @@ class InteractivePlot(tk.Frame,object):
         if self.drawn_object is not None and self.previous_args is not None:
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
-            vmin,vmax = self.colorbar.vmin, self.colorbar.vmax
+            #vmin,vmax = self.colorbar.vmin, self.colorbar.vmax
             #xmin,xmax,ymin,ymax = self.drawn_object._extent
             if (self.previous_xlim[0] == xmin and
                 self.previous_xlim[1] == xmax and
                 self.previous_ylim[0] == ymin and
-                self.previous_ylim[1] == ymax and
-                self.previous_vmin == vmin and
-                self.previous_vmax == vmax):
+                self.previous_ylim[1] == ymax):
                 kwargs['initialize'] = False
                 
                 if len(args) == len(self.previous_args):
@@ -262,11 +260,7 @@ class InteractivePlot(tk.Frame,object):
                 while self.drawn_object.thread.isAlive():
                     self.winfo_toplevel().update()
 
-                # Update the controls' axis limits
-                for axis_controller in self.controls.axis_controllers:
-                    axis_controller.limits.on_axis_limits_changed()
-
-                self.controls.save_state()
+                
         
         # After creation
         if not self.gui.data.is_image:
@@ -276,7 +270,6 @@ class InteractivePlot(tk.Frame,object):
         
             xadaptive = self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get()
             yadaptive = self.gui.controls.axis_controllers['YAxis'].limits.adaptive.get()
-            cadaptive = self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()
 
             controls_xlimits = [
                 self.gui.controls.axis_controllers['XAxis'].limits.low.get(),
@@ -286,19 +279,12 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.controls.axis_controllers['YAxis'].limits.low.get(),
                 self.gui.controls.axis_controllers['YAxis'].limits.high.get(),
             ]
-            controls_climits = [
-                self.gui.controls.axis_controllers['Colorbar'].limits.low.get(),
-                self.gui.controls.axis_controllers['Colorbar'].limits.high.get(),
-            ]
             
             if ((xadaptive or np.nan in controls_xlimits) and
                 (yadaptive or np.nan in controls_ylimits)): self.reset_data_xylim(which='both',draw=False)
             elif xadaptive or np.nan in controls_xlimits: self.reset_data_xylim(which='xlim',draw=False)
             elif yadaptive or np.nan in controls_ylimits: self.reset_data_xylim(which='ylim',draw=False)
 
-            if (cadaptive or np.nan in controls_climits): self.reset_colorbar_limits(draw=False)
-            
-        #self.canvas.draw_idle()
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
         self.previous_vmin = self.colorbar.vmin
@@ -360,30 +346,6 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
             
         if draw: self.canvas.draw_idle()
-
-    def reset_colorbar_limits(self, draw=True):
-        if globals.debug > 1: print("interactiveplot.reset_colorbar_limits")
-        
-        new_vmin, new_vmax = self.colorbar.calculate_limits()
-        
-        vmin = self.colorbar.vmin
-        vmax = self.colorbar.vmax
-        limits_changed = False
-        if vmin:
-            if np.abs((new_vmin-vmin)/vmin) > 0.001:
-                self.colorbar.vmin = new_vmin
-                limits_changed = True
-        if vmax:
-            if np.abs((new_vmax-vmax)/vmax) > 0.001:
-                self.colorbar.vmax = new_vmax
-                limits_changed = True
-
-        if limits_changed:
-            self.colorbar.set_clim(self.colorbar.vmin, self.colorbar.vmax)
-            self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
-
-        if draw: self.canvas.draw_idle()
-        
         
     def calculate_data_xylim(self, which='both'):
         if globals.debug > 1: print("interactiveplot.calculate_data_xylim")
@@ -412,3 +374,4 @@ class InteractivePlot(tk.Frame,object):
         elif which == 'ylim': return [None, None], new_ylim
         else: return new_xlim, new_ylim
         
+

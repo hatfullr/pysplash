@@ -16,7 +16,7 @@ import globals
 import numpy as np
 
 class AxisController(LabelledFrame,object):
-    def __init__(self,master,text,relief='sunken',bd=1,**kwargs):
+    def __init__(self,master,text,relief='sunken',bd=1,allowadaptive=True,**kwargs):
         if globals.debug > 1: print("axiscontroller.__init__")
         super(AxisController,self).__init__(
             master,
@@ -27,13 +27,14 @@ class AxisController(LabelledFrame,object):
         )
 
         self.axis = None
+        self.allowadaptive=allowadaptive
         
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
 
         self.previous_scale = self.scale.get()
-
+        
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
@@ -102,7 +103,7 @@ class AxisController(LabelledFrame,object):
         )
 
 
-        self.limits = AxisLimits(self)
+        self.limits = AxisLimits(self,allowadaptive=self.allowadaptive)
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")

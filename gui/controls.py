@@ -61,14 +61,6 @@ class Controls(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
 
-        self.point_size = tk.IntVar(value=1)
-
-        self.rotation_x = tk.DoubleVar(value=0)
-        self.rotation_y = tk.DoubleVar(value=0)
-        self.rotation_z = tk.DoubleVar(value=0)
-
-        self.show_orientation = tk.BooleanVar(value=False)
-
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
         # Update button
@@ -82,9 +74,11 @@ class Controls(tk.Frame,object):
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
 
-        self.axis_controllers = {}
-        for axis_name in self.axis_names:
-            self.axis_controllers[axis_name] = AxisController(self,axis_name)
+        self.axis_controllers = {
+            'XAxis' : AxisController(self,'XAxis'),
+            'YAxis' : AxisController(self,'YAxis'),
+            'Colorbar' : AxisController(self,'Colorbar',allowadaptive=False),
+        }
             
         # Plot controls
         self.plotcontrols = PlotControls(self)
@@ -242,7 +236,33 @@ class Controls(tk.Frame,object):
                 if isinstance(widget,tk.Label): continue
                 states.append([widget,widget.cget('state')])
         return states
-                        
+
+    def is_limits_changed(self, which):
+        if globals.debug > 1: print("controls.is_limits_changed")
+
+        # Check if the user changed some of the axis limits in the controls panel
+        ax = self.gui.interactiveplot.ax
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        vmin, vmax = self.gui.interactiveplot.colorbar.get_cax_limits()
+
+        if isinstance(which, str):
+            user_min, user_max = self.get_user_axis_limits(which)
+            if which == 'XAxis': return xmin != user_min or xmax != user_max
+            elif which == 'YAxis': return ymin != user_min or ymax != user_max
+            elif which == 'Colorbar': return vmin != user_min or vmax != user_max
+            else: raise ValueError("Received argument",which,"but expected one of 'XAxis', 'YAxis', or 'Colorbar'")
+        elif isinstance(which, (list, tuple, np.ndarray)):
+            if all([isinstance(w,str) for w in which]):
+                return any([self.is_limits_changed(w) for w in which])
+            else: raise TypeError("All elements in the input list, tuple, or np.ndarray must be of type 'str'")
+        else: raise TypeError("Argument must be one of types 'str', 'list', 'tuple', or 'np.ndarray'")
+
+    def get_user_axis_limits(self, which):
+        if globals.debug > 1: print("controls.get_axis_limits")
+        return self.axis_controllers[which].limits.low.get(), self.axis_controllers[which].limits.high.get()
+    
+        
     def on_update_button_pressed(self,*args,**kwargs):
         if not self.state_listeners_connected: return
         if globals.debug > 1: print("controls.on_update_button_pressed")
@@ -253,12 +273,21 @@ class Controls(tk.Frame,object):
         self.winfo_toplevel().focus_set()
         # Update the focus
         self.update()
+
+        need_reset = False
         
         changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
 
         # If the data file changed, read the new one
         if self.gui.filecontrols.current_file in changed_variables:
             self.gui.read()
+            need_reset = True
+
+        # If the x, y, or colorbar axes' combobox values changed
+        for axis_controller in self.axis_controllers.values():
+            if axis_controller.value in changed_variables:
+                need_reset = True
+                break
 
         # Update the x and y scales of the data
         #self.gui.data.set_xscale(self.axis_controllers['XAxis'].scale.get())
@@ -283,65 +312,56 @@ class Controls(tk.Frame,object):
         """
 
         # Check if the user changed any of the x or y axis limits
-        ax = self.gui.interactiveplot.ax
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        user_xmin = self.axis_controllers['XAxis'].limits.low.get()
-        user_xmax = self.axis_controllers['XAxis'].limits.high.get()
-        user_ymin = self.axis_controllers['YAxis'].limits.low.get()
-        user_ymax = self.axis_controllers['YAxis'].limits.high.get()
-        #print(xmin, user_xmin)
-        if xmin != user_xmin or xmax != user_xmax or ymin != user_ymin or ymax != user_ymax:
+        if self.is_limits_changed(('XAxis','YAxis')):
             # Cancel any queued zoom
             self.gui.plottoolbar.cancel_queued_zoom()
-
-            flag = self.gui.interactiveplot.drawn_object is not None
-            #if flag: self.gui.interactiveplot.drawn_object._disconnect()
-
+            
+            user_xmin, user_xmax = self.get_user_axis_limits('XAxis')
+            user_ymin, user_ymax = self.get_user_axis_limits('YAxis')
+            
             if np.isnan(user_xmin): user_xmin = None
             if np.isnan(user_xmax): user_xmax = None
             if np.isnan(user_ymin): user_ymin = None
             if np.isnan(user_ymax): user_ymax = None
             
             # Now set the new axis limits
-            ax.set_xlim(user_xmin, user_xmax)
-            ax.set_ylim(user_ymin, user_ymax)
-            
-            #if flag: self.gui.interactiveplot.drawn_object._connect()
-
-            
-            
+            self.gui.interactiveplot.ax.set_xlim(user_xmin, user_xmax)
+            self.gui.interactiveplot.ax.set_ylim(user_ymin, user_ymax)
+            print("limits changed")
+            need_reset = True
             
         
         # Perform the queued zoom if there is one
         if self.gui.plottoolbar.queued_zoom:
             self.gui.plottoolbar.queued_zoom()
+            print("queued zoom")
+            need_reset = True
         
         # Perform any rotations necessary
-        if self.gui.data is not None:
-            self.gui.data.rotate(
-                self.rotation_x.get(),
-                self.rotation_y.get(),
-                self.rotation_z.get(),
-            )
+        if (self.plotcontrols.rotation_x in changed_variables or
+            self.plotcontrols.rotation_y in changed_variables or
+            self.plotcontrols.rotation_z in changed_variables):
+            if self.gui.data is not None:
+                self.gui.data.rotate(
+                    self.plotcontrols.rotation_x.get(),
+                    self.plotcontrols.rotation_y.get(),
+                    self.plotcontrols.rotation_z.get(),
+                )
+                print("rotation")
+                need_reset = True
 
-        # Update the axis 
-        #for axis_name, axis_controller in self.axis_controllers.items():
-        #    if axis_controller.axis is not None:
-        #        axis_controller.axis.set_label(axis_controller.label.get())
-        #        self.gui.interactiveplot.canvas.draw()
-        #    else:
-        #        print("BAD")
-            
+        # Check if the user changed the colorbar axis limits
+        if self.is_limits_changed('Colorbar'):
+            # If we aren't going to be resetting the plot, then simply update
+            # the colorbar limits. This will automatically update the colors in the image
+            if not need_reset:
+                self.gui.interactiveplot.colorbar.set_clim(self.get_user_axis_limits('Colorbar'))
+                self.gui.interactiveplot.canvas.draw_idle()
+        
         # Draw the new plot
-        self.gui.interactiveplot.reset()
-        self.gui.interactiveplot.update()
-
-        # Update the user's limits if they got changed above
-        #self.gui.interactiveplot.fig.canvas.draw_idle()
-        #print(self.gui.interactiveplot.ax.get_ylim())
-        #for axis_controller in [self.axis_controllers['XAxis'], self.axis_controllers['YAxis']]:
-        #    axis_controller.update_limits()
+        if need_reset:
+            self.gui.interactiveplot.reset()
+            self.gui.interactiveplot.update()
         
         self.save_state()
 

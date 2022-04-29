@@ -21,24 +21,24 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
         self.previous_ax_position = None
         
-        self._ax.get_figure().canvas.mpl_connect('draw_event',self.update_limits)
         self.show_cid = None
+        self.image_cid = None
         self.connected_canvas = None
+    
+    def set_clim(self, cminmax):
+        if globals.debug > 1: print("customcolorbar.set_clim")
 
-    def update_limits(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.update_limits")
-
-        # Get the color data in the plot
         axesimage = self.find_axesimage()
         if axesimage:
-            vmin, vmax = self.calculate_limits()
+            self.vmin = cminmax[0]
+            self.vmax = cminmax[1]
             self.norm = matplotlib.colors.Normalize(
-                vmin=vmin,
-                vmax=vmax,
+                vmin=self.vmin,
+                vmax=self.vmax,
             )
-            axesimage.set_clim(vmin,vmax)
+            #axesimage.set_clim(self.vmin,self.vmax)
             self.draw_all()
-
+    
     def find_axesimage(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.find_axesimage")
         for child in self._ax.get_children():
@@ -68,6 +68,24 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             self.show_cid = None
             self.connected_canvas = None
 
+    def connect_axesimage(self, axesimage):
+        if globals.debug > 1: print("customcolorbar.connect_axesimage")
+        
+        if self.side in ['right', 'left']:
+            self.image_cid = self.cax.callbacks.connect(
+                "ylim_changed",
+                lambda *args, **kwargs: axesimage.set_clim(self.vmin,self.vmax)
+            )
+        elif seld.side in ['top', 'bottom']:
+            self.image_cid = self.cax.callbacks.connect(
+                "xlim_changed",
+                lambda *args, **kwargs: axesimage.set_clim(self.vmin,self.vmax)
+            )
+        else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
+        
+    def disconnect_axesimage(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.disconnect_axesimage")
+        if self.image_cid: self.cax.callbacks.disconnect(self.image_cid)
 
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")
@@ -176,3 +194,10 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     @visible.setter
     def visible(self, value):
         self.cax.set_visible(value)
+
+    def get_cax_limits(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.get_cax_limits")
+
+        if self.side in ['right', 'left']: return self.cax.get_ylim()
+        elif self.side in ['top', 'bottom']: return self.cax.get_xlim()
+        else: raise Exception("The colorbar has an unrecognized side attribute",self.side)

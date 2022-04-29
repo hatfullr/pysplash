@@ -19,7 +19,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.yscale = yscale
         self.cscale = cscale
         self.aspect = aspect
-        #self.colorbar = colorbar
 
         self.data_is_image = False
         if hasattr(data,"is_image"):
@@ -44,8 +43,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._axes.add_image(self)
 
         self.colorbar = colorbar
-
-        self.cids = None
+        if self.colorbar:
+            self.colorbar.connect_axesimage(self)
         
         if not self.data_is_image:
             self.previous_xlim = self._axes.get_xlim()
@@ -73,36 +72,13 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if globals.debug > 1: print("customaxesimage.after_cancel")
         self.widget.after_cancel(*args,**kwargs)
 
-    def _connect(self,*args,**kwargs):
-        if globals.debug > 1: print("customaxesimage._connect")
-        if not self.data_is_image:
-            print("Connecting")
-            if self.cids: self._disconnect()
-            self.cids = [
-                self._axes.callbacks.connect('xlim_changed',self.wait_to_calculate),
-                self._axes.callbacks.connect('ylim_changed',self.wait_to_calculate),
-                self._axes.get_figure().callbacks.connect('dpi_changed',self.calculate_xypixels),
-                self._axes.callbacks.connect('resize_event',self.calculate_xypixels),
-            ]
-            
-    def _disconnect(self,*args,**kwargs):
-        if globals.debug > 1: print("customaxesimage._disconnect")
-        if self.cids:
-            self._axes.callbacks.disconnect(self.cids[0])
-            self._axes.callbacks.disconnect(self.cids[1])
-            self._axes.get_figure().callbacks.disconnect(self.cids[2])
-            self._axes.callbacks.disconnect(self.cids[3])
-            self.cids = None
-        #for cid in self.cids:
-        #    for obj in [self._axes,self._axes.get_figure()]:
-        #        obj.callbacks.disconnect(cid)
-
     def remove(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.remove")
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
         
-        if not self.data_is_image: self._disconnect()
+        #if not self.data_is_image: self._disconnect()
+        if self.colorbar: self.colorbar.disconnect_axesimage()
         super(CustomAxesImage,self).remove(*args,**kwargs)
 
     
@@ -171,12 +147,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._unscaled_data = copy(self._data)
         self.set_data(self._data)
         self.after_calculate()
-        
-        if self.colorbar is not None:
-            if isinstance(self.colorbar, CustomColorbar):
-                self.colorbar.update_limits()
-            else:
-                raise Exception("Cannot update limits of a colorbar that is not of type 'CustomColorbar'. Got type '"+type(self.colorbar)+"'")
+
+        # Update this image's colors based on the colorbar's limits
+        if self.colorbar:
+            self.set_clim(self.colorbar.vmin, self.colorbar.vmax)
         
         canvas = self._axes.get_figure().canvas
         canvas.get_tk_widget().update_idletasks()
@@ -217,4 +191,3 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             elif cscale == '^10': data = 10.**self._unscaled_data
             self.cscale = cscale
             self.set_data(data,scaled=False)
-
