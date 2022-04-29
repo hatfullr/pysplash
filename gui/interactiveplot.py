@@ -162,8 +162,8 @@ class InteractivePlot(tk.Frame,object):
             args = (
                 self.ax,
                 A[idx],
-                self.gui.get_data(x)[idx],
-                self.gui.get_data(y)[idx],
+                self.gui.get_display_data(x)[idx],
+                self.gui.get_display_data(y)[idx],
                 m[idx],
                 h[idx],
                 rho[idx],
