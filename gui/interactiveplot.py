@@ -69,8 +69,10 @@ class InteractivePlot(tk.Frame,object):
     
     def initialize_drawn_object(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.initialize_drawn_object")
-        self.reset_data_xlim(draw=False)
-        self.reset_data_ylim(draw=False)
+        self.reset_data_xylim(which='both',draw=False)
+        if self.colorbar
+        #self.reset_data_xlim(draw=False)
+        #self.reset_data_ylim(draw=False)
         self.enable_draw()
         self.update()
 
@@ -101,7 +103,6 @@ class InteractivePlot(tk.Frame,object):
 
     def set_draw_type(self,new_draw_type):
         if globals.debug > 1: print("interactiveplot.set_draw_type")
-        print("     ",self.draw_type,new_draw_type)
         self.draw_type = new_draw_type
 
     def reset(self,*args,**kwargs):
@@ -326,11 +327,6 @@ class InteractivePlot(tk.Frame,object):
 
         self.gui.set_user_controlled(True)
 
-
-
-        
-                    
-
     def on_point_size_changed(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.on_point_size_changed")
         if isinstance(self.drawn_object,ScatterPlot):
@@ -355,115 +351,7 @@ class InteractivePlot(tk.Frame,object):
                 self.time_text.set_position((event.x,event.y))
                 self.time_text.set_visible(True)
         self.canvas.draw_idle()
-        
-    """
-    def init_colorbar(self):
-        if globals.debug > 1: print("interactiveplot.init_colorbar")
-        d = self.cbwidth + self.cbbuff
-        
-        pos = self.ax.get_position()
-        self.cax = self.fig.add_axes([
-            pos.x1-self.cbwidth - 0.1,
-            pos.y0 + 0.5*d,
-            self.cbwidth,
-            pos.height - 0.5*d,
-        ],visible=False)
-        
-        self.cax.yaxis.tick_right()
-        
-        self.colorbar = matplotlib.colorbar.ColorbarBase(self.cax)
 
-    
-    def show_colorbar(self):
-        if globals.debug > 1: print("interactiveplot.show_colorbar")
-        if self.cax is None: self.init_colorbar()
-        if self.cax.get_visible(): return
-        
-        pos = self.ax.get_position()
-        
-        d = self.cbbuff + self.cbwidth
-        
-        self.ax.set_position([
-            pos.x0,
-            pos.y0 + 0.5*d,
-            pos.width - d - 0.1,
-            pos.height - 0.5*d,
-        ])
-
-        self.cax.set_visible(True)
-
-        # Enable the colorbar scale controls
-        self.gui.controls.enable('colorbar')
-        
-        self.colorbar_visible = True
-        self.update_colorbar_label()
-
-    def hide_colorbar(self):
-        if globals.debug > 1: print("interactiveplot.hide_colorbar")
-        if self.cax is None: return
-        if not self.cax._visible: return
-        
-        self.disconnect_clim()
-        
-        pos = self.ax.get_position()
-        
-        d = self.cbbuff + self.cbwidth
-        
-        self.ax.set_position([
-            pos.x0,
-            pos.y0 - 0.5*d,
-            pos.width + d,
-            pos.height + 0.5*d
-        ])
-        
-        self.cax.set_visible(False)
-
-        # Disable the colorbar controls
-        self.gui.controls.caxis_scale.set('linear')
-        self.gui.controls.disable('colorbar')
-
-        self.colorbar_visible = False
-        
-    def update_colorbar_clim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.update_colorbar_clim")
-        if self.gui.controls.caxis_adaptive_limits.get():
-            if self.drawn_object is not None:
-                data = self.drawn_object._data
-                vmin = np.nanmin(data[np.isfinite(data)])
-                vmax = np.nanmax(data[np.isfinite(data)])
-                self.colorbar.norm = matplotlib.colors.Normalize(vmin=vmin,vmax=vmax)
-                self.colorbar.draw_all()
-                # Update the values in the control panel
-                self.gui.controls.caxis_limits.low.set(vmin)
-                self.gui.controls.caxis_limits.high.set(vmax)
-        else:
-            # Make sure the colorbar limits match what is in the controls panel
-            ylim = [
-                self.gui.controls.caxis_limits.low.get(),
-                self.gui.controls.caxis_limits.high.get(),
-            ]
-            if ylim[0] != self.cax.get_ylim()[0] or ylim[1] != self.cax.get_ylim()[1]:
-                data = self.drawn_object._data
-                self.colorbar.norm = matplotlib.colors.Normalize(vmin=ylim[0],vmax=ylim[1])
-                self.colorbar.draw_all()
-                self.canvas.draw_idle()
-                
-    def update_data_clim(self,axis=None,ylim=None):
-        if globals.debug > 1: print("interactiveplot.update_data_clim")
-        if self.drawn_object is not None:
-            if ylim is None: ylim = self.cax.get_ylim()
-            self.drawn_object.set_clim(ylim)
-    
-    def connect_clim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.connect_clim")
-        if self.cax is not None: self.cax_cid = self.cax.callbacks.connect('ylim_changed',self.update_data_clim)
-    
-    def disconnect_clim(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.disconnect_clim")
-        if self.cax_cid is not None:
-            self.cax.callbacks.disconnect(self.cax_cid)
-            self.cax_cid = None
-    """
     def on_data_changed(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.on_data_changed")
         if isinstance(self.drawn_object,IntegratedValuePlot):
@@ -521,9 +409,9 @@ class InteractivePlot(tk.Frame,object):
 
     def reset_colorbar_limits(self, draw=True):
         if globals.debug > 1: print("interactiveplot.reset_colorbar_limits")
-
+        
         new_vmin, new_vmax = self.colorbar.calculate_limits()
-
+        
         vmin = self.colorbar.vmin
         vmax = self.colorbar.vmax
         limits_changed = False
