@@ -22,21 +22,46 @@ class IntegratedValuePlot(CustomAxesImage,object):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
 
+        # We are calculating integral sum(m * A / rho * W) dz where
+        # m is mass, A is a given quantity, rho is density, and W is
+        # the kernel function. We must have the same units on the
+        # x and y axes or else this calculation makes no sense.
+        if physical_units[1] != physical_units[2]:
+            raise ValueError("Cannot calculate an integrated value plot that has different units on the x and y axes")
+
         self.A = np.ascontiguousarray(A,dtype=np.double)
         self.x = np.ascontiguousarray(x,dtype=np.double)
         self.y = np.ascontiguousarray(y,dtype=np.double)
         self.m = np.ascontiguousarray(m,dtype=np.double)
         self.h = np.ascontiguousarray(h,dtype=np.double)
         self.rho = np.ascontiguousarray(rho,dtype=np.double)
+
+        # We are given all the quantities in display units. For now,
+        # we want to show integrated value plots only in physical units.
         
-        self.physical_units = physical_units
-        self.display_units = display_units
+        physical_quantity_unit = physical_units[0]
+        physical_length_unit = physical_units[1]
+        physical_mass_unit = physical_units[3]
+        physical_density_unit = physical_units[5]
+        display_quantity_unit = display_units[0]
+        display_length_unit = display_units[1]
+        display_mass_unit = display_units[3]
+        display_density_unit = display_units[5]
+
+        physical_unit = physical_mass_unit * physical_quantity_unit / physical_density_unit * physical_length_unit / physical_length_unit**3
+        display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**3
+        
+        self.units = physical_unit / display_unit
+        
+        #self.physical_units = physical_units
+        #self.display_units = display_units
 
         self.wint, self.ctab = setupintegratedkernel()
         self.wint = np.ascontiguousarray(self.wint,dtype=np.double)
 
         # Make everything in physical units and then just set the
         # extent to display units later
+        """
         self.A *= self.physical_units[0]
         self.x *= self.physical_units[1]
         self.y *= self.physical_units[2]
@@ -44,10 +69,14 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.h *= self.physical_units[4]
         self.rho *= self.physical_units[5]
         self.wint *= self.physical_units[4]**3
+        """
 
         self.h2 = self.h**2
         self.ctabinvh2 = self.ctab/self.h2
-
+        # Later we multiply by the integrated kernel function, which returns the quantity
+        # int_0^1 W(u')*h^3 du' where u' is unitless and W(u')*h^3 is unitless. In
+        # StarSmasher, when the density is calculated the final result is divided by h^3,
+        # so we do that here too.
         self.quantity = np.ascontiguousarray(
             self.m*self.A/(self.rho*self.h2*self.h),
             dtype=np.double,
@@ -92,18 +121,23 @@ class IntegratedValuePlot(CustomAxesImage,object):
         xpmax = self.x+self.h
         ypmin = self.y-self.h
         ypmax = self.y+self.h
-
+        
+        """
         display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
         
         idx = np.logical_and(
                 np.logical_and(xpmax > xmin*display_to_physical[1], xpmin < xmax*display_to_physical[1]),
                 np.logical_and(ypmax > ymin*display_to_physical[2], ypmin < ymax*display_to_physical[2]),
         )
-        
+        """
+        idx = np.logical_and(
+            np.logical_and(xpmax > xmin, xpmin < xmax),
+            np.logical_and(ypmax > ymin, ypmin < ymax),
+        )
         if any(idx):
             self._extent = [xmin,xmax,ymin,ymax]
-            self.dx = float(xmax-xmin)/float(self.xpixels) * display_to_physical[1]
-            self.dy = float(ymax-ymin)/float(self.ypixels) * display_to_physical[2]
+            self.dx = float(xmax-xmin)/float(self.xpixels) #* display_to_physical[1]
+            self.dy = float(ymax-ymin)/float(self.ypixels) #* display_to_physical[2]
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
             
             self.calculate_data(idx)
@@ -144,10 +178,10 @@ class IntegratedValuePlot(CustomAxesImage,object):
             device_idx = cuda.to_device(np.where(idx)[0])
             device_data = cuda.to_device(self._data)
 
-            display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
+            #display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
             
-            xmin = self.ax.get_xlim()[0]*display_to_physical[1]
-            ymin = self.ax.get_ylim()[0]*display_to_physical[2]
+            xmin = self.ax.get_xlim()[0]#*display_to_physical[1]
+            ymin = self.ax.get_ylim()[0]#*display_to_physical[2]
             
             threadsperblock = 512
             blockspergrid = len(idx) // threadsperblock + 1
@@ -170,7 +204,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 self.device_wint,
             )
             cuda.synchronize()
-            self._data = device_data.copy_to_host()
+            self._data = device_data.copy_to_host() * self.units
     else:
         def calculate_data(self,idx): # On CPU
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
@@ -178,12 +212,12 @@ class IntegratedValuePlot(CustomAxesImage,object):
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
 
-            display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
+            #display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
 
-            xmin *= display_to_physical[1]
-            xmax *= display_to_physical[1]
-            ymin *= display_to_physical[2]
-            ymax *= display_to_physical[2]
+            #xmin *= display_to_physical[1]
+            #xmax *= display_to_physical[1]
+            #ymin *= display_to_physical[2]
+            #ymax *= display_to_physical[2]
 
             xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*self.dx
             ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*self.dy
@@ -215,3 +249,4 @@ class IntegratedValuePlot(CustomAxesImage,object):
                     indices = (dr2[idx_r]*ctabinvh2[idx_x][idx_y][idx_r]).astype(int,copy=False)
                     self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices])
 
+            self._data *= self.units

@@ -144,17 +144,17 @@ class InteractivePlot(tk.Frame,object):
 
         else: # It will be some form of IntegratedValue plot
             if self.draw_type == 'Column density':
-                A = self.gui.get_data('rho')
+                A = self.gui.get_display_data('rho')
                 Ap = self.gui.get_physical_units('rho')
                 Ad = self.gui.get_display_units('rho')
             elif self.draw_type == 'Optical depth':
-                A = self.gui.get_data('rho')*self.gui.get_data('opacity')
+                A = self.gui.get_display_data('rho')*self.gui.get_display_data('opacity')
                 Ap = self.gui.get_physical_units('rho')*self.gui.get_physical_units('opacity')
                 Ad = self.gui.get_display_units('rho')*self.gui.get_display_units('opacity')
             
-            m = self.gui.get_data('m')
-            h = self.gui.get_data('h')
-            rho = self.gui.get_data('rho')
+            m = self.gui.get_display_data('m')
+            h = self.gui.get_display_data('h')
+            rho = self.gui.get_display_data('rho')
 
             idx = self.gui.get_data('u') != 0
 
@@ -162,8 +162,8 @@ class InteractivePlot(tk.Frame,object):
             args = (
                 self.ax,
                 A[idx],
-                self.gui.get_data(x)[idx],
-                self.gui.get_data(y)[idx],
+                self.gui.get_display_data(x)[idx],
+                self.gui.get_display_data(y)[idx],
                 m[idx],
                 h[idx],
                 rho[idx],
@@ -182,7 +182,7 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('m'),
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
-                ]
+                ],
             )
 
             kwargs['cmap'] = self.colorbar.cmap

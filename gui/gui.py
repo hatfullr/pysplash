@@ -290,14 +290,15 @@ class GUI(tk.Frame,object):
             # Check to see if the key matches
             xaxis = self.controls.axis_controllers['XAxis'].value.get()
             yaxis = self.controls.axis_controllers['YAxis'].value.get()
+            controller = None
             if key == xaxis:
                 controller = self.controls.axis_controllers['XAxis']
             elif key == yaxis:
                 controller = self.controls.axis_controllers['YAxis']
-
-            scale = controller.scale.get()
-            if scale == 'log10': d = np.log10(d)
-            elif scale == '^10': d = 10**d
+            if controller:
+                scale = controller.scale.get()
+                if scale == 'log10': d = np.log10(d)
+                elif scale == '^10': d = 10**d
         return d
     
     def get_physical_data(self,key):
