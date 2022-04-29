@@ -57,9 +57,6 @@ class InteractivePlot(tk.Frame,object):
         self.previous_xlim = None
         self.previous_ylim = None
 
-        #self.winfo_toplevel().bind("<<ResizeStarted>>",self.disable_draw)
-        #self.winfo_toplevel().bind("<<ResizeStopped>>",self.enable_draw)
-
         self.keypresshandler = KeyPressHandler(self.canvas)
         self.keypresshandler.connect()
 
@@ -67,15 +64,6 @@ class InteractivePlot(tk.Frame,object):
         
         self.init_after_id = None
     
-    def initialize_drawn_object(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.initialize_drawn_object")
-        self.reset_data_xylim(which='both',draw=False)
-        if self.colorbar
-        #self.reset_data_xlim(draw=False)
-        #self.reset_data_ylim(draw=False)
-        self.enable_draw()
-        self.update()
-
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
@@ -83,8 +71,6 @@ class InteractivePlot(tk.Frame,object):
         self.time = tk.DoubleVar()
         
         self.time.trace('w',lambda event=None: self.set_time_text(event))
-        
-        #self.connect_clim()
 
         self.time_text = None
     
@@ -280,17 +266,10 @@ class InteractivePlot(tk.Frame,object):
                 for axis_controller in self.controls.axis_controllers:
                     axis_controller.limits.on_axis_limits_changed()
 
-                # Connect the controls to the interative plot
-                #self.gui.controls.connect()
                 self.controls.save_state()
         
         # After creation
         if not self.gui.data.is_image:
-            if self.draw_type != 'None':
-                # Update the colorbar limits; automatically updates the plotted
-                # color limits
-                #self.colorbar.update_limits()
-                pass
 
             self.previous_args = args
             self.previous_kwargs = kwargs            
@@ -449,16 +428,6 @@ class InteractivePlot(tk.Frame,object):
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = [np.nanmin(xdata), np.nanmax(xdata)]
             new_ylim = [np.nanmin(ydata), np.nanmax(ydata)]
-            
-            #if self.gui.data.is_image:
-            #    new_xlim = self.gui.data['extent'][:2]
-            #    new_ylim = self.gui.data['extent'][-2:]
-            #else:
-            #    new_xlim = np.array(self.get_data_xlim())
-            #    new_ylim = np.array(self.get_data_ylim())
-            #    if self.drawn_object is not None:
-            #        if self.drawn_object.aspect == 'equal':
-            #            new_xlim, new_ylim = self.drawn_object.equalize_aspect_ratio(xlim=new_xlim,ylim=new_ylim)
         else:
             # Get the home view and use its limits as the new limits
             xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
