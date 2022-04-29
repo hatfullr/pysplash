@@ -142,14 +142,13 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     def show(self,side='right'):
         if globals.debug > 1: print("customcolorbar.show")
 
-        if not self.cax.get_visible():
-        
+        if not self.visible:
             self.update_position()
-            self.cax.set_visible(True)
+            self.visible = True
             self.connect_show()
-        
+
             self._ax.get_figure().canvas.draw_idle()
-        
+            
 
     def hide(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.hide")
@@ -158,10 +157,10 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             # Colorbar has yet to be shown
             return
 
-        if self.cax.get_visible():
+        if self.visible:
         
             # Hide the colorbar
-            self.cax.set_visible(False)
+            self.visible = False
 
             self.disconnect_show()
         
@@ -170,5 +169,10 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
             self._ax.get_figure().canvas.draw_idle()
         
-        
-        
+    @property
+    def visible(self):
+        return self.cax.get_visible()
+
+    @visible.setter
+    def visible(self, value):
+        self.cax.set_visible(value)
