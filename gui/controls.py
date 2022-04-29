@@ -77,7 +77,7 @@ class Controls(tk.Frame,object):
         self.axis_controllers = {
             'XAxis' : AxisController(self,'XAxis'),
             'YAxis' : AxisController(self,'YAxis'),
-            'Colorbar' : AxisController(self,'Colorbar',allowadaptive=False),
+            'Colorbar' : AxisController(self,'Colorbar'),
         }
             
         # Plot controls
