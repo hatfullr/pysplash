@@ -351,21 +351,6 @@ class InteractivePlot(tk.Frame,object):
         self.colorbar.set_label(label)
         #self.colorbar.draw_all()
     """
-    
-    def get_data_xlim(self,*args,**kwargs):
-        x = self.gui.get_display_data(self.gui.controls.axis_controllers['XAxis'].value.get(), scaled = False)
-        xmin = np.amin(x)
-        xmax = np.amax(x)
-        xmargin = self.ax.margins()[0]
-        dx = (xmax-xmin)*xmargin
-        return (xmin-dx, xmax+dx)
-    def get_data_ylim(self,*args,**kwargs):
-        y = self.gui.get_display_data(self.gui.controls.axis_controllers['YAxis'].value.get(), scaled = False)
-        ymin = np.amin(y)
-        ymax = np.amax(y)
-        ymargin = self.ax.margins()[1]
-        dy = (ymax-ymin)*ymargin
-        return (ymin-dy, ymax+dy)
 
     def reset_data_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_data_xylim")
