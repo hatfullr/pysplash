@@ -306,11 +306,6 @@ class InteractivePlot(tk.Frame,object):
 
         self.gui.set_user_controlled(True)
 
-    def on_point_size_changed(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.on_point_size_changed")
-        if isinstance(self.drawn_object,ScatterPlot):
-            self.drawn_object.set_size(self.gui.controls.plotcontrols.point_size)
-
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")
         text = "t = %f" % self.time.get()
@@ -331,11 +326,6 @@ class InteractivePlot(tk.Frame,object):
                 self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
-    def on_data_changed(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.on_data_changed")
-        if isinstance(self.drawn_object,IntegratedValuePlot):
-            self.update_colorbar_clim()
-            self.canvas.draw_idle()
     """
     def update_colorbar_label(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update_colorbar_label")
