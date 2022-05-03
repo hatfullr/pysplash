@@ -1,11 +1,13 @@
 import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
+    import ttk
     from tkFont import Font as tkFont
 else:
     import tkinter as tk
+    import tkinter.ttk as ttk
     import tkinter.font as tkFont
-
+from widgets.button import Button
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 import numpy as np
@@ -19,12 +21,10 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Zoom', u'Zoom to rectangle\nx/y fixes axis', u'zoom_to_rect', u'zoom'),
             (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
             (u'Save', u'Save the figure', u'filesave', u'save_figure'),
-            )
+        )
         self.gui = gui
         self.canvas = canvas
         self.toolbar = NavigationToolbar2Tk
-        self.toolbar._old_Button = self.toolbar._Button
-        self.toolbar._Button = self._new_Button
         self.toolbar.__init__(self,self.canvas,master)
 
         self.queued_zoom = None
@@ -35,9 +35,12 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Remove the "x=... y=..." labels
         for child in self.winfo_children():
             if isinstance(child, tk.Label):
-                child.pack_forget()
+                child.destroy()
 
         self.toolbar.set_message = self.set_xy_message
+
+    def pack(self, *args, **kwargs):
+        super(CustomToolbar, self).pack(side=kwargs['side'],fill='y')
         
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
@@ -77,22 +80,6 @@ class CustomToolbar(NavigationToolbar2Tk):
                 break
         else:
             self.gui.interactiveplot.xycoords.set("")
-        
-    def _new_Button(self, *args, **kwargs):
-        b = self._old_Button(*args, **kwargs)
-        # It expects dpi=100, but we have a different dpi. Because stuff is
-        # stupid, we have to first increase the image size then decrease it
-        # using integers.
-        try:
-            b._ntimage = b._ntimage.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
-            b._ntimage = b._ntimage.subsample(100,100)
-            b.config(height=b._ntimage.height(),image=b._ntimage)
-        except AttributeError:
-            b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.zoom(self.canvas.figure.dpi,self.canvas.figure.dpi)
-            b._ntimage._PhotoImage__photo = b._ntimage._PhotoImage__photo.subsample(100,100)
-            b.config(height=b._ntimage._PhotoImage__photo.height(),image=b._ntimage._PhotoImage__photo)
-        return b
-
 
     def on_queued_zoom(self):
         flag = False

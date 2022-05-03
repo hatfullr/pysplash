@@ -1,28 +1,31 @@
 from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
+    import ttk
 else:
     import tkinter as tk
-#from widgets.button import Button
+    import tkinter.ttk as ttk
+from widgets.button import Button
 
-class SwitchButton(tk.Button,object):
-    def __init__(self,master,command=(None,None),variable=None,relief='raised',**kwargs):
+class SwitchButton(Button,object):
+    def __init__(self,master,command=(None,None),variable=None,*args,**kwargs):
         # False for not-pressed and True for pressed
         if variable is None: self.variable = tk.BooleanVar(value=False)
         else: self.variable = variable
-
-        if self.variable.get(): relief='sunken'
         
-        super(SwitchButton,self).__init__(master,command=self.command,relief=relief,**kwargs)
+        super(SwitchButton,self).__init__(master,command=self.command,*args,**kwargs)
+        
+        # Set the initial button state
+        self.state(['pressed'] if self.variable.get() else ['!pressed'])
         
         self._command = command
-
+        
         self.variable.trace('w',self.on_variable_changed)
-    
+        
     def on_variable_changed(self, *args, **kwargs):
-        # Make the button relief always follow exactly the state of the variable
+        # Make the button state always follow exactly the state of the variable
         variable = self.variable.get()
-        self.configure(relief='sunken' if variable else 'raised')
+        self.state(['pressed'] if variable else ['!pressed'])
         
         if self.cget('state') != 'disabled':
             if not hasattr(self._command,"__len__"): command = [self._command,self._command]

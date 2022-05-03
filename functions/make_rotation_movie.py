@@ -4,7 +4,7 @@ if version_info.major < 3:
     import tkFileDialog
 else:
     import tkinter as tk
-    import tk.filedialog as tkFileDialog
+    import tkinter.filedialog as tkFileDialog
 from matplotlib.animation import FuncAnimation
 import numpy as np
 from functions.rotate import rotate
