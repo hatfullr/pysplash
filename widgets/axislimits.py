@@ -15,7 +15,7 @@ import numpy as np
 
 class AxisLimits(tk.LabelFrame,object):
     def __init__(self, master, text="Limits", allowadaptive=True, **kwargs):
-
+        if globals.debug > 1: print("axislimits.__init__")
         super(AxisLimits, self).__init__(master,text=text,**kwargs)
 
         self.allowadaptive = allowadaptive
@@ -87,9 +87,11 @@ class AxisLimits(tk.LabelFrame,object):
                         widget.configure(state=state)
 
     def disable(self,*args,**kwargs):
+        if globals.debug > 1: print("axislimits.disable")
         for child in self.get_all_children():
             self.set_widget_state(child,'disabled')
     def enable(self,*args,**kwargs):
+        if globals.debug > 1: print("axislimits.enable")
         for child in self.get_all_children():
             self.set_widget_state(child,'normal')
                         
