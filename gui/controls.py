@@ -2,9 +2,11 @@ from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
     import ttk
+    from plotcontrols import PlotControls
 else:
     import tkinter as tk
     import tkinter.ttk as ttk
+    from gui.plotcontrols import PlotControls
 from collections import OrderedDict
 from widgets.integerentry import IntegerEntry
 from widgets.labelledframe import LabelledFrame
@@ -12,8 +14,6 @@ from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
 from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
-from gui.customtoolbar import CustomToolbar
-from gui.plotcontrols import PlotControls
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 import globals

@@ -2,24 +2,28 @@ import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
     from tkFont import Font as tkFont
-    from filecontrols import FileControls
     from interactiveplot import InteractivePlot
     from controls import Controls
+    from customtoolbar import CustomToolbar
+    from filecontrols import FileControls
+    from menubar.functionsmenubar import FunctionsMenuBar
+    from menubar.datamenubar import DataMenuBar
 else:
     import tkinter as tk
     import tkinter.font as tkFont
-    from gui.filecontrols import FileControls
     from gui.interactiveplot import InteractivePlot
     from gui.controls import Controls
+    from gui.customtoolbar import CustomToolbar
+    from gui.filecontrols import FileControls
+    from gui.menubar.functionsmenubar import FunctionsMenuBar
+    from gui.menubar.datamenubar import DataMenuBar
 
 from lib.data import Data
+from widgets.menubar import MenuBar
+from functions.make_rotation_movie import make_rotation_movie
+
 from read_file import read_file
 import globals
-from gui.customtoolbar import CustomToolbar
-from widgets.menubar import MenuBar
-from gui.menubar.functionsmenubar import FunctionsMenuBar
-from gui.menubar.datamenubar import DataMenuBar
-from functions.make_rotation_movie import make_rotation_movie
 import copy
 import os.path
 import json

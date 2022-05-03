@@ -6,7 +6,7 @@ from functions.downloaddatafromserver import download_data_from_server
 
 
 class DataMenuBar(tk.Menu, object):
-    def __init__(self, master, gui, *args, name='data', tearoff=0, **kwargs):
+    def __init__(self, master, gui, name='data', tearoff=0, *args, **kwargs):
         super(DataMenuBar, self).__init__(
             master,
             *args,

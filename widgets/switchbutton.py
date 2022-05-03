@@ -3,6 +3,7 @@ if version_info.major < 3:
     import Tkinter as tk
 else:
     import tkinter as tk
+#from widgets.button import Button
 
 class SwitchButton(tk.Button,object):
     def __init__(self,master,command=(None,None),variable=None,relief='raised',**kwargs):

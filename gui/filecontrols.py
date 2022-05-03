@@ -1,12 +1,12 @@
 import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
+    import ttk
     from tkFont import Font as tkFont
-    #from customtoolbar import CustomToolbar
 else:
     import tkinter as tk
+    import tkinter.ttk as ttk
     import tkinter.font as tkFont
-    #from gui.customtoolbar import CustomToolbar
 import globals
 from widgets.integerentry import IntegerEntry
 
@@ -36,9 +36,9 @@ class FileControls(tk.Frame,object):
         if globals.debug > 1: print("filecontrols.create_widgets")
         #self.toolbar = CustomToolbar(self,self.gui,self.canvas,bg=self.bg)
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
-        self.back_button = tk.Button(self,text="<<",width=2,height=1,padx=5,pady=5)
+        self.back_button = ttk.Button(self,text="<<",width=3)
         self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount) #tk.Entry(self,textvariable=self.skip_amount,width=5)
-        self.next_button = tk.Button(self,text=">>",width=2,height=1,padx=5,pady=5)
+        self.next_button = ttk.Button(self,text=">>",width=3)
         
     def place_widgets(self):
         if globals.debug > 1: print("filecontrols.place_widgets")

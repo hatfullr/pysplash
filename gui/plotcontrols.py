@@ -11,7 +11,7 @@ from widgets.floatentry import FloatEntry
 import globals
 
 class PlotControls(LabelledFrame, object):
-    def __init__(self, master, *args, relief='sunken', bd=1, **kwargs):
+    def __init__(self, master, relief='sunken', bd=1, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.__init__")
         super(PlotControls, self).__init__(master, "Plot Controls", *args, relief=relief, bd=bd, **kwargs)
 

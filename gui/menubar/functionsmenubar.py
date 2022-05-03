@@ -4,7 +4,7 @@ else: import Tkinter as tk
 
 
 class FunctionsMenuBar(tk.Menu, object):
-    def __init__(self, master, gui, *args, name='functions', tearoff=0, **kwargs):
+    def __init__(self, master, gui, name='functions', tearoff=0, *args, **kwargs):
         super(FunctionsMenuBar, self).__init__(
             master,
             *args,

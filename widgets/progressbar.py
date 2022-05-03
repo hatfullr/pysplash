@@ -9,7 +9,7 @@ else:
 class ProgressBar(ttk.Frame,object):
     style_initialized = False
     
-    def __init__(self,master,*args,textvariable=None,maximum=100,style="ProgressBar.TFrame",borderwidth=1,relief='sunken',**kwargs):
+    def __init__(self,master,textvariable=None,maximum=100,style="ProgressBar.TFrame",borderwidth=1,relief='sunken',*args,**kwargs):
         ttkstyle = ttk.Style()
         if not ProgressBar.style_initialized:
             # https://stackoverflow.com/a/56678946/4954083

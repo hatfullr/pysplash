@@ -1,8 +1,10 @@
 from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
+    import tkFileDialog
 else:
     import tkinter as tk
+    import tk.filedialog as tkFileDialog
 from matplotlib.animation import FuncAnimation
 import numpy as np
 from functions.rotate import rotate
@@ -41,7 +43,7 @@ def make_rotation_movie(gui):
             gui.update()
         return gui.interactiveplot.drawn_object,
     
-    savefile = tk.filedialog.asksaveasfilename()
+    savefile = tkFileDialog.asksaveasfilename()
     if not savefile: return
     
     gui.message("Creating rotations movie...")
