@@ -8,16 +8,15 @@ else:
     import tkinter.ttk as ttk
     from gui.plotcontrols import PlotControls
 from collections import OrderedDict
-from widgets.integerentry import IntegerEntry
 from widgets.labelledframe import LabelledFrame
-from widgets.floatentry import FloatEntry
-from widgets.switchbutton import SwitchButton
 from widgets.axiscontroller import AxisController
 from lib.integratedvalueplot import IntegratedValuePlot
+from functions.getwidgetsstates import get_widgets_states
+from functions.setwidgetsstates import set_widgets_states
+from functions.getallchildren import get_all_children
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 import globals
-import inspect # Remove me
 
 class Controls(tk.Frame,object):
     def __init__(self,gui,*args,**kwargs):
@@ -75,13 +74,13 @@ class Controls(tk.Frame,object):
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
 
         self.axis_controllers = {
-            'XAxis' : AxisController(self,'XAxis'),
-            'YAxis' : AxisController(self,'YAxis'),
-            'Colorbar' : AxisController(self,'Colorbar'),
+            'XAxis' : AxisController(self,'XAxis',padx=3,pady=3,relief='sunken'),
+            'YAxis' : AxisController(self,'YAxis',padx=3,pady=3,relief='sunken'),
+            'Colorbar' : AxisController(self,'Colorbar',padx=3,pady=3,relief='sunken'),
         }
             
         # Plot controls
-        self.plotcontrols = PlotControls(self)
+        self.plotcontrols = PlotControls(self,padx=3,pady=3,relief='sunken')
     
     def place_widgets(self):
         if globals.debug > 1: print("controls.place_widgets")
@@ -140,8 +139,7 @@ class Controls(tk.Frame,object):
         variables = []
 
         variables.append(self.gui.filecontrols.current_file)
-
-        for child in self.get_all_children():
+        for child in get_all_children(self):
             if hasattr(child,"get_variables"):
                 variables += child.get_variables()
         
@@ -183,25 +181,16 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.on_colorbar_combobox_selected")
         c = self.axis_controllers[self.axis_names[2]].value.get()
         self.gui.interactiveplot.set_draw_type(c)
-    
-    def get_all_children(self, finList=[], wid=None):
-        #if globals.debug > 1: print("controls.get_all_children")
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
 
     
     def disable(self,temporarily=False):
         if globals.debug > 1: print("controls.disable")
         
-        children = self.get_all_children()
-        if temporarily: self.previous_state = self.get_widget_state(children)
+        children = get_all_children(self)
+        if temporarily: self.previous_state = get_widgets_states(children)
         else: self.previous_state = None
         
-        self.set_widget_state(children,'disabled')
+        set_widgets_states(children,'disabled')
 
     def enable(self):
         if globals.debug > 1: print("controls.enable")
@@ -210,33 +199,46 @@ class Controls(tk.Frame,object):
                 widget.configure(state=state)
             self.previous_state = None
         else:
-            children = self.get_all_children()
-            self.set_widget_state(children,'normal')
+            children = get_all_children(self)
+            set_widgets_states(children,'normal')
     
-    
+    """
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("controls.set_widget_state")
         if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
         for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                current_state = widget.cget('state')
-                if current_state != state:
-                    if isinstance(widget,ttk.Combobox):
-                        if state == 'normal': widget.configure(state='readonly')
-                    else:
-                        widget.configure(state=state)
-
+            if isinstance(widget,(tk.Label, ttk.Label)): continue
+            # tk widgets, and also ttk.Combobox
+            if hasattr(widget, 'configure') and widget.configure():
+                print("widget.configure = ",widget.configure())
+                if 'state' in widget.configure().keys():
+                    current_state = widget.cget('state')
+                    if current_state != state:
+                        if isinstance(widget,ttk.Combobox):
+                            if state == 'normal': widget.configure(state='readonly')
+                        else:
+                            widget.configure(state=state)
+            # ttk widgets
+            elif hasattr(widget, 'state'):
+                current_state = widget.state()
+                if state not in current_state:
+                    widget.state([state] if isinstance(state,str) else state)
+    
     def get_widget_state(self,widgets):
         if globals.debug > 1: print("controls.get_widget_state")
         if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
         states = []
         for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                states.append([widget,widget.cget('state')])
+            if isinstance(widget,tk.Label): continue
+            # tk widgets
+            if hasattr(widget,'configure') and widget.configure():
+                if 'state' in widget.configure().keys():
+                    states.append([widget,widget.cget('state')])
+            # ttk widgets
+            elif hasattr(widget, 'state'):
+                states.append([widget,widget.state()])
         return states
-
+    """
     def is_limits_changed(self, which):
         if globals.debug > 1: print("controls.is_limits_changed")
 
@@ -289,6 +291,12 @@ class Controls(tk.Frame,object):
                 need_reset = True
                 break
 
+        # If any of the axis units changed
+        for axis_controller in self.axis_controllers.values():
+            if axis_controller.units.value in changed_variables:
+                need_reset = True
+                break
+
         # Update the x and y scales of the data
         #self.gui.data.set_xscale(self.axis_controllers['XAxis'].scale.get())
         #self.gui.data.set_yscale(self.axis_controllers['YAxis'].scale.get())
@@ -327,7 +335,6 @@ class Controls(tk.Frame,object):
             # Now set the new axis limits
             self.gui.interactiveplot.ax.set_xlim(user_xmin, user_xmax)
             self.gui.interactiveplot.ax.set_ylim(user_ymin, user_ymax)
-            print("limits changed")
             need_reset = True
             
         

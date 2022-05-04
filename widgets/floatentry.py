@@ -14,13 +14,17 @@ import numpy as np
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',extra_validatecommands=[],**kwargs):
+    def __init__(self,master,validate='focusout',extra_validatecommands=[],variable=None,**kwargs):
         self.extra_validatecommands = extra_validatecommands
         self.special_characters = [["."],["E"],["+","-"]]
         self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         self._textvariable = tk.StringVar()
-        self.textvariable = kwargs.pop('textvariable', None)
+
+        if 'textvariable' in kwargs.keys():
+            raise TypeError("Keyword 'textvariable' is not valid")
+        
+        self.variable = variable
         
         super(FloatEntry,self).__init__(master,textvariable=self._textvariable,**kwargs)
         self.configure(
@@ -28,14 +32,18 @@ class FloatEntry(FlashingEntry,object):
             validatecommand=(self.register(self.validatecommand),'%P'),
         )
         
-        if self.textvariable:
-            self.tvtrace_id = self.textvariable.trace("w", self.format_text)
+        if self.variable:
+            if not isinstance(self.variable, tk.DoubleVar):
+                raise TypeError("Keyword argument 'variable' must be of type tk.DoubleVar. Received type '"+type(self.variable).__name__+"'")
+            self.tvtrace_id = self.variable.trace("w", self.format_text)
+
+        self.format_text()
 
 
     def validatecommand(self, newtext):
         # Allow empty text
         if not newtext: return True
-
+        
         # Reformat the text so it is in a regular format for us to check
         newtext = newtext.replace("d","e").replace("D","E").strip()
         newtext = newtext.replace(",",".") # Weird Europeans!
@@ -45,9 +53,9 @@ class FloatEntry(FlashingEntry,object):
         except ValueError:
             self.flash()
             return False
-
+            
         if all([command(newtext) for command in self.extra_validatecommands]):
-            self.textvariable.set(float(newtext))
+            self.variable.set(float(newtext))
             self._textvariable.set(newtext)
             return True
         else:
@@ -59,8 +67,8 @@ class FloatEntry(FlashingEntry,object):
     def format_text(self, *args, **kwargs):
         # Technically this function gets called 2 times, but I am not sure why.
         # This should not affect the result of the function, though
-        #print(self.textvariable.get())
-        number = self.textvariable.get()
+        #print(self.variable.get())
+        number = self.variable.get()
         fontname = str(self.cget('font'))
         if version_info.major < 3:
             font = tkFont(name=fontname, exists=True)

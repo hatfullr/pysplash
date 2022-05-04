@@ -10,7 +10,6 @@ import signal
 import subprocess
 from lib.threadedtask import ThreadedTask
 from widgets.progressbar import ProgressBar
-#from widgets.tooltip import ToolTip
 import globals
 
 try:

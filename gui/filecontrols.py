@@ -10,6 +10,8 @@ else:
 import globals
 from widgets.integerentry import IntegerEntry
 from widgets.button import Button
+from functions.getallchildren import get_all_children
+from functions.setwidgetsstates import set_widgets_states
 
 class FileControls(tk.Frame,object):
     def __init__(self,gui,canvas,bg='white',*args,**kwargs):
@@ -74,29 +76,22 @@ class FileControls(tk.Frame,object):
             text = '...'+text
         
         self.current_file_displayed.set(text)
-
-    def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("filecontrols.get_all_children")
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
             
     def disable(self,group):
         if globals.debug > 1: print("filecontrols.disable")
-        if group == 'all': children = self.get_all_children()
-        elif group == 'toolbar': children = self.get_all_children(wid=self.toolbar)
+        if group == 'all': children = get_all_children(self)
+        elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
-        self.set_state(children,'disabled')
+        set_widgets_states(children, 'disabled')
+        #self.set_state(children,'disabled')
 
     def enable(self,group):
         if globals.debug > 1: print("filecontrols.enable")
-        if group == 'all': children = self.get_all_children()
-        elif group == 'toolbar': children = self.get_all_children(wid=self.toolbar)
+        if group == 'all': children = get_all_children(self)
+        elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
-        self.set_state(children,'normal')
+        set_widgets_states(children, 'normal')
+        #self.set_state(children,'normal')
 
     def set_state(self,widgets,state):
         if globals.debug > 1: print("filecontrols.set_state")

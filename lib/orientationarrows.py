@@ -19,9 +19,6 @@ class OrientationArrows:
 
         self.visible = True
 
-        #self.ax.callbacks.connect("xlim changed",self.update)
-        #self.ax.callbacks.connect("ylim changed",self.update)
-        
         self.artists = []
 
     def clear(self,*args,**kwargs):

@@ -7,9 +7,10 @@ else:
     import tkinter.ttk as ttk
 
 from widgets.labelledframe import LabelledFrame
-from widgets.floatentry import FloatEntry
-from widgets.switchbutton import SwitchButton
 from widgets.axislimits import AxisLimits
+from widgets.axisunits import AxisUnits
+from widgets.axisscale import AxisScale
+from functions.getallchildren import get_all_children
 import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
@@ -27,6 +28,7 @@ class AxisController(LabelledFrame,object):
         )
 
         self.axis = None
+        self.cid = None
         self.allowadaptive=allowadaptive
         
         self.create_variables()
@@ -63,124 +65,83 @@ class AxisController(LabelledFrame,object):
             textvariable=self.value,
         )
 
-        self.label_and_scale_frame = tk.Frame(self)
-
-        self.label_frame = tk.Frame(self.label_and_scale_frame)
-        self.label_label = tk.Label(self.label_frame,text="Label")
+        self.label_frame = tk.LabelFrame(self,text="Label")
         self.label_entry = tk.Entry(
             self.label_frame,
             textvariable=self.label,
             width=11,
         )
         
-        self.scale_buttons_frame = tk.Frame(self.label_and_scale_frame)
-        self.linear_button = tk.Radiobutton(
-            self.scale_buttons_frame,
-            text="linear",
-            variable=self.scale,
-            indicatoron=False,
-            value="linear",
-            padx=5,
-            pady=5,
-        )
-        self.log_button = tk.Radiobutton(
-            self.scale_buttons_frame,
-            text="log10",
-            variable=self.scale,
-            indicatoron=False,
-            value="log10",
-            padx=5,
-            pady=5,
-        )
-        self.pow10_button = tk.Radiobutton(
-            self.scale_buttons_frame,
-            text="^10",
-            variable=self.scale,
-            indicatoron=False,
-            value="^10",
-            padx=5,
-            pady=5,
-        )
-
-
         self.limits = AxisLimits(self,allowadaptive=self.allowadaptive)
+        self.units_and_scale_frame = tk.Frame(self)
+        self.units = AxisUnits(self.units_and_scale_frame)
+        self.scale = AxisScale(self.units_and_scale_frame)
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")
         self.combobox.pack(side='top',fill='x')
 
-        self.label_entry.pack(side='right')
-        self.label_label.pack(side='right')
-        self.label_frame.pack(side='left')
-        
-        self.pow10_button.pack(side='right')
-        self.log_button.pack(side='right')
-        self.linear_button.pack(side='right')
-        self.scale_buttons_frame.pack(side='right',fill='x')
-        
-        self.label_and_scale_frame.pack(side='top',fill='x')
+        self.label_entry.pack(fill='x',expand=True,padx=2)
+        self.label_frame.pack(side='top',fill='x',expand=True)
 
-        self.limits.pack(side='top',fill='x',padx=2)
+        self.limits.pack(side='top',fill='x')
+
+        self.units.pack(side='left',fill='both',expand=True,padx=(0,5))
+        self.scale.pack(side='left')
+        self.units_and_scale_frame.pack(side='top',fill='x',expand=True)
         
-    def connect(self,axis):
+    def connect(self,axis,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.connect")
         if axis is not None:
             self.axis = axis
             self.limits.connect(self.axis)
-            self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
-        
-    def set_widget_state(self,widgets,state):
-        if globals.debug > 1: print("axiscontroller.set_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                current_state = widget.cget('state')
-                if current_state != state:
-                    if isinstance(widget,ttk.Combobox):
-                        if state == 'normal': widget.configure(state='readonly')
-                    else:
-                        widget.configure(state=state)
-
-    def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("axiscontroller.get_all_children")
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
+            self.units.connect(self.axis)
+            self.scale.connect(self.axis)
+            self.cid = self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
+    
+    def disconnect(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.disconnect")
+        self.limits.disconnect()
+        self.units.disconnect()
+        self.scale.disconnect()
+        if self.axis and self.cid:
+            self.axis.get_figure().canvas.mpl_disconnect(self.cid)
+            self.cid = None
+     
+    
         
     def disable(self,*args,**kwargs):
-        for child in self.get_all_children():
+        if globals.debug > 1: print("axiscontroller.disable")
+        for child in get_all_children(self):
             self.set_widget_state(child,'disabled')
     def enable(self,*args,**kwargs):
-        for child in self.get_all_children():
+        if globals.debug > 1: print("axiscontroller.enable")
+        for child in get_all_children(self):
             self.set_widget_state(child,'normal')
 
-    def update_scale_buttons(self, *args, **kwargs):
-        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
-
-        # Only do this if we are not using adaptive limits
-        if not self.limits.adaptive.get():
-        
-            limits = [self.limits.low.get(), self.limits.high.get()]
-            # Allow negative values if we are in the log10 scale, but if we are in
-            # any other scale then disable the log10 button
-            if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
-                self.log_button.configure(state='disabled')
-            else:
-                self.log_button.configure(state='normal')
+    
 
     def update_labels(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.update_labels")
-        
         if self.axis.get_label_text() != self.label.get():
             parent_ax = self.axis.axes
             if isinstance(self.axis, XAxis):
                 parent_ax.set_xlabel(self.label.get())
             elif isinstance(self.axis, YAxis):
                 parent_ax.set_ylabel(self.label.get())
+
+    def update_scale_buttons(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
+
+        # Only do this if we are not using adaptive limits
+        if not self.limits.adaptive.get():
+            limits = [self.limits.low.get(), self.limits.high.get()]
+            # Allow negative values if we are in the log10 scale, but if we are in
+            # any other scale then disable the log10 button
+            if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
+                self.scale.log_button.configure(state='disabled')
+            else:
+                self.scale.log_button.configure(state='normal')
     
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")

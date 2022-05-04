@@ -17,6 +17,9 @@ class FlashingEntry(ttk.Entry,object):
         super(FlashingEntry,self).pack(expand=True,fill='both')
         self.bind("<Configure>", self.on_configure)
 
+        # Bind the Enter key to focusout
+        self.bind("<Return>", lambda *args,**kwargs: self.winfo_toplevel().focus())
+
     def pack(self,*args,**kwargs):
         self.container.pack(*args,**kwargs)
 
@@ -44,6 +47,8 @@ class FlashingEntry(ttk.Entry,object):
                 'background':self.container.cget('background'),
             }
             self.container.configure(background=self.flash_color)
+            # Set the focus to this widget
+            self.focus()
         else:
             # We are already flashing, so we should extend the flash duration
             # such that the flashing ends "time" from now

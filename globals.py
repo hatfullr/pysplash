@@ -16,3 +16,5 @@ debug = 1
 # value to False gives ~10x performance increase.
 use_multiprocessing_on_scatter_plots = False
 
+# The width of a tooltip to determine text wrapping
+tooltip_wraplength=50

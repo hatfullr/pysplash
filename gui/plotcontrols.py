@@ -8,6 +8,9 @@ else:
 from widgets.labelledframe import LabelledFrame
 from widgets.integerentry import IntegerEntry
 from widgets.floatentry import FloatEntry
+from functions.getwidgetsstates import get_widgets_states
+from functions.setwidgetsstates import set_widgets_states
+from functions.getallchildren import get_all_children
 import globals
 
 class PlotControls(LabelledFrame, object):
@@ -47,9 +50,9 @@ class PlotControls(LabelledFrame, object):
         # Rotations
         self.rotations_frame = tk.Frame(self)
         self.rotation_label = tk.Label(self.rotations_frame, text="Rotation (x,y,z deg)")
-        self.rotation_x_entry = FloatEntry(self.rotations_frame, textvariable=self.rotation_x)
-        self.rotation_y_entry = FloatEntry(self.rotations_frame, textvariable=self.rotation_y)
-        self.rotation_z_entry = FloatEntry(self.rotations_frame, textvariable=self.rotation_z)
+        self.rotation_x_entry = FloatEntry(self.rotations_frame, variable=self.rotation_x)
+        self.rotation_y_entry = FloatEntry(self.rotations_frame, variable=self.rotation_y)
+        self.rotation_z_entry = FloatEntry(self.rotations_frame, variable=self.rotation_z)
 
         # Show Orientation
         self.show_orientation_checkbutton = tk.Checkbutton(
@@ -75,23 +78,15 @@ class PlotControls(LabelledFrame, object):
 
         # Show Orientation
         self.show_orientation_checkbutton.pack(side='top',fill='x',expand=True)
-
-    def get_all_children(self, finList=[], wid=None):
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
         
     def disable(self,temporarily=False):
         if globals.debug > 1: print("plotcontrols.disable")
         
-        children = self.get_all_children()
-        if temporarily: self.previous_state = self.get_widget_state(children)
+        children = get_all_children(self)
+        if temporarily: self.previous_state = get_widgets_states(children)
         else: self.previous_state = None
         
-        self.set_widget_state(children,'disabled')
+        set_widgets_states(children,'disabled')
 
     def enable(self):
         if globals.debug > 1: print("plotcontrols.enable")
@@ -100,9 +95,9 @@ class PlotControls(LabelledFrame, object):
                 widget.configure(state=state)
             self.previous_state = None
         else:
-            children = self.get_all_children()
-            self.set_widget_state(children,'normal')
-
+            children = get_all_children(self)
+            set_widgets_states(children,'normal')
+    """
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("plotcontrols.set_widget_state")
         if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
@@ -125,3 +120,4 @@ class PlotControls(LabelledFrame, object):
                 if isinstance(widget,tk.Label): continue
                 states.append([widget,widget.cget('state')])
         return states
+    """

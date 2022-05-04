@@ -1,67 +1,24 @@
-""" tk_ToolTip_class101.py
-gives a Tkinter widget a tooltip as the mouse is above the widget
-tested with Python27 and Python34  by  vegaseat  09sep2014
-www.daniweb.com/programming/software-development/code/484591/a-tooltip-class-for-tkinter
+# https://github.com/matplotlib/matplotlib/blob/1ff14f140546b8df3f17543ff8dac3ddd210c0f1/lib/matplotlib/backends/_backend_tk.py#L840
+import globals
+import textwrap
+import matplotlib.backends
 
-Modified to include a delay time by Victor Zaccardo, 25mar16
-"""
-
-try:
-    # for Python2
-    import Tkinter as tk
-except ImportError:
-    # for Python3
-    import tkinter as tk
-
-class ToolTip(object):
-    """
-    create a tooltip for a given widget
-    """
-    def __init__(self, widget, text='widget info'):
-        self.waittime = 500     #miliseconds
-        self.wraplength = 180   #pixels
-        self.widget = widget
-        self.text = text
-        self.widget.bind("<Enter>", self.enter)
-        self.widget.bind("<Leave>", self.leave)
-        self.widget.bind("<ButtonPress>", self.leave)
-        self.id = None
-        self.tw = None
-
-    def enter(self, event=None):
-        self.schedule()
-
-    def leave(self, event=None):
-        self.unschedule()
-        self.hidetip()
-
-    def schedule(self):
-        self.unschedule()
-        self.id = self.widget.after(self.waittime, self.showtip)
-
-    def unschedule(self):
-        id = self.id
-        self.id = None
-        if id:
-            self.widget.after_cancel(id)
-
-    def showtip(self, event=None):
-        x = y = 0
-        x, y, cx, cy = self.widget.bbox("insert")
-        x += self.widget.winfo_rootx() + 25
-        y += self.widget.winfo_rooty() + 20
-        # creates a toplevel window
-        self.tw = tk.Toplevel(self.widget)
-        # Leaves only the label and removes the app window
-        self.tw.wm_overrideredirect(True)
-        self.tw.wm_geometry("+%d+%d" % (x, y))
-        label = tk.Label(self.tw, text=self.text, justify='left',
-                       background="#ffffff", relief='solid', borderwidth=1,
-                       wraplength = self.wraplength)
-        label.pack(ipadx=1)
-
-    def hidetip(self):
-        tw = self.tw
-        self.tw= None
-        if tw:
-            tw.destroy()
+class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
+    @staticmethod
+    def createToolTip(widget, text):
+        text = textwrap.fill(text, width=globals.tooltip_wraplength)
+        toolTip = ToolTip(widget)
+        def enter(event):
+            toolTip.showtip(text)
+            # ttk widgets have an attribute called "state" which they use
+            # to set the widget styling. When the user is hovering over
+            # the widget, we should make sure the widget's style is set
+            # to the "active" state
+            if hasattr(widget, "state") and widget.state() != 'disabled':
+                widget.state(['active'])
+        def leave(event):
+            toolTip.hidetip()
+            if hasattr(widget, "state") and widget.state() != 'disabled':
+                widget.state(["!active"])
+        widget.bind('<Enter>', enter)
+        widget.bind('<Leave>', leave)

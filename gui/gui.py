@@ -21,6 +21,7 @@ else:
 from lib.data import Data
 from widgets.menubar import MenuBar
 from functions.make_rotation_movie import make_rotation_movie
+from functions.getallchildren import get_all_children
 
 from read_file import read_file
 import globals
@@ -82,7 +83,7 @@ class GUI(tk.Frame,object):
         all_mapped = False
         while not all_mapped:
             self.update()
-            for child in self.get_all_children():
+            for child in get_all_children(self):
                 if child.winfo_exists() == 0:
                     break
             else:
@@ -175,7 +176,7 @@ class GUI(tk.Frame,object):
         )
         self.controls = Controls(
             self,
-            width=2*self.dpi, # pixels = inches * dpi
+            width=2.25*self.dpi, # pixels = inches * dpi
             bd=1,
             relief='sunken',
             padx=5,
@@ -198,6 +199,9 @@ class GUI(tk.Frame,object):
 
         self.message_label.place(rely=1,relx=1,anchor="se")
         self.pack(fill='both',expand=True)
+
+        # Make the controls have a fixed width
+        self.controls.pack_propagate(False)
 
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")
@@ -370,14 +374,4 @@ class GUI(tk.Frame,object):
         for filename in os.listdir(tmp_path):
             if filename not in self.filenames:
                 self.filenames.append(os.path.join(tmp_path,filename))
-        
-            
-                         
-    def get_all_children(self, finList=[], wid=None):
-        #if globals.debug > 1: print("gui.get_all_children")
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
+

@@ -1,17 +1,17 @@
 from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
-    import ttk
 else:
     import tkinter as tk
-    import tkinter.ttk as ttk
 from widgets.button import Button
 
 class SwitchButton(Button,object):
     def __init__(self,master,command=(None,None),variable=None,*args,**kwargs):
         # False for not-pressed and True for pressed
-        if variable is None: self.variable = tk.BooleanVar(value=False)
-        else: self.variable = variable
+        self.variable = variable
+        if self.variable is None: self.variable = tk.BooleanVar(value=False)
+        if not isinstance(self.variable, tk.BooleanVar):
+            raise TypeError("Keyword argument 'variable' must be of type tk.BooleanVar. Received '"+type(self.variable).__name__+"'")
         
         super(SwitchButton,self).__init__(master,command=self.command,*args,**kwargs)
         

@@ -8,6 +8,8 @@ else:
 
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
+from widgets.tooltip import ToolTip
+from functions.getallchildren import get_all_children
 import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
@@ -44,34 +46,28 @@ class AxisLimits(tk.LabelFrame,object):
 
         self.entry_low = FloatEntry(
             self,
-            textvariable=self.low,
+            variable=self.low,
         )
         self.entry_high = FloatEntry(
             self,
-            textvariable=self.high,
+            variable=self.high,
         )
         self.adaptive_button = SwitchButton(
             self,
-            text="Adaptive",
+            text="A",
+            width=2,
             variable=self.adaptive,
             command=(self.adaptive_on, self.adaptive_off),
         )
+        ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible.")
+        
         
     def place_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.place_widgets")
 
         self.entry_low.pack(side='left',fill='x',expand=True)
         self.entry_high.pack(side='left',fill='x',expand=True)
-        if self.allowadaptive: self.adaptive_button.pack(side='left')
-
-    def get_all_children(self, finList=[], wid=None):
-        if globals.debug > 1: print("axislimits.get_all_children")
-        if wid is None: _list = self.winfo_children()
-        else: _list = wid.winfo_children()        
-        for item in _list:
-            finList.append(item)
-            self.get_all_children(finList=finList,wid=item)
-        return finList
+        if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2)
 
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("axislimits.set_widget_state")
@@ -88,21 +84,21 @@ class AxisLimits(tk.LabelFrame,object):
 
     def disable(self,*args,**kwargs):
         if globals.debug > 1: print("axislimits.disable")
-        for child in self.get_all_children():
+        for child in get_all_children(self):
             self.set_widget_state(child,'disabled')
     def enable(self,*args,**kwargs):
         if globals.debug > 1: print("axislimits.enable")
-        for child in self.get_all_children():
+        for child in get_all_children(self):
             self.set_widget_state(child,'normal')
                         
     def connect(self,axis):
         if globals.debug > 1: print("axislimits.connect")
         if axis:
             self.axis=axis
-            if isinstance(axis, XAxis):
-                self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
-            elif isinstance(axis, YAxis):
-                self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
+            if isinstance(self.axis, XAxis):
+                self.cid = self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
+            elif isinstance(self.axis, YAxis):
+                self.cid = self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
             
             # Update the entry widgets
             self.on_axis_limits_changed()
@@ -110,7 +106,7 @@ class AxisLimits(tk.LabelFrame,object):
     def disconnect(self):
         if globals.debug > 1: print("axislimits.disconnect")
         if self.axis and self.cid:
-            self.axis.axes.callbacks.disconnect(self.cid)
+            self.axis.callbacks.disconnect(self.cid)
             self.cid = None
             
     def on_axis_limits_changed(self, *args, **kwargs):
