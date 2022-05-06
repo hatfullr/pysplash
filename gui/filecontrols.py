@@ -14,12 +14,12 @@ from functions.getallchildren import get_all_children
 from functions.setwidgetsstates import set_widgets_states
 
 class FileControls(tk.Frame,object):
-    def __init__(self,gui,canvas,bg='white',*args,**kwargs):
+    def __init__(self,master,gui,canvas,bg='white',*args,**kwargs):
         if globals.debug > 1: print("filecontrols.__init__")
         self.gui = gui
         self.canvas = canvas
         self.bg = bg
-        super(FileControls,self).__init__(self.gui,*args,bg=self.bg,**kwargs)
+        super(FileControls,self).__init__(master,self.gui,*args,bg=self.bg,**kwargs)
         
         self.create_variables()
         self.create_widgets()
@@ -37,11 +37,10 @@ class FileControls(tk.Frame,object):
         
     def create_widgets(self):
         if globals.debug > 1: print("filecontrols.create_widgets")
-        #self.toolbar = CustomToolbar(self,self.gui,self.canvas,bg=self.bg)
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
-        self.back_button = Button(self,text="<<",width=3)
+        self.back_button = Button(self,text="<<",width=3,command=self.gui.previous_file)
         self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount) #tk.Entry(self,textvariable=self.skip_amount,width=5)
-        self.next_button = Button(self,text=">>",width=3)
+        self.next_button = Button(self,text=">>",width=3,command=self.gui.next_file)
         
     def place_widgets(self):
         if globals.debug > 1: print("filecontrols.place_widgets")

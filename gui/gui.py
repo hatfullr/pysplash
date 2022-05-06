@@ -78,8 +78,8 @@ class GUI(tk.Frame,object):
 
         #self.plottoolbar.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
-        self.filecontrols.next_button.configure(command=self.next_file)
-        self.filecontrols.back_button.configure(command=self.previous_file)
+        #self.filecontrols.next_button.configure(command=self.next_file)
+        #self.filecontrols.back_button.configure(command=self.previous_file)
 
         all_mapped = False
         while not all_mapped:
@@ -166,6 +166,7 @@ class GUI(tk.Frame,object):
         
         self.filecontrols = FileControls(
             self.under_plot_frame,
+            self,
             self.interactiveplot.canvas,
             bg='white',
             relief='sunken',
