@@ -39,12 +39,11 @@ class FileControls(tk.Frame,object):
         if globals.debug > 1: print("filecontrols.create_widgets")
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
         self.back_button = Button(self,text="<<",width=3,command=self.gui.previous_file)
-        self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount) #tk.Entry(self,textvariable=self.skip_amount,width=5)
+        self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount)
         self.next_button = Button(self,text=">>",width=3,command=self.gui.next_file)
         
     def place_widgets(self):
         if globals.debug > 1: print("filecontrols.place_widgets")
-        #self.toolbar.grid(row=0,column=0)
         self.current_file_label.grid(row=0,column=1,sticky='ew')
         self.back_button.grid(row=0,column=2)
         self.skip_amount_entry.grid(row=0,column=3,sticky='news')
@@ -82,7 +81,6 @@ class FileControls(tk.Frame,object):
         elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         set_widgets_states(children, 'disabled')
-        #self.set_state(children,'disabled')
 
     def enable(self,group):
         if globals.debug > 1: print("filecontrols.enable")
@@ -90,7 +88,6 @@ class FileControls(tk.Frame,object):
         elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         set_widgets_states(children, 'normal')
-        #self.set_state(children,'normal')
 
     def set_state(self,widgets,state):
         if globals.debug > 1: print("filecontrols.set_state")

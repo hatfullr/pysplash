@@ -32,7 +32,6 @@ class AxisLimits(tk.LabelFrame,object):
         return [
             self.low,
             self.high,
-            self.adaptive,
         ]
 
     def create_variables(self, *args, **kwargs):
@@ -124,6 +123,28 @@ class AxisLimits(tk.LabelFrame,object):
         #if high != round(limits[1],len(str(high))):
         #    self.high.set(limits[1])
 
+    def set_adaptive_limits(self, *args, **kwargs):
+        if globals.debug > 1: print("axislimits.set_adaptive_limits")
+        if self.adaptive.get():
+            # Set the limit entries to be the data's true, total limits
+            if self.axis:
+                # Try to locate the GUI widget
+                for child in self.winfo_toplevel().winfo_children():
+                    if isinstance(child, gui.gui.GUI):
+                        # Check if this axis is the colorbar
+                        if self.axis._axes is child.interactiveplot.colorbar.cax:
+                            newlim = child.interactiveplot.colorbar.calculate_limits()
+                        # This axis is either the x or y axes of the main plot (not the colorbar)
+                        else:
+                            if isinstance(self.axis, XAxis):
+                                newlim, dummy = child.interactiveplot.calculate_xylim(which='xlim')
+                            elif isinstance(self.axis, YAxis):
+                                dummy, newlim = child.interactiveplot.calculate_xylim(which='ylim')
+
+                        if None not in newlim: self.set_limits(newlim)
+                        break
+        
+
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
         if not self.allowadaptive: return
@@ -134,25 +155,7 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.configure(state='disabled')
         self.entry_high.configure(state='disabled')
 
-        
-        # Set the limit entries to be the data's true, total limits
-        if self.axis:
-            # Try to locate the GUI widget
-            for child in self.winfo_toplevel().winfo_children():
-                if isinstance(child, gui.gui.GUI):
-                    # Check if this axis is the colorbar
-                    if self.axis._axes is child.interactiveplot.colorbar.cax:
-                        newlim = child.interactiveplot.colorbar.calculate_limits()
-                    # This axis is either the x or y axes of the main plot (not the colorbar)
-                    else:
-                        if isinstance(self.axis, XAxis):
-                            newlim, dummy = child.interactiveplot.calculate_xylim(which='xlim')
-                        elif isinstance(self.axis, YAxis):
-                            dummy, newlim = child.interactiveplot.calculate_xylim(which='ylim')
-                            
-                    if None not in newlim: self.set_limits(newlim)
-                    break
-        
+        self.set_adaptive_limits()
             
 
     def adaptive_off(self, *args, **kwargs):

@@ -84,24 +84,16 @@ class FloatEntry(FlashingEntry,object):
     def format_text(self, *args, **kwargs):
         # Technically this function gets called 2 times, but I am not sure why.
         # This should not affect the result of the function, though
-        #print(self.variable.get())
         number = self.variable.get()
         fontname = str(self.cget('font'))
-        if version_info.major < 3:
-            font = tkFont(name=fontname, exists=True)
-        else:
-            font = tkFont.nametofont(fontname)
+        if version_info.major < 3: font = tkFont(name=fontname, exists=True)
+        else: font = tkFont.nametofont(fontname)
         width = int(self.winfo_width() / font.measure("A"))
-        #print(width)
-        #total_width = max(3, self.cget('width'))
-
-        # Test the generic conversion
-        #testtext = "%-G" % number
-        
-        #precision = 1
-        #if "." in testtext:
-        #    decimalplace = testtext.index(".")
-        #    precision = max(precision, total_width - testtext.index("."))
-        
-        self._textvariable.set(("%-*.*G" % (width,width-2,number)).strip())
+        precision = width
+        newtext = ("%-*.*G" % (width,precision,number)).strip()
+        while font.measure(newtext) > self.winfo_width():
+            precision -= 1
+            if precision < 0: break
+            newtext = ("%-*.*G" % (width,precision,number)).strip()
+        self._textvariable.set(newtext)
 

@@ -14,11 +14,11 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
             # to set the widget styling. When the user is hovering over
             # the widget, we should make sure the widget's style is set
             # to the "active" state
-            if hasattr(widget, "state") and widget.state() != 'disabled':
+            if hasattr(widget, "state") and 'disabled' not in widget.state():
                 widget.state(['active'])
         def leave(event):
             toolTip.hidetip()
             if hasattr(widget, "state") and widget.state() != 'disabled':
                 widget.state(["!active"])
-        widget.bind('<Enter>', enter)
-        widget.bind('<Leave>', leave)
+        widget.bind('<Enter>', enter, add='+')
+        widget.bind('<Leave>', leave, add='+')

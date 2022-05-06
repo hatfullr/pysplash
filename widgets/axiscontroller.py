@@ -50,6 +50,9 @@ class AxisController(LabelledFrame,object):
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
         self.units.value.trace('w',self.update_limits)
+
+        if self.usecombobox:
+            self.combobox.bind("<<ComboboxSelected>>", self.limits.set_adaptive_limits, add='+')
         
 
     def get_variables(self,*args,**kwargs):

@@ -13,7 +13,7 @@ class SwitchButton(Button,object):
         if not isinstance(self.variable, tk.BooleanVar):
             raise TypeError("Keyword argument 'variable' must be of type tk.BooleanVar. Received '"+type(self.variable).__name__+"'")
         
-        super(SwitchButton,self).__init__(master,command=self.command,*args,**kwargs)
+        super(SwitchButton,self).__init__(master,switch=True,command=self.command,*args,**kwargs)
         
         # Set the initial button state
         self.state(['pressed'] if self.variable.get() else ['!pressed'])
@@ -25,7 +25,6 @@ class SwitchButton(Button,object):
     def on_variable_changed(self, *args, **kwargs):
         # Make the button state always follow exactly the state of the variable
         variable = self.variable.get()
-        self.state(['pressed'] if variable else ['!pressed'])
         
         if 'disabled' not in self.state():
             if not hasattr(self._command,"__len__"): command = [self._command,self._command]
