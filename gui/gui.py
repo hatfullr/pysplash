@@ -73,7 +73,8 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-        
+        # Disable the colorbar initially
+        self.controls.axis_controllers['Colorbar'].disable()
 
         #self.plottoolbar.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
@@ -112,10 +113,6 @@ class GUI(tk.Frame,object):
 
         self.controls.connect()
 
-        # Turn on adaptive limits in x and y initially
-        #for name in self.controls.axis_names[:2]:
-        #    self.controls.axis_controllers[name].limits.adaptive_on()
-        
         self.controls.save_state()
         
     def initialize_xy_controls(self):
@@ -237,7 +234,8 @@ class GUI(tk.Frame,object):
             read_file(self.filecontrols.current_file.get()),
             #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
-
+        # Enable the colorbar
+        self.controls.axis_controllers['Colorbar'].enable()
         if self.data.is_image:
             return
 
@@ -258,17 +256,15 @@ class GUI(tk.Frame,object):
         values = ['None']
         ckeys = self.data['data'].keys()
         for key in ['x','y','m','h','rho']:
-            if key not in ckeys: break
-        else: values.append("Column density")
-        for key in ['x','y','m','h','rho','opacity']:
-            if key not in ckeys: break
-        else: values.append("Optical depth")
+            if key not in ckeys:
+                # Disable the colorbar controls if we are missing any of these
+                self.controls.axis_controllers['Colorbar'].disable()
+                break
 
         # Update the axis controllers
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
-        self.controls.axis_controllers['Colorbar'].combobox.configure(values=values)
 
         self.initialize_xy_controls()
 

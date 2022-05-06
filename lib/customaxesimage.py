@@ -45,7 +45,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.colorbar = colorbar
         if self.colorbar:
             self.colorbar.connect_axesimage(self)
-        
+
         if not self.data_is_image:
             self.previous_xlim = self._axes.get_xlim()
             self.previous_ylim = self._axes.get_ylim()
@@ -118,7 +118,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         
     def _calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._calculate")
-
         self.calculate_xypixels()
         
         #self.after_id_calculate = None
@@ -175,7 +174,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
     def set_data(self,new_data,scaled=True):
         if globals.debug > 1: print("customaxesimage.set_data")
-        #self._data = new_data
         if scaled:
             if new_data.dtype != 'bool':
                 if self.cscale == 'log10': new_data = np.log10(new_data)

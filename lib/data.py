@@ -36,10 +36,14 @@ class Data(collections.OrderedDict,object):
         
         # Assume linear data initially
         self.scale = 'linear'
-        
+
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
         if not self.is_image: self.__init__(self._original)
+
+    def set_units(self, key, units, *args, **kwargs):
+        if globals.debug > 1: print("data.set_units")
+        self['display_units'][key] = copy.copy(self._original['display_units'][key]) / units
         
     def rotate(self,anglexdeg,angleydeg,anglezdeg):
         if globals.debug > 1: print("data.rotate")

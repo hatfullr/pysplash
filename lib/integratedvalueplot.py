@@ -18,7 +18,7 @@ except ImportError:
     has_jit = False
 
 class IntegratedValuePlot(CustomAxesImage,object):
-    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,**kwargs):
+    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,plot_units,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
 
@@ -52,6 +52,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
         display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**3
         
         self.units = physical_unit / display_unit
+        self.plot_units = plot_units
         
         #self.physical_units = physical_units
         #self.display_units = display_units
@@ -138,9 +139,10 @@ class IntegratedValuePlot(CustomAxesImage,object):
             self._extent = [xmin,xmax,ymin,ymax]
             self.dx = float(xmax-xmin)/float(self.xpixels) #* display_to_physical[1]
             self.dy = float(ymax-ymin)/float(self.ypixels) #* display_to_physical[2]
-            self._data = np.zeros(np.shape(self._data),dtype=np.double)
             
+            self._data = np.zeros(np.shape(self._data),dtype=np.double)
             self.calculate_data(idx)
+            self._data *= self.units / self.plot_units
         if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
 
     
@@ -204,7 +206,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 self.device_wint,
             )
             cuda.synchronize()
-            self._data = device_data.copy_to_host() * self.units
+            self._data = device_data.copy_to_host()
     else:
         def calculate_data(self,idx): # On CPU
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
@@ -248,5 +250,3 @@ class IntegratedValuePlot(CustomAxesImage,object):
 
                     indices = (dr2[idx_r]*ctabinvh2[idx_x][idx_y][idx_r]).astype(int,copy=False)
                     self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices])
-
-            self._data *= self.units

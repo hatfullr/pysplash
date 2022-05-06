@@ -61,13 +61,12 @@ class AxisLimits(tk.LabelFrame,object):
         )
         ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible.")
         
-        
     def place_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.place_widgets")
 
-        self.entry_low.pack(side='left',fill='x',expand=True)
-        self.entry_high.pack(side='left',fill='x',expand=True)
-        if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2)
+        self.entry_low.pack(side='left',fill='both',expand=True,padx=(2,0),pady=(0,2))
+        self.entry_high.pack(side='left',fill='both',expand=True,pady=(0,2))
+        if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2,pady=(0,2))
 
     def set_widget_state(self,widgets,state):
         if globals.debug > 1: print("axislimits.set_widget_state")
@@ -142,14 +141,14 @@ class AxisLimits(tk.LabelFrame,object):
             for child in self.winfo_toplevel().winfo_children():
                 if isinstance(child, gui.gui.GUI):
                     # Check if this axis is the colorbar
-                    if self.axis.axes is child.interactiveplot.colorbar.cax:
+                    if self.axis._axes is child.interactiveplot.colorbar.cax:
                         newlim = child.interactiveplot.colorbar.calculate_limits()
                     # This axis is either the x or y axes of the main plot (not the colorbar)
                     else:
                         if isinstance(self.axis, XAxis):
-                            newlim, dummy = child.interactiveplot.calculate_data_xylim(which='xlim')
+                            newlim, dummy = child.interactiveplot.calculate_xylim(which='xlim')
                         elif isinstance(self.axis, YAxis):
-                            dummy, newlim = child.interactiveplot.calculate_data_xylim(which='ylim')
+                            dummy, newlim = child.interactiveplot.calculate_xylim(which='ylim')
                             
                     if None not in newlim: self.set_limits(newlim)
                     break

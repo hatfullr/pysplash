@@ -11,13 +11,15 @@ from widgets.axislimits import AxisLimits
 from widgets.axisunits import AxisUnits
 from widgets.axisscale import AxisScale
 from functions.getallchildren import get_all_children
-import gui
+from widgets.mathentry import MathEntry
+from widgets.entry import Entry
+from functions.setwidgetsstates import set_widgets_states
 from matplotlib.axis import XAxis, YAxis
 import globals
 import numpy as np
 
 class AxisController(LabelledFrame,object):
-    def __init__(self,master,text,relief='sunken',bd=1,allowadaptive=True,**kwargs):
+    def __init__(self,master,text,relief='sunken',bd=1,allowadaptive=True,usecombobox=True,gui=None,**kwargs):
         if globals.debug > 1: print("axiscontroller.__init__")
         super(AxisController,self).__init__(
             master,
@@ -26,6 +28,12 @@ class AxisController(LabelledFrame,object):
             bd=bd,
             **kwargs
         )
+
+        self.usecombobox = usecombobox
+        if not self.usecombobox and not gui:
+            raise ValueError("If keyword 'usecombobox' is set to False then keyword 'gui' cannot be None")
+        
+        self.gui = gui
 
         self.axis = None
         self.cid = None
@@ -36,10 +44,13 @@ class AxisController(LabelledFrame,object):
         self.place_widgets()
 
         self.previous_scale = self.scale.get()
+        self.previous_units = self.units.value.get()
         
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
+        self.units.value.trace('w',self.update_limits)
+        
 
     def get_variables(self,*args,**kwargs):
         return [
@@ -57,19 +68,26 @@ class AxisController(LabelledFrame,object):
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_widgets")
-        self.combobox = ttk.Combobox(
-            self,
-            state='readonly',
-            width=0,
-            values=[self.value.get()],
-            textvariable=self.value,
-        )
+        if self.usecombobox:
+            self.combobox = ttk.Combobox(
+                self,
+                state='readonly',
+                width=0,
+                values=[self.value.get()],
+                textvariable=self.value,
+            )
+        else:
+            self.value.set("")
+            self.entry = MathEntry(
+                self,
+                self.gui,
+                textvariable=self.value,
+            )
 
         self.label_frame = tk.LabelFrame(self,text="Label")
-        self.label_entry = tk.Entry(
+        self.label_entry = Entry(
             self.label_frame,
             textvariable=self.label,
-            width=11,
         )
         
         self.limits = AxisLimits(self,allowadaptive=self.allowadaptive)
@@ -79,10 +97,11 @@ class AxisController(LabelledFrame,object):
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")
-        self.combobox.pack(side='top',fill='x')
+        if self.usecombobox: self.combobox.pack(side='top',fill='both')
+        else: self.entry.pack(side='top',fill='both')
 
-        self.label_entry.pack(fill='x',expand=True,padx=2)
-        self.label_frame.pack(side='top',fill='x',expand=True)
+        self.label_entry.pack(fill='both',expand=True,padx=2,pady=(0,2))
+        self.label_frame.pack(side='top',fill='both',expand=True)
 
         self.limits.pack(side='top',fill='x')
 
@@ -95,14 +114,14 @@ class AxisController(LabelledFrame,object):
         if axis is not None:
             self.axis = axis
             self.limits.connect(self.axis)
-            self.units.connect(self.axis)
+            #self.units.connect(self.axis)
             self.scale.connect(self.axis)
             self.cid = self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
     
     def disconnect(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.disconnect")
         self.limits.disconnect()
-        self.units.disconnect()
+        #self.units.disconnect()
         self.scale.disconnect()
         if self.axis and self.cid:
             self.axis.get_figure().canvas.mpl_disconnect(self.cid)
@@ -112,13 +131,11 @@ class AxisController(LabelledFrame,object):
         
     def disable(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.disable")
-        for child in get_all_children(self):
-            self.set_widget_state(child,'disabled')
+        set_widgets_states(get_all_children(self), 'disabled')
+
     def enable(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.enable")
-        for child in get_all_children(self):
-            self.set_widget_state(child,'normal')
-
+        set_widgets_states(get_all_children(self), 'normal')
     
 
     def update_labels(self,*args,**kwargs):
@@ -190,3 +207,11 @@ class AxisController(LabelledFrame,object):
                     self.limits.high.set(np.log10(np.log10(high)))
 
             self.previous_scale = current_scale
+    
+    def update_limits(self, *args, **kwargs):
+        if globals.debug > 1: print('axiscontroller.update_limits')
+
+        units = self.units.value.get()
+        for limit in [self.limits.low, self.limits.high]:
+            limit.set(limit.get() * self.previous_units / units)
+        self.previous_units = units

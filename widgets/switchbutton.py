@@ -27,7 +27,7 @@ class SwitchButton(Button,object):
         variable = self.variable.get()
         self.state(['pressed'] if variable else ['!pressed'])
         
-        if self.cget('state') != 'disabled':
+        if 'disabled' not in self.state():
             if not hasattr(self._command,"__len__"): command = [self._command,self._command]
             else: command = self._command
             
@@ -37,7 +37,7 @@ class SwitchButton(Button,object):
             elif command[1] is not None: command[1](*args, **kwargs)
 
     def command(self,*args,**kwargs):
-        if self.cget('state') != 'disabled':
+        if 'disabled' not in self.state():
             # Flip the variable, setting off chain of events in on_variable_changed
             self.variable.set(not self.variable.get())
     

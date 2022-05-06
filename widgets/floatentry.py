@@ -14,7 +14,8 @@ import numpy as np
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',extra_validatecommands=[],variable=None,**kwargs):
+    def __init__(self,master,validate='focusout',extra_validatecommands=[],variable=None,disallowed_values=[],**kwargs):
+        self.disallowed_values = disallowed_values
         self.extra_validatecommands = extra_validatecommands
         self.special_characters = [["."],["E"],["+","-"]]
         self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
@@ -23,6 +24,8 @@ class FloatEntry(FlashingEntry,object):
 
         if 'textvariable' in kwargs.keys():
             raise TypeError("Keyword 'textvariable' is not valid")
+
+        self.bid = None
         
         self.variable = variable
         
@@ -42,7 +45,9 @@ class FloatEntry(FlashingEntry,object):
 
     def validatecommand(self, newtext):
         # Allow empty text
-        if not newtext: return True
+        if not newtext:
+            self.on_validate_success()
+            return True
         
         # Reformat the text so it is in a regular format for us to check
         newtext = newtext.replace("d","e").replace("D","E").strip()
@@ -51,17 +56,29 @@ class FloatEntry(FlashingEntry,object):
         try:
             float(newtext)
         except ValueError:
-            self.flash()
+            self.on_validate_fail()
+            raise
             return False
-            
+
+        if float(newtext) in self.disallowed_values:
+            self.on_validate_fail()
+            return False
+        
         if all([command(newtext) for command in self.extra_validatecommands]):
             self.variable.set(float(newtext))
             self._textvariable.set(newtext)
+            self.on_validate_success()
             return True
         else:
-            self.flash()
+            self.on_validate_fail()
             return False
 
+    def on_validate_fail(self, *args, **kwargs):
+        self.flash()
+        self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus())
+    def on_validate_success(self, *args, **kwargs):
+        if self.bid: self.unbind("<FocusOut>", self.bid)
+        self.bid = None
     
     # Try to fit the text within the widget, but only to a minimum size of "0.0"
     def format_text(self, *args, **kwargs):
@@ -85,6 +102,6 @@ class FloatEntry(FlashingEntry,object):
         #if "." in testtext:
         #    decimalplace = testtext.index(".")
         #    precision = max(precision, total_width - testtext.index("."))
-            
+        
         self._textvariable.set(("%-*.*G" % (width,width-2,number)).strip())
 

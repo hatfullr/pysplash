@@ -12,7 +12,6 @@ def get_widgets_states(widgets):
     if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
     states = []
     for widget in widgets:
-        if isinstance(widget,tk.Label): continue
         # tk widgets
         if hasattr(widget,'configure') and widget.configure():
             if 'state' in widget.configure().keys():

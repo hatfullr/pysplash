@@ -5,40 +5,22 @@ if version_info.major < 3:
 else:
     import tkinter as tk
     from tkinter import ttk
+from widgets.entry import Entry
     
-class FlashingEntry(ttk.Entry,object):
-    def __init__(self,master,borderwidth=1,flash_color='red',width=0,**kwargs):
+class FlashingEntry(Entry,object):
+    def __init__(self,master,borderwidth=1,flash_color='red',**kwargs):
         self._flash_after_id = None
         self.flash_color = flash_color
         self.flashing = False
-        
-        self.container = tk.Frame(master,borderwidth=borderwidth)
-        super(FlashingEntry,self).__init__(self.container,width=width,**kwargs)
-        super(FlashingEntry,self).pack(expand=True,fill='both')
-        self.bind("<Configure>", self.on_configure)
 
-        # Bind the Enter key to focusout
-        self.bind("<Return>", lambda *args,**kwargs: self.winfo_toplevel().focus())
+        self.container = tk.Frame(master,borderwidth=1)
+        super(FlashingEntry,self).__init__(self.container,**kwargs)
 
-    def pack(self,*args,**kwargs):
-        self.container.pack(*args,**kwargs)
+        self.pack = lambda *args,**kwargs: self.container.pack(*args,**kwargs)
+        self.place = lambda *args,**kwargs: self.container.place(*args,**kwargs)
+        self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
 
-    def place(self,*args,**kwargs):
-        self.container.place(*args,**kwargs)
-
-    def grid(self,*args,**kwargs):
-        self.container.grid(*args,**kwargs)
-    
-    def on_configure(self, *args, **kwargs):
-        # Automagically expand the entry widget to fill the frame
-        if self.cget('width') == 0:
-            super(FlashingEntry,self).place(
-                anchor='nw',
-                relheight=1.,
-                relwidth=1.,
-                relx=0.,
-                rely=0.,
-            )
+        super(FlashingEntry, self).pack(fill='both',expand=True)
     
     def flash(self,time=1000):
         if not self.flashing:

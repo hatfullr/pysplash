@@ -142,15 +142,10 @@ class InteractivePlot(tk.Frame,object):
                 kwargs['aspect'] = aspect
                 self.colorbar.hide()
 
-        else: # It will be some form of IntegratedValue plot
-            if self.draw_type == 'Column density':
-                A = self.gui.get_display_data('rho')
-                Ap = self.gui.get_physical_units('rho')
-                Ad = self.gui.get_display_units('rho')
-            elif self.draw_type == 'Optical depth':
-                A = self.gui.get_display_data('rho')*self.gui.get_display_data('opacity')
-                Ap = self.gui.get_physical_units('rho')*self.gui.get_physical_units('opacity')
-                Ad = self.gui.get_display_units('rho')*self.gui.get_display_units('opacity')
+        elif self.draw_type == "Integrated Value": # It will be some form of IntegratedValue plot
+            A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].entry.get_data()
+            if A is None or Ap is None or Ad is None:
+                raise Exception("One of A, Ap, or Ad was None. This should never happen.")
             
             m = self.gui.get_display_data('m')
             h = self.gui.get_display_data('h')
@@ -183,6 +178,7 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
                 ],
+                self.gui.controls.axis_controllers['Colorbar'].units.value.get(),
             )
 
             kwargs['cmap'] = self.colorbar.cmap
@@ -255,13 +251,9 @@ class InteractivePlot(tk.Frame,object):
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
                 raise RuntimeError("Failed to spawn thread to draw the plot")
-            else:
-                # Block until the plot is finished drawing
-                while self.drawn_object.thread.isAlive():
-                    self.winfo_toplevel().update()
-
-                
-        
+            #else:
+            #    self.after(100, lambda *args,**kwargs: print("Try"))
+            
         # After creation
         if not self.gui.data.is_image:
 
@@ -270,6 +262,7 @@ class InteractivePlot(tk.Frame,object):
         
             xadaptive = self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get()
             yadaptive = self.gui.controls.axis_controllers['YAxis'].limits.adaptive.get()
+            cadaptive = self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()
 
             controls_xlimits = [
                 self.gui.controls.axis_controllers['XAxis'].limits.low.get(),
@@ -279,19 +272,27 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.controls.axis_controllers['YAxis'].limits.low.get(),
                 self.gui.controls.axis_controllers['YAxis'].limits.high.get(),
             ]
+            controls_climits = [
+                self.gui.controls.axis_controllers['Colorbar'].limits.low.get(),
+                self.gui.controls.axis_controllers['Colorbar'].limits.high.get(),
+            ]
             
             if ((xadaptive or np.nan in controls_xlimits) and
-                (yadaptive or np.nan in controls_ylimits)): self.reset_data_xylim(which='both',draw=False)
-            elif xadaptive or np.nan in controls_xlimits: self.reset_data_xylim(which='xlim',draw=False)
-            elif yadaptive or np.nan in controls_ylimits: self.reset_data_xylim(which='ylim',draw=False)
+                (yadaptive or np.nan in controls_ylimits)): self.reset_xylim(which='both',draw=False)
+            elif xadaptive or np.nan in controls_xlimits: self.reset_xylim(which='xlim',draw=False)
+            elif yadaptive or np.nan in controls_ylimits: self.reset_xylim(which='ylim',draw=False)
+
+            if self.colorbar.visible and (cadaptive or np.nan in controls_climits):
+                self.reset_clim(draw=False)
+                
 
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
         self.previous_vmin = self.colorbar.vmin
         self.previous_vmax = self.colorbar.vmax
-
+        
         self.gui.set_user_controlled(True)
-
+        
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")
         text = "t = %f" % self.time.get()
@@ -328,27 +329,38 @@ class InteractivePlot(tk.Frame,object):
         #self.colorbar.draw_all()
     """
 
-    def reset_data_xylim(self,which='both',draw=True):
-        if globals.debug > 1: print("interactiveplot.reset_data_xylim")
+    def reset_clim(self, draw=True):
+        if globals.debug > 1: print("interactiveplot.reset_clim")
+        self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
+        newlim = np.array(self.colorbar.calculate_limits(data=self.drawn_object._data))
+        lim = np.array([self.colorbar.vmin, self.colorbar.vmax])
+        if None not in newlim:
+            if any(np.abs((newlim-lim[lim != 0])/lim[lim != 0]) > 0.001):
+                self.colorbar.set_clim(newlim)
+                self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
+        if draw: self.canvas.draw_idle()
+
+    def reset_xylim(self,which='both',draw=True):
+        if globals.debug > 1: print("interactiveplot.reset_xylim")
         
-        new_xlim, new_ylim = self.calculate_data_xylim(which=which)
+        new_xlim, new_ylim = self.calculate_xylim(which=which)
 
         xlim = np.array(self.ax.get_xlim())
         ylim = np.array(self.ax.get_ylim())
         
         if None not in new_xlim:
-            if any(np.abs((new_xlim-xlim)/xlim) > 0.001):
+            if any(np.abs((new_xlim-xlim[xlim != 0])/xlim[xlim != 0]) > 0.001):
                 self.ax.set_xlim(new_xlim)
                 self.gui.controls.axis_controllers['XAxis'].limits.on_axis_limits_changed()
         if None not in new_ylim:
-            if any(np.abs((new_ylim-ylim)/ylim) > 0.001):
+            if any(np.abs((new_ylim-ylim[ylim != 0])/ylim[ylim != 0]) > 0.001):
                 self.ax.set_ylim(new_ylim)
                 self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
             
         if draw: self.canvas.draw_idle()
         
-    def calculate_data_xylim(self, which='both'):
-        if globals.debug > 1: print("interactiveplot.calculate_data_xylim")
+    def calculate_xylim(self, which='both'):
+        if globals.debug > 1: print("interactiveplot.calculate_xylim")
 
         if which not in ['xlim', 'ylim', 'both']:
             raise ValueError("Keyword 'which' must be one of 'xlim', 'ylim', or 'both'. Received ",which)

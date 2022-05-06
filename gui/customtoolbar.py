@@ -54,8 +54,6 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.gui.interactiveplot.reset()
         self.gui.interactiveplot.update()
         
-        #self.gui.interactiveplot.reset_data_xylim()
-
     def get_home_xylimits(self, *args, **kwargs):
         # Simulate a Home button press, but without drawing the plot. Return
         # the resulting x-y limits as xmin, xmax, ymin, ymax

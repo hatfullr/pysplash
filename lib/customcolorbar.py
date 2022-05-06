@@ -46,16 +46,20 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 return child
         return None
         
-    def calculate_limits(self,*args,**kwargs):
+    def calculate_limits(self,data=None,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.calculate_limits")
-        # Get the color data in the plot
-        axesimage = self.find_axesimage()
-        if axesimage:
-            data = axesimage._data
+        if self.visible:
+            # Get the color data in the plot
+            if data is None:
+                axesimage = self.find_axesimage()
+                if axesimage:
+                    data = axesimage._data
+            if data is None: return [None, None]
             vmin = np.nanmin(data[np.isfinite(data)])
             vmax = np.nanmax(data[np.isfinite(data)])
             return [vmin, vmax]
-        return [None, None]
+        else: return [None, None]
+        
 
     def connect_show(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.connect_show")

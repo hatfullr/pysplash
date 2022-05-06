@@ -30,13 +30,6 @@ class Controls(tk.Frame,object):
         style.map('TCombobox', selectforeground=[('readonly', 'black')])
         style.map('TCombobox', fieldbackground=[('disabled',self.gui["bg"])])
 
-        # Order is important
-        self.axis_names = [
-            'XAxis',
-            'YAxis',
-            'Colorbar',
-        ]
-        
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
@@ -48,8 +41,6 @@ class Controls(tk.Frame,object):
         self.state_listeners_connected = True
         
         self.connect_state_listeners()
-        
-        self.axis_controllers[self.axis_names[2]].combobox.bind("<<ComboboxSelected>>",self.on_colorbar_combobox_selected)
         
         self.saved_state = None
         self.previous_state = None
@@ -72,11 +63,10 @@ class Controls(tk.Frame,object):
         
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
-
         self.axis_controllers = {
             'XAxis' : AxisController(self,'XAxis',padx=3,pady=3,relief='sunken'),
             'YAxis' : AxisController(self,'YAxis',padx=3,pady=3,relief='sunken'),
-            'Colorbar' : AxisController(self,'Colorbar',padx=3,pady=3,relief='sunken'),
+            'Colorbar' : AxisController(self,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False,gui=self.gui),
         }
             
         # Plot controls
@@ -149,40 +139,6 @@ class Controls(tk.Frame,object):
                 variables.append(attr)
         return variables
     
-    """
-    def update_axis_comboboxes(self,data):
-        if globals.debug > 1: print("controls.update_axis_comboboxes")
-        # Update the values in the comboboxes with the keys in data
-        if not isinstance(data,OrderedDict):
-            raise TypeError("The data read from a file in read_file must be of type 'OrderedDict', not '"+type(data).__name__+"'")
-
-        data_keys = data['data'].keys()
-        for data_key in ['x','y','z','m','h']:
-            if data_key not in data_keys:
-                raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
-
-        keys = []
-        N = len(data['data']['x'])
-        for key,val in data['data'].items():
-            if hasattr(val,"__len__"):
-                if len(val) == N: keys.append(key)
-        
-        self.xaxis_combobox.config(values=keys)
-        self.yaxis_combobox.config(values=keys)
-
-        # Both rho and u are required for column density plots
-        keys = ["None"]
-        for data_key in ['rho','u']:
-            keys.append("Column density")
-        self.caxis_combobox.config(values=keys)
-    """
-
-    def on_colorbar_combobox_selected(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.on_colorbar_combobox_selected")
-        c = self.axis_controllers[self.axis_names[2]].value.get()
-        self.gui.interactiveplot.set_draw_type(c)
-
-    
     def disable(self,temporarily=False):
         if globals.debug > 1: print("controls.disable")
         
@@ -202,43 +158,7 @@ class Controls(tk.Frame,object):
             children = get_all_children(self)
             set_widgets_states(children,'normal')
     
-    """
-    def set_widget_state(self,widgets,state):
-        if globals.debug > 1: print("controls.set_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        for widget in widgets:
-            if isinstance(widget,(tk.Label, ttk.Label)): continue
-            # tk widgets, and also ttk.Combobox
-            if hasattr(widget, 'configure') and widget.configure():
-                print("widget.configure = ",widget.configure())
-                if 'state' in widget.configure().keys():
-                    current_state = widget.cget('state')
-                    if current_state != state:
-                        if isinstance(widget,ttk.Combobox):
-                            if state == 'normal': widget.configure(state='readonly')
-                        else:
-                            widget.configure(state=state)
-            # ttk widgets
-            elif hasattr(widget, 'state'):
-                current_state = widget.state()
-                if state not in current_state:
-                    widget.state([state] if isinstance(state,str) else state)
-    
-    def get_widget_state(self,widgets):
-        if globals.debug > 1: print("controls.get_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        states = []
-        for widget in widgets:
-            if isinstance(widget,tk.Label): continue
-            # tk widgets
-            if hasattr(widget,'configure') and widget.configure():
-                if 'state' in widget.configure().keys():
-                    states.append([widget,widget.cget('state')])
-            # ttk widgets
-            elif hasattr(widget, 'state'):
-                states.append([widget,widget.state()])
-        return states
-    """
+
     def is_limits_changed(self, which):
         if globals.debug > 1: print("controls.is_limits_changed")
 
@@ -264,7 +184,6 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.get_axis_limits")
         return self.axis_controllers[which].limits.low.get(), self.axis_controllers[which].limits.high.get()
     
-        
     def on_update_button_pressed(self,*args,**kwargs):
         if not self.state_listeners_connected: return
         if globals.debug > 1: print("controls.on_update_button_pressed")
@@ -272,11 +191,12 @@ class Controls(tk.Frame,object):
         # We do the following update step to make sure focus has been released from the
         # entry widgets. Otherwise, we do not register any change in the entry widgets.
         # Send the focus to the root widget
-        self.winfo_toplevel().focus_set()
+        self.winfo_toplevel().focus()
         # Update the focus
         self.update()
 
         need_reset = False
+        redraw_canvas = False
         
         changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
 
@@ -285,39 +205,12 @@ class Controls(tk.Frame,object):
             self.gui.read()
             need_reset = True
 
-        # If the x, y, or colorbar axes' combobox values changed
+        # If the x, y, or colorbar axes' combobox values or units changed
         for axis_controller in self.axis_controllers.values():
-            if axis_controller.value in changed_variables:
+            if (axis_controller.value in changed_variables or # Values
+                axis_controller.units.value in changed_variables): # Units
                 need_reset = True
                 break
-
-        # If any of the axis units changed
-        for axis_controller in self.axis_controllers.values():
-            if axis_controller.units.value in changed_variables:
-                need_reset = True
-                break
-
-        # Update the x and y scales of the data
-        #self.gui.data.set_xscale(self.axis_controllers['XAxis'].scale.get())
-        #self.gui.data.set_yscale(self.axis_controllers['YAxis'].scale.get())
-
-        #print(self.gui.data.scale)
-        
-        """
-        if self.gui.interactiveplot.drawn_object is not None and self.saved_state is not None:
-            axis_controller_exclusively_changed = None
-            for axis_name, axis_controller in self.axis_controllers.items():
-                axis_variables = axis_controller.get_variables()
-                for variable in changed_variables:
-                    if variable is not axis_controller.value and variable not in axis_variables:
-                        break
-                else:
-                    axis_controller_exclusively_changed = axis_controller
-                    break
-
-            if axis_controller_exclusively_changed is self.axis_controllers['Colorbar']:
-                self.gui.interactiveplot.update_colorbar_label()
-        """
 
         # Check if the user changed any of the x or y axis limits
         if self.is_limits_changed(('XAxis','YAxis')):
@@ -341,7 +234,6 @@ class Controls(tk.Frame,object):
         # Perform the queued zoom if there is one
         if self.gui.plottoolbar.queued_zoom:
             self.gui.plottoolbar.queued_zoom()
-            print("queued zoom")
             need_reset = True
         
         # Perform any rotations necessary
@@ -354,7 +246,6 @@ class Controls(tk.Frame,object):
                     self.plotcontrols.rotation_y.get(),
                     self.plotcontrols.rotation_z.get(),
                 )
-                print("rotation")
                 need_reset = True
 
         # Check if the user changed the colorbar axis limits
@@ -369,6 +260,8 @@ class Controls(tk.Frame,object):
         if need_reset:
             self.gui.interactiveplot.reset()
             self.gui.interactiveplot.update()
+        elif redraw_canvas:
+            self.gui.interactiveplot.canvas.draw_idle()
         
         self.save_state()
 

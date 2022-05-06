@@ -12,7 +12,6 @@ def set_widgets_states(widgets,state):
     if globals.debug > 1: print("set_widgets_states")
     if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
     for widget in widgets:
-        if isinstance(widget,(tk.Label, ttk.Label)): continue
         # tk widgets, and also ttk.Combobox
         if hasattr(widget, 'configure') and widget.configure():
             if 'state' in widget.configure().keys():
