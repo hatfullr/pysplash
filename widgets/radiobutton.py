@@ -26,7 +26,7 @@ class RadioButton(SwitchButton, object):
         
         self.variable.trace("w", boolchange)
         self.radiovariable.trace("w", varchange)
-        self.bind("<Button-1>", on_button1)
+        self.bind("<ButtonRelease-1>", on_button1, add='+')
 
         if self.radiovariable.get() == self.value: self.variable.set(True)
 
