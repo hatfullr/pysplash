@@ -18,7 +18,7 @@ except ImportError:
     has_jit = False
 
 class IntegratedValuePlot(CustomAxesImage,object):
-    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,plot_units,**kwargs):
+    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
 
@@ -36,6 +36,9 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.h = np.ascontiguousarray(h,dtype=np.double)
         self.rho = np.ascontiguousarray(rho,dtype=np.double)
 
+        self.x /= kwargs.get('xunits', 1.)
+        self.y /= kwargs.get('yunits', 1.)
+
         # We are given all the quantities in display units. For now,
         # we want to show integrated value plots only in physical units.
         
@@ -52,7 +55,6 @@ class IntegratedValuePlot(CustomAxesImage,object):
         display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**3
         
         self.units = physical_unit / display_unit
-        self.plot_units = plot_units
         
         #self.physical_units = physical_units
         #self.display_units = display_units
@@ -142,7 +144,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
             
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
             self.calculate_data(idx)
-            self._data *= self.units / self.plot_units
+            self._data *= self.units / self.cunits
         if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
 
     

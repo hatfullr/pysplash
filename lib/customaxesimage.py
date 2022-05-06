@@ -11,13 +11,16 @@ from collections import OrderedDict
 from lib.customcolorbar import CustomColorbar
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
         self.xscale = xscale
         self.yscale = yscale
         self.cscale = cscale
+        self.xunits = xunits
+        self.yunits = yunits
+        self.cunits = cunits
         self.aspect = aspect
 
         self.data_is_image = False
@@ -31,7 +34,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         else:
             self._data = copy(data)            
             extent = list(self._axes.get_xlim())+list(self._axes.get_ylim())
-            
+
         kwargs['origin'] = 'lower'
         matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,**kwargs)
         self._extent = extent

@@ -44,7 +44,6 @@ class InteractivePlot(tk.Frame,object):
         #self.colorbar_visible = False
         
         self.drawn_object = None
-        self.draw_type = 'None' # scatter
 
         self.create_variables()
         self.create_widgets()
@@ -87,10 +86,6 @@ class InteractivePlot(tk.Frame,object):
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
 
-    def set_draw_type(self,new_draw_type):
-        if globals.debug > 1: print("interactiveplot.set_draw_type")
-        self.draw_type = new_draw_type
-
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.reset")
         if self.drawn_object is not None:
@@ -120,9 +115,13 @@ class InteractivePlot(tk.Frame,object):
         kwargs = {}
         kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
         kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
+        kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
 
+        colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
+        
         # Scatter plot
-        if self.draw_type == 'None':
+        if not colorbar_text.strip() or colorbar_text.strip() == "":
             if self.gui.data.is_image:
                 method = CustomAxesImage
                 args = (
@@ -142,7 +141,7 @@ class InteractivePlot(tk.Frame,object):
                 kwargs['aspect'] = aspect
                 self.colorbar.hide()
 
-        elif self.draw_type == "Integrated Value": # It will be some form of IntegratedValue plot
+        elif colorbar_text.strip() or colorbar_text.strip() != "":
             A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].entry.get_data()
             if A is None or Ap is None or Ad is None:
                 raise Exception("One of A, Ap, or Ad was None. This should never happen.")
@@ -178,15 +177,17 @@ class InteractivePlot(tk.Frame,object):
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
                 ],
-                self.gui.controls.axis_controllers['Colorbar'].units.value.get(),
             )
 
             kwargs['cmap'] = self.colorbar.cmap
             kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['aspect'] = aspect
             kwargs['colorbar'] = self.colorbar
 
             self.colorbar.show()
+        else:
+            raise Exception("Unable to decide on scatter plot or integrated value plot. This should never happen.")
 
         changed_args = False
         
@@ -313,22 +314,6 @@ class InteractivePlot(tk.Frame,object):
                 self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
-    """
-    def update_colorbar_label(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.update_colorbar_label")
-        if self.drawn_object is None: return
-        if not hasattr(self.drawn_object,"cscale"): return
-
-        label = self.draw_type
-        if self.drawn_object.cscale == 'log10':
-            label = "$\\log_{10}$ "+label
-        elif self.drawn_object.cscale == '^10':
-            label = "$10^{\\mathrm{"+label.replace(" ","\\ ")+"}}$"
-        
-        self.colorbar.set_label(label)
-        #self.colorbar.draw_all()
-    """
-
     def reset_clim(self, draw=True):
         if globals.debug > 1: print("interactiveplot.reset_clim")
         self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
@@ -375,13 +360,21 @@ class InteractivePlot(tk.Frame,object):
             ydata = self.gui.get_display_data(y)
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
-            new_xlim = [np.nanmin(xdata), np.nanmax(xdata)]
-            new_ylim = [np.nanmin(ydata), np.nanmax(ydata)]
+            new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
+            new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
         else:
             # Get the home view and use its limits as the new limits
             xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
-            new_xlim = [xmin, xmax]
-            new_ylim = [ymin, ymax]
+            new_xlim = np.array([xmin, xmax])
+            new_ylim = np.array([ymin, ymax])
+
+        # Apply the units to the limits
+        xunits = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        yunits = self.gui.controls.axis_controllers['YAxis'].units.value.get()
+        
+        new_xlim /= xunits
+        new_ylim /= yunits
+            
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim
         else: return new_xlim, new_ylim

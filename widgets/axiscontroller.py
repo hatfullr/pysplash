@@ -163,11 +163,14 @@ class AxisController(LabelledFrame,object):
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
 
-        low = self.limits.low.get()
-        high = self.limits.high.get()
-
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
+            # First reset the units so that things don't get mucked up
+            self.units.value.set(1.)
+
+            low = self.limits.low.get()
+            high = self.limits.high.get()
+            
             if self.previous_scale == 'linear':
                 if current_scale == 'log10':
                     self.limits.low.set(np.log10(low))
@@ -212,6 +215,7 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print('axiscontroller.update_limits')
 
         units = self.units.value.get()
-        for limit in [self.limits.low, self.limits.high]:
-            limit.set(limit.get() * self.previous_units / units)
-        self.previous_units = units
+        if abs((self.previous_units-units)/units) > 0.001:
+            for limit in [self.limits.low, self.limits.high]:
+                limit.set(limit.get() * self.previous_units / units)
+            self.previous_units = units

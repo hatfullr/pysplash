@@ -44,6 +44,9 @@ class ScatterPlot(CustomAxesImage,object):
             np.full((1,1),False,dtype='bool'),
             **kwargs
         )
+
+        self.x /= self.xunits
+        self.y /= self.yunits
         
         self.initializing = False
         
@@ -92,7 +95,7 @@ class ScatterPlot(CustomAxesImage,object):
             np.logical_and(self.y > ymin, self.y < ymax),
         )
         if any(idx):
-            self._extent = [xmin,xmax,ymin,ymax]
+            self._extent = np.array([xmin,xmax,ymin,ymax])
             self.dx = (xmax-xmin)/float(self.xpixels)
             self.dy = (ymax-ymin)/float(self.ypixels)
             

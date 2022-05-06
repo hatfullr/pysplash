@@ -41,7 +41,8 @@ class MathEntry(FlashingEntry, object):
 
     def validatecommand(self, newtext):
         # Allow empty text
-        if not newtext: return True
+        if not newtext.strip() or newtext.strip() == "":
+            return True
 
         try:
             self.get_data(text=newtext)
@@ -50,6 +51,5 @@ class MathEntry(FlashingEntry, object):
             raise
             return False
 
-        self.gui.interactiveplot.set_draw_type("Integrated Value")
         return True
         
