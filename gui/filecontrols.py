@@ -12,6 +12,8 @@ from widgets.integerentry import IntegerEntry
 from widgets.button import Button
 from functions.getallchildren import get_all_children
 from functions.setwidgetsstates import set_widgets_states
+from widgets.tooltip import ToolTip
+from hotkeyslist import hotkeyslist, hotkeys_to_string
 
 class FileControls(tk.Frame,object):
     def __init__(self,master,gui,canvas,bg='white',*args,**kwargs):
@@ -41,6 +43,11 @@ class FileControls(tk.Frame,object):
         self.back_button = Button(self,text="<<",width=3,command=self.gui.previous_file)
         self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount)
         self.next_button = Button(self,text=">>",width=3,command=self.gui.next_file)
+        
+        ToolTip.createToolTip(self.back_button, "Go back N files. Press "+hotkeys_to_string('previous file')+" to do this and update the plot.")
+        ToolTip.createToolTip(self.next_button, "Go forward N files. Press "+hotkeys_to_string('next file')+" to do this and update the plot.")
+
+        
         
     def place_widgets(self):
         if globals.debug > 1: print("filecontrols.place_widgets")

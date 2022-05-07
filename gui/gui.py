@@ -22,6 +22,8 @@ from lib.data import Data
 from widgets.menubar import MenuBar
 from functions.make_rotation_movie import make_rotation_movie
 from functions.getallchildren import get_all_children
+from lib.hotkeys import Hotkeys
+from hotkeyslist import hotkeyslist
 
 from read_file import read_file
 import globals
@@ -68,19 +70,16 @@ class GUI(tk.Frame,object):
         self.preferences_file = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"preferences.json")
 
         self.load_preferences()
-        
+
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
 
+        self.create_hotkeys()
+
         # Disable the colorbar initially
         self.controls.axis_controllers['Colorbar'].disable()
-
-        #self.plottoolbar.toolbar.set_message = lambda text: self.interactiveplot.xycoords.set(text)
         
-        #self.filecontrols.next_button.configure(command=self.next_file)
-        #self.filecontrols.back_button.configure(command=self.previous_file)
-
         all_mapped = False
         while not all_mapped:
             self.update()
@@ -90,7 +89,7 @@ class GUI(tk.Frame,object):
             else:
                 all_mapped = True
 
-        
+        self.xy_controls_initialized = False
         
         #self.filecontrols.current_file.trace("w",self.read)
         if len(sys.argv) > 1:
@@ -133,6 +132,7 @@ class GUI(tk.Frame,object):
                         break
         self.controls.update()
         self.controls.connect_state_listeners()
+        self.xy_controls_initialized = True
 
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
@@ -201,6 +201,12 @@ class GUI(tk.Frame,object):
         # Make the controls have a fixed width
         self.controls.pack_propagate(False)
 
+    def create_hotkeys(self, *args, **kwargs):
+        if globals.debug > 1: print("gui.create_hotkeys")
+        self.hotkeys = Hotkeys(self.window)
+        self.hotkeys.bind("next file", (self.next_file, self.controls.on_update_button_pressed))
+        self.hotkeys.bind("previous file", (self.previous_file, self.controls.on_update_button_pressed))
+        
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")
         # Display a message on the bottom-right hand corner of the window
@@ -267,7 +273,7 @@ class GUI(tk.Frame,object):
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
 
-        self.initialize_xy_controls()
+        if not self.xy_controls_initialized: self.initialize_xy_controls()
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
