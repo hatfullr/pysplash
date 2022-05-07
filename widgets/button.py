@@ -24,21 +24,34 @@ class Button(ttk.Label, object):
         self._button1pressed = False
         self._mousein = False
 
+    def destroy(self, *args, **kwargs):
+        self.unbind("<Enter>")
+        self.unbind("<Leave>")
+        self.unbind("<Button-1>")
+        self.unbind("<ButtonRelease-1>")
+        super(Button,self).destroy(*args, **kwargs)
+
     def on_button1(self, *args, **kwargs):
         self._button1pressed = True
         if 'disabled' not in self.state(): self.state(['pressed'])
 
     def on_buttonrelease1(self, *args, **kwargs):
         self._button1pressed = False
-        if 'disabled' not in self.state():
-            if self._mousein and self.command is not None: self.command(*args, **kwargs)
+        # If this button is being used to destroy its parent widget, then
+        # we need to do a special try/except clause.
+        try:
+            if 'disabled' not in self.state():
+                if self._mousein and self.command is not None: self.command(*args, **kwargs)
 
-            if self.switch and not hasattr(self, 'variable'): raise AttributeError("If a button is a switch, it needs to have the 'variable' attribute")
-            
-            if self.switch:
-                if self.variable.get(): self.state(['pressed'])
+                if self.switch and not hasattr(self, 'variable'): raise AttributeError("If a button is a switch, it needs to have the 'variable' attribute")
+
+                if self.switch:
+                    if self.variable.get(): self.state(['pressed'])
+                    else: self.state(['!pressed'])
                 else: self.state(['!pressed'])
-            else: self.state(['!pressed'])
+        except tk.TclError as e:
+            if "invalid command name" in str(e): return
+            raise(e)
             
     def on_enter(self, *args, **kwargs):
         self._mousein = True

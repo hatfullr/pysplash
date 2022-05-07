@@ -13,5 +13,6 @@ class FunctionsMenuBar(tk.Menu, object):
             **kwargs
         )
 
+        self.add_command(label='Make movie', command=gui.make_movie)
         self.add_command(label='Make rotation movie', command=gui.make_rotation_movie)
         

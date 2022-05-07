@@ -33,7 +33,7 @@ class FileControls(tk.Frame,object):
     
     def create_variables(self):
         if globals.debug > 1: print("filecontrols.create_variables")
-        self.skip_amount = tk.StringVar()
+        self.skip_amount = tk.IntVar()
         self.current_file = tk.StringVar()
         self.current_file_displayed = tk.StringVar()
         
@@ -41,11 +41,11 @@ class FileControls(tk.Frame,object):
         if globals.debug > 1: print("filecontrols.create_widgets")
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
         self.back_button = Button(self,text="<<",width=3,command=self.gui.previous_file)
-        self.skip_amount_entry = IntegerEntry(self, textvariable=self.skip_amount)
+        self.skip_amount_entry = IntegerEntry(self, variable=self.skip_amount)
         self.next_button = Button(self,text=">>",width=3,command=self.gui.next_file)
         
-        ToolTip.createToolTip(self.back_button, "Go back N files. Press "+hotkeys_to_string('previous file')+" to do this and update the plot.")
-        ToolTip.createToolTip(self.next_button, "Go forward N files. Press "+hotkeys_to_string('next file')+" to do this and update the plot.")
+        ToolTip.createToolTip(self.back_button, "Go back N files. Press "+hotkeys_to_string('previous file')+" to also update the plot.")
+        ToolTip.createToolTip(self.next_button, "Go forward N files. Press "+hotkeys_to_string('next file')+" to also update the plot.")
 
         
         

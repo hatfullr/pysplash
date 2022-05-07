@@ -14,14 +14,12 @@ import numpy as np
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',extra_validatecommands=[],variable=None,disallowed_values=[],**kwargs):
+    def __init__(self,master,validate='focusout',allowblank=True,extra_validatecommands=[],variable=None,disallowed_values=[],**kwargs):
         self.disallowed_values = disallowed_values
         self.extra_validatecommands = extra_validatecommands
-        self.special_characters = [["."],["E"],["+","-"]]
-        self.numbers = ["1","2","3","4","5","6","7","8","9","0"]
-        if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
+        self.allowblank = allowblank
         self._textvariable = tk.StringVar()
-
+        if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         if 'textvariable' in kwargs.keys():
             raise TypeError("Keyword 'textvariable' is not valid")
 
@@ -35,17 +33,19 @@ class FloatEntry(FlashingEntry,object):
             validatecommand=(self.register(self.validatecommand),'%P'),
         )
         
-        if self.variable:
+        if self.variable is not None:
             if not isinstance(self.variable, tk.DoubleVar):
                 raise TypeError("Keyword argument 'variable' must be of type tk.DoubleVar. Received type '"+type(self.variable).__name__+"'")
-            self.tvtrace_id = self.variable.trace("w", self.format_text)
+        else: self.variable = tk.DoubleVar()
+
+        self.variable.trace("w", self.format_text)
 
         self.format_text()
 
 
     def validatecommand(self, newtext):
         # Allow empty text
-        if not newtext:
+        if not newtext and self.allowblank:
             self.on_validate_success()
             return True
         
@@ -55,9 +55,9 @@ class FloatEntry(FlashingEntry,object):
         
         try:
             float(newtext)
-        except ValueError:
+        except Exception as e:
             self.on_validate_fail()
-            raise
+            print(e)
             return False
 
         if float(newtext) in self.disallowed_values:
@@ -72,6 +72,10 @@ class FloatEntry(FlashingEntry,object):
         else:
             self.on_validate_fail()
             return False
+
+        # We passed all tests, so return True
+        self.on_validate_success()
+        return True
 
     def on_validate_fail(self, *args, **kwargs):
         self.flash()

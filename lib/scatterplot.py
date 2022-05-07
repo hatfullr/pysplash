@@ -2,11 +2,9 @@ import sys
 if sys.version_info.major < 3:
     import Tkinter as tk
     from customaxesimage import CustomAxesImage
-    #from threadedtask import ThreadedTask
 else:
     import tkinter as tk
     from lib.customaxesimage import CustomAxesImage
-    #from lib.threadedtask import ThreadedTask
 
 import globals
 from time import time

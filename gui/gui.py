@@ -20,7 +20,8 @@ else:
 
 from lib.data import Data
 from widgets.menubar import MenuBar
-from functions.make_rotation_movie import make_rotation_movie
+from functions.makemovie import make_movie
+from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
@@ -91,7 +92,6 @@ class GUI(tk.Frame,object):
 
         self.xy_controls_initialized = False
         
-        #self.filecontrols.current_file.trace("w",self.read)
         if len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
             self.filecontrols.current_file.set(sys.argv[1])
@@ -339,7 +339,11 @@ class GUI(tk.Frame,object):
         
         if self.filenames[nextidx] != self.filecontrols.current_file.get():
             self.filecontrols.current_file.set(self.filenames[nextidx])
-    
+
+    def make_movie(self, *args, **kwargs):
+        if globals.debug > 1: print("gui.make_movie")
+        make_movie(self)
+            
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)

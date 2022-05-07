@@ -291,6 +291,12 @@ class InteractivePlot(tk.Frame,object):
         self.previous_ylim = self.ax.get_ylim()
         self.previous_vmin = self.colorbar.vmin
         self.previous_vmax = self.colorbar.vmax
+
+        # Put the filename in the axis title for now
+        f = self.gui.filecontrols.current_file.get()
+        if len(f) > 30:
+            f = "..."+f[-27:]
+        self.ax.set_title(f)
         
         self.gui.set_user_controlled(True)
         

@@ -57,7 +57,7 @@ class ProgressBar(ttk.Frame,object):
 
         self.value.trace('w', self._update_progress)
 
-        self._update_progress
+        #self._update_progress
 
         self.bind("<Configure>", self._resize_canvas)
         self._canvas_width = self.winfo_reqwidth()
@@ -66,7 +66,11 @@ class ProgressBar(ttk.Frame,object):
 
 
     def set_text(self,new_text):
-        self._canvas.itemconfig(self._text, text=new_text)
+        try:
+            self._canvas.itemconfig(self._text, text=new_text)
+        except tk.TclError as e:
+            if "invalid command name" in str(e): return
+            raise(e)
 
     def state(self, newstate):
         if "normal" in newstate: newstate[newstate.index("normal")] = "!disabled"
@@ -81,10 +85,14 @@ class ProgressBar(ttk.Frame,object):
         return result
         
     def configure(self, *args, **kwargs):
-        self.state([kwargs.pop('state',None)])
-        if 'value' in kwargs.keys(): self.value.set(kwargs.pop('value'))
-        self.font = kwargs.pop('font', self.font)
-        super(ProgressBar,self).configure(*args,**kwargs)
+        try:
+            self.state([kwargs.pop('state',None)])
+            if 'value' in kwargs.keys(): self.value.set(kwargs.pop('value'))
+            self.font = kwargs.pop('font', self.font)
+            super(ProgressBar,self).configure(*args,**kwargs)
+        except tk.TclError as e:
+            if "invalid command name" in str(e): return
+            raise(e)
         
     def get_progress_color(self, *args, **kwargs):
         return ttk.Style().lookup("TProgressbar", 'background', state=self._get_state())
@@ -92,19 +100,24 @@ class ProgressBar(ttk.Frame,object):
         return ttk.Style().lookup("TProgressbar", "troughcolor", state=self._get_state())
     
     def _update_progress(self, *args, **kwargs):
-        x1 = int(self.value.get()/float(self.maximum)  * self._canvas_width)
+        try:
+            x1 = int(self.value.get()/float(self.maximum)  * self._canvas_width)
         
-        # Update the progress rectangle coordinates
-        self._canvas.coords(
-            self._progress_rectangle,
-            0,
-            0,
-            x1,
-            self._canvas_height,
-        )
-        # Update the progress rectangle color
-        color = self.get_progress_color()
-        self._canvas.itemconfig(self._progress_rectangle, fill=color, outline=color)
+            # Update the progress rectangle coordinates
+            self._canvas.coords(
+                self._progress_rectangle,
+                0,
+                0,
+                x1,
+                self._canvas_height,
+            )
+            # Update the progress rectangle color
+            color = self.get_progress_color()
+        
+            self._canvas.itemconfig(self._progress_rectangle, fill=color, outline=color)
+        except tk.TclError as e:
+            if "invalid command name" in str(e): return
+            raise(e)
             
 
     def _resize_canvas(self, event):

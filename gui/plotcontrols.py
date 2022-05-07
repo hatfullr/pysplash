@@ -45,7 +45,7 @@ class PlotControls(LabelledFrame, object):
         # Point size
         self.point_size_frame = tk.Frame(self)
         self.point_size_label = tk.Label(self.point_size_frame, text="Point size (px)")
-        self.point_size_entry = IntegerEntry(self.point_size_frame,textvariable=self.point_size,disallowed_values=[0])
+        self.point_size_entry = IntegerEntry(self.point_size_frame,variable=self.point_size,disallowed_values=[0])
         
         # Rotations
         self.rotations_frame = tk.Frame(self)

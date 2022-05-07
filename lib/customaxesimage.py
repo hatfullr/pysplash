@@ -23,6 +23,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.cunits = cunits
         self.aspect = aspect
 
+        self.calculating = False
+        
         self.data_is_image = False
         if hasattr(data,"is_image"):
             if data.is_image:
@@ -121,6 +123,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         
     def _calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._calculate")
+        self.calculating = True
         self.calculate_xypixels()
         
         #self.after_id_calculate = None
@@ -153,11 +156,13 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         # Update this image's colors based on the colorbar's limits
         if self.colorbar:
             self.set_clim(self.colorbar.vmin, self.colorbar.vmax)
-        
-        canvas = self._axes.get_figure().canvas
-        canvas.get_tk_widget().update_idletasks()
-        canvas.draw_idle()
+
+        if self._axes is not None:
+            canvas = self._axes.get_figure().canvas
+            canvas.get_tk_widget().update_idletasks()
+            canvas.draw_idle()
         self.after_id_calculate = None
+        self.calculating = False
     
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change

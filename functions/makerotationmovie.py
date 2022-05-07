@@ -21,17 +21,16 @@ def make_rotation_movie(gui):
             anglex = 90
             anglez = i-90
         
-        #anglex = gui.controls.rotation_x.get() + 1
-        #anglez = gui.controls.rotation_z.get() + 1
-        if gui.controls.rotation_x.get() != 90:
-            gui.controls.rotation_x.set(anglex)
-        elif gui.controls.rotation_z.get() != 90:
-            gui.controls.rotation_z.set(anglez)
+        if gui.controls.plotcontrols.rotation_x.get() != 90:
+            gui.controls.plotcontrols.rotation_x.set(anglex)
+        elif gui.controls.plotcontrols.rotation_z.get() != 90:
+            gui.controls.plotcontrols.rotation_z.set(anglez)
 
         print(i,nframes,anglex,anglez)
-        gui.data.rotate(anglex,0,anglez)
-        gui.interactiveplot.reset()
-        gui.interactiveplot.update()
+        gui.controls.on_update_button_pressed()
+        #gui.data.rotate(anglex,0,anglez)
+        #gui.interactiveplot.reset()
+        #gui.interactiveplot.update()
 
         if ((anglex%10 == 0 and anglez == 0) or
             (anglex == 90 and anglez%10 == 0)):
