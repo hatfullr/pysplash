@@ -27,7 +27,7 @@ class FileControls(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.winfo_toplevel().bind("<<ResizeStopped>>",self.set_current_file_displayed)
+        self.winfo_toplevel().bind("<<ResizeStopped>>",self.set_current_file_displayed,add="+")
         self.current_file.trace('w',self.set_current_file_displayed)
         self.skip_amount.set(1)
     
@@ -41,7 +41,7 @@ class FileControls(tk.Frame,object):
         if globals.debug > 1: print("filecontrols.create_widgets")
         self.current_file_label = tk.Label(self,textvariable=self.current_file_displayed,padx=10,bg=self.bg)
         self.back_button = Button(self,text="<<",width=3,command=self.gui.previous_file)
-        self.skip_amount_entry = IntegerEntry(self, variable=self.skip_amount)
+        self.skip_amount_entry = IntegerEntry(self, variable=self.skip_amount,width=4)
         self.next_button = Button(self,text=">>",width=3,command=self.gui.next_file)
         
         ToolTip.createToolTip(self.back_button, "Go back N files. Press "+hotkeys_to_string('previous file')+" to also update the plot.")
@@ -51,16 +51,16 @@ class FileControls(tk.Frame,object):
         
     def place_widgets(self):
         if globals.debug > 1: print("filecontrols.place_widgets")
-        self.current_file_label.grid(row=0,column=1,sticky='ew')
-        self.back_button.grid(row=0,column=2)
-        self.skip_amount_entry.grid(row=0,column=3,sticky='news')
-        self.next_button.grid(row=0,column=4)
+        self.current_file_label.grid(row=0,column=1,sticky='ew',padx=(0,5))
+        self.back_button.grid(row=0,column=2,sticky='ns')
+        self.skip_amount_entry.grid(row=0,column=3,sticky='ns')
+        self.next_button.grid(row=0,column=4,sticky='ns')
 
-        self.columnconfigure(1,weight=4)
-        self.columnconfigure(3,weight=1)
+        self.columnconfigure(1,weight=1)
 
     def set_current_file_displayed(self,*args,**kwargs):
         if globals.debug > 1: print("filecontrols.set_current_file_displayed")
+        self.update_idletasks()
         padx = self.current_file_label.cget('padx')
         text = self.current_file.get()
         allowed_width = self.current_file_label.winfo_width() - 2*padx

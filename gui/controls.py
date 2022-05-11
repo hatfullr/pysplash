@@ -64,9 +64,9 @@ class Controls(tk.Frame,object):
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
         self.axis_controllers = {
-            'XAxis' : AxisController(self,'XAxis',padx=3,pady=3,relief='sunken'),
-            'YAxis' : AxisController(self,'YAxis',padx=3,pady=3,relief='sunken'),
-            'Colorbar' : AxisController(self,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False,gui=self.gui),
+            'XAxis' : AxisController(self,self.gui,'XAxis',padx=3,pady=3,relief='sunken'),
+            'YAxis' : AxisController(self,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
+            'Colorbar' : AxisController(self,self.gui,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False),
         }
             
         # Plot controls
@@ -211,6 +211,9 @@ class Controls(tk.Frame,object):
                 axis_controller.units.value in changed_variables): # Units
                 need_reset = True
                 break
+                #if any(self.gui.get_display_data(axis_controller.value.get(), scaled=False) <= 0):
+                #    axis_controller.scale.linear_button.invoke()
+                
 
         # Check if the user changed any of the x or y axis limits
         if self.is_limits_changed(('XAxis','YAxis')):

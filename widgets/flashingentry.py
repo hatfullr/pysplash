@@ -21,7 +21,9 @@ class FlashingEntry(Entry,object):
         self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
 
         super(FlashingEntry, self).pack(fill='both',expand=True)
-    
+
+        self.previous_style = None
+        
     def flash(self,time=1000):
         if not self.flashing:
             self.flashing = True
@@ -39,8 +41,10 @@ class FlashingEntry(Entry,object):
         self._flash_after_id = self.after(time,self._stop_flash)
     
     def _stop_flash(self,*args,**kwargs):
+        if self._flash_after_id is not None:
+            self.after_cancel(self._flash_after_id)
         self._flash_after_id = None
-        self.container.configure(self.previous_style)
+        if self.previous_style is not None: self.container.configure(self.previous_style)
         self.flashing = False
 
 

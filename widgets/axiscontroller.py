@@ -19,7 +19,7 @@ import globals
 import numpy as np
 
 class AxisController(LabelledFrame,object):
-    def __init__(self,master,text,relief='sunken',bd=1,allowadaptive=True,usecombobox=True,gui=None,**kwargs):
+    def __init__(self,master,gui,text,relief='sunken',bd=1,allowadaptive=True,usecombobox=True,**kwargs):
         if globals.debug > 1: print("axiscontroller.__init__")
         super(AxisController,self).__init__(
             master,
@@ -30,8 +30,6 @@ class AxisController(LabelledFrame,object):
         )
 
         self.usecombobox = usecombobox
-        if not self.usecombobox and not gui:
-            raise ValueError("If keyword 'usecombobox' is set to False then keyword 'gui' cannot be None")
         
         self.gui = gui
 
@@ -52,7 +50,8 @@ class AxisController(LabelledFrame,object):
         self.units.value.trace('w',self.update_limits)
 
         if self.usecombobox:
-            self.combobox.bind("<<ComboboxSelected>>", self.limits.set_adaptive_limits, add='+')
+            self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
+        self.previous_value = None
         
 
     def get_variables(self,*args,**kwargs):
@@ -111,6 +110,23 @@ class AxisController(LabelledFrame,object):
         self.units.pack(side='left',fill='both',expand=True,padx=(0,5))
         self.scale.pack(side='left')
         self.units_and_scale_frame.pack(side='top',fill='x',expand=True)
+
+    def on_combobox_selected(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.on_combobox_selected")
+        # Check for any <= 0 values in the data. If there are any, then if
+        # the user is in log10 scale mode, we need to switch them out of it
+        if self.usecombobox:
+            if self.previous_value != self.value.get():
+                self.units.value.set(1.) # Reset the units
+            if self.value.get() in self.gui.data['data'].keys():
+                if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
+                    if self.scale.get() == "log10":
+                        self.scale.linear_button.invoke()
+                        self.on_scale_changed()
+        #else: # If all values in the data are positive and non-zero
+        self.limits.set_adaptive_limits()
+        
+        self.previous_value = self.value.get()
         
     def connect(self,axis,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.connect")
@@ -153,8 +169,14 @@ class AxisController(LabelledFrame,object):
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
 
+        # Never allow log10 when <= 0 data is present
+        if self.value.get() not in self.gui.data['data'].keys(): return
+        
+        if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
+            self.scale.log_button.configure(state='disabled')
+            
         # Only do this if we are not using adaptive limits
-        if not self.limits.adaptive.get():
+        elif not self.limits.adaptive.get():
             limits = [self.limits.low.get(), self.limits.high.get()]
             # Allow negative values if we are in the log10 scale, but if we are in
             # any other scale then disable the log10 button

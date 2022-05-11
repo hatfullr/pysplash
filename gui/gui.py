@@ -78,24 +78,30 @@ class GUI(tk.Frame,object):
 
         self.create_hotkeys()
 
-        # Disable the colorbar initially
-        self.controls.axis_controllers['Colorbar'].disable()
+        self.filenames = []
         
-        all_mapped = False
-        while not all_mapped:
-            self.update()
-            for child in get_all_children(self):
-                if child.winfo_exists() == 0:
-                    break
-            else:
-                all_mapped = True
-
         self.xy_controls_initialized = False
-        
-        if len(sys.argv) > 1:
+        self.initialize(first=True)
+        self.controls.connect()
+        self.controls.save_state()
+
+    def initialize(self, first=False, *args, **kwargs):
+        if globals.debug > 1: print("gui.initialize")
+
+        if first and len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
-            self.filecontrols.current_file.set(sys.argv[1])
+
+        if len(self.filenames) > 0:
+            currentfile = self.filecontrols.current_file.get()
+            if currentfile in self.filenames:
+                self.filecontrols.current_file.set(currentfile)
+            else:
+                self.filecontrols.current_file.set(self.filenames[0])
+            
             self.read()
+
+            # Disable the colorbar initially
+            self.controls.axis_controllers['Colorbar'].disable()
             
             # Set the x and y limits
             xmargin, ymargin = self.interactiveplot.ax.margins()
@@ -105,14 +111,14 @@ class GUI(tk.Frame,object):
             dy = (ylim[1]-ylim[0])*ymargin
             self.interactiveplot.ax.set_xlim(xlim[0]-dx,xlim[1]+dx)
             self.interactiveplot.ax.set_ylim(ylim[0]-dy,ylim[1]+dy)
-            
-            self.interactiveplot.update()
+
+            if self.interactiveplot.drawn_object is None:
+                self.interactiveplot.update()
+            else:
+                self.controls.on_update_button_pressed()
         else:
-            self.filenames = []
-
-        self.controls.connect()
-
-        self.controls.save_state()
+            self.filecontrols.current_file.set("")
+            self.interactiveplot.reset()
         
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
@@ -319,7 +325,6 @@ class GUI(tk.Frame,object):
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
         skip_amount = int(self.filecontrols.skip_amount.get())
-        #filenames = sys.argv[1:]
 
         idx = self.filenames.index(self.filecontrols.current_file.get())
         nextidx = min(idx+skip_amount,len(self.filenames)-1)
@@ -331,7 +336,6 @@ class GUI(tk.Frame,object):
     def previous_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.previous_file")
         skip_amount = int(self.filecontrols.skip_amount.get())
-        #filenames = sys.argv[1:]
         
         idx = self.filenames.index(self.filecontrols.current_file.get())
         nextidx = max(idx-skip_amount,0)

@@ -42,4 +42,3 @@ class SwitchButton(Button,object):
             # Flip the variable, setting off chain of events in on_variable_changed
             self.variable.set(not self.variable.get())
     
-        

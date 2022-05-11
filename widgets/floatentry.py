@@ -79,7 +79,7 @@ class FloatEntry(FlashingEntry,object):
 
     def on_validate_fail(self, *args, **kwargs):
         self.flash()
-        self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus())
+        self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus(),add="+")
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None

@@ -68,3 +68,6 @@ class Button(ttk.Label, object):
     def configure(self, *args, **kwargs):
         self.command = kwargs.pop('command',self.command)
         super(Button, self).configure(*args, **kwargs)
+
+    def invoke(self, *args, **kwargs):
+        self.command()

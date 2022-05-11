@@ -20,24 +20,24 @@ except ImportError:
 
 
 def download_data_from_server(gui):
-    DataFromServer(gui)
+    DownloadDataFromServer(gui)
 
-class DataFromServer(tk.Toplevel,object):
+class DownloadDataFromServer(tk.Toplevel,object):
     def __init__(self,gui):
         if globals.debug > 1: print("datafromserver.__init__")
         # Setup the window
-        super(DataFromServer,self).__init__(gui)
+        super(DownloadDataFromServer,self).__init__(gui)
         
         self.gui = gui
-        self.gui_root = self.gui.winfo_toplevel()
+        self.root = self.gui.winfo_toplevel()
         
         self.pad = 5
-        aspect = self.gui_root.winfo_screenheight()/self.gui_root.winfo_screenwidth()
-        self.width = int(self.gui_root.winfo_screenwidth() / 6)
+        aspect = self.root.winfo_screenheight()/self.root.winfo_screenwidth()
+        self.width = int(self.root.winfo_screenwidth() / 6)
         height = self.width*aspect
 
-        gui_root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        self.tmp_path = os.path.join(gui_root_path,"tmp")
+        root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        self.tmp_path = os.path.join(root_path,"tmp")
 
         
         
@@ -295,7 +295,7 @@ class DataFromServer(tk.Toplevel,object):
 
         # Block until the task has finished
         while self.thread.isAlive():
-            self.gui_root.update()
+            self.root.update()
 
         if not self.canceled:
             # After getting the file list, start downloading the files
@@ -390,7 +390,7 @@ class DataFromServer(tk.Toplevel,object):
                 self.progressbar.configure(value=current)
                 self.progressbar.set_text("Downloading... (%3.2f%%)" % current)
 
-        self.gui_root.update()
+        self.root.update()
         
         
         
