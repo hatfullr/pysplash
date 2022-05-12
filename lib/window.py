@@ -15,18 +15,10 @@ class Window(tk.Tk):
         tk.Tk.__init__(self)
         self.wm_title("PySplash")
 
-        #self.width = tk.IntVar(value=self.winfo_width())
-        #self.height = tk.IntVar(value=self.winfo_height())
-        #self.resizing = False
-        
-        #self.after_id = None
-
         self.width = self.winfo_width()
         self.height = self.winfo_height()
 
         self.configure(padx=5,pady=5)
-        #self.bind("<Configure>",self.detect_resize)
-        self.bind("<Configure>",self.on_configure,add="+")
 
     # This prevents tkinter from slowing down by first closing tkinter
     # before printing traceback whenever an error occurs
@@ -52,33 +44,5 @@ class Window(tk.Tk):
         for filename in os.listdir(tmp_path):
             os.remove(os.path.join(tmp_path,filename))
                 
-        self.quit()
-
-    def on_configure(self,*args,**kwargs):
-        if globals.debug > 1: print("window.on_configure")
-
-        #new_width = self.winfo_width()
-        #new_height = self.winfo_height()
-
-        #if new_width != self.width or new_height != self.height:
-            
-        
-    """
-    def on_resize(self,event):
-        if globals.debug > 1: print("window.on_resize")
-        self.width.set(event.width)
-        self.height.set(event.height)
-        self.resizing = False
-        self.event_generate("<<ResizeStopped>>")
-        
-    def detect_resize(self,event):
-        if globals.debug > 1: print("window.detect_resize")
-        if event.widget is self:
-            if self.width.get() != event.width or self.height.get() != event.height:
-                if not self.resizing:
-                    self.resizing = True
-                    self.event_generate("<<ResizeStarted>>")
-                if self.after_id is not None:
-                    self.after_cancel(self.after_id)
-                self.after_id = self.after(100,lambda event=event: self.on_resize(event))
-    """
+        #self.quit()
+        self.destroy()
