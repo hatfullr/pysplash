@@ -78,7 +78,7 @@ class GUI(tk.Frame,object):
 
         # When the user clicks on widgets etc, those widgets should acquire
         # the application focus... (why isn't this default?!)
-        self.window.bind("<Button-1>", lambda event: event.widget.focus())
+        self.window.bind("<Button-1>", self.on_button1)
         
         self.create_hotkeys()
 
@@ -88,6 +88,14 @@ class GUI(tk.Frame,object):
         self.initialize(first=True)
         self.controls.connect()
         self.controls.save_state()
+
+    def on_button1(self, event):
+        if globals.debug > 1: print("gui.on_button1")
+        widget = event.widget
+        # Clicking on the menubar gives a strange event.widget
+        if isinstance(widget, str):
+            widget = self.window.nametowidget(widget.replace("#",""))
+        widget.focus()
 
     def initialize(self, first=False, *args, **kwargs):
         if globals.debug > 1: print("gui.initialize")
