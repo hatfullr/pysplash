@@ -61,8 +61,6 @@ class InteractivePlot(tk.Frame,object):
 
         self.keypresshandler.register('t',self.set_time_text)
         
-        self.init_after_id = None
-    
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
@@ -252,8 +250,6 @@ class InteractivePlot(tk.Frame,object):
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
                 raise RuntimeError("Failed to spawn thread to draw the plot")
-            #else:
-            #    self.after(100, lambda *args,**kwargs: print("Try"))
             
         # After creation
         if not self.gui.data.is_image:

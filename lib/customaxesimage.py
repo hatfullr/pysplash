@@ -69,13 +69,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def after_calculate(self,*args,**kwargs):
         # To be created by a child class
         pass
-        
-    def after(self,*args,**kwargs):
-        if globals.debug > 1: print("customaxesimage.after")
-        return self.widget.after(*args,**kwargs)
-    def after_cancel(self,*args,**kwargs):
-        if globals.debug > 1: print("customaxesimage.after_cancel")
-        self.widget.after_cancel(*args,**kwargs)
 
     def remove(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.remove")
@@ -126,7 +119,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.calculating = True
         self.calculate_xypixels()
         
-        #self.after_id_calculate = None
         if self.aspect == 'equal': self.equalize_aspect_ratio()
         if not (self.ypixels == self._data.shape[0] and self.xpixels == self._data.shape[1]):
             self._data = np.resize(self._data,(self.ypixels,self.xpixels)) # Fills new entries with 0
@@ -170,15 +162,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if globals.debug > 1: print("customaxesimage.wait_to_calculate")
         print(self,"wait to calculate",self.after_id_calculate, args,kwargs)
         if not self.after_id_calculate:
-            self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
+            self.after_id_calculate = self.widget.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
         else:
-            self.after_cancel(self.after_id_calculate)
+            self.widget.after_cancel(self.after_id_calculate)
             self.after_id_calculate = None
-            
-        
-        #if self.after_id_calculate is not None:
-        #    self.after_cancel(self.after_id_calculate)
-        #self.after_id_calculate = self.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
 
     def set_data(self,new_data,scaled=True):
         if globals.debug > 1: print("customaxesimage.set_data")
@@ -189,11 +176,3 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._data = new_data
         super(CustomAxesImage,self).set_data(new_data)
 
-    def update_cscale(self,cscale):
-        if globals.debug > 1: print("customaxesimage.update_cscale")
-        if cscale != self.cscale:
-            if cscale == 'linear': data = self._unscaled_data
-            elif cscale == 'log10': data = np.log10(self._unscaled_data)
-            elif cscale == '^10': data = 10.**self._unscaled_data
-            self.cscale = cscale
-            self.set_data(data,scaled=False)
