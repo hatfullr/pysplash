@@ -234,13 +234,6 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.get_user_controlled")
         return self.user_controlled
 
-    def do_after(self,amount,todo,trigger,args=[],kwargs={}):
-        if globals.debug > 1: print("gui.do_after")
-        if not trigger():
-            self.after(amount,lambda amt=amount,td=todo,trig=trigger,arrgs=args,kwarrgs=kwargs: self.do_after(amt,td,trig,arrgs,kwarrgs))
-        else:
-            todo(*args,**kwargs)
-
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
         self.data = Data(
