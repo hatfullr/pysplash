@@ -168,15 +168,17 @@ class AxisController(LabelledFrame,object):
 
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
-
-        # Never allow log10 when <= 0 data is present
-        if self.value.get() not in self.gui.data['data'].keys(): return
         
-        if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
-            self.scale.log_button.configure(state='disabled')
-            
+        # Never allow log10 when <= 0 data is present
+        if self.gui.data is not None:
+            if self.value.get() not in self.gui.data['data'].keys(): return
+        
+            if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
+                self.scale.log_button.configure(state='disabled')
+                return
+        
         # Only do this if we are not using adaptive limits
-        elif not self.limits.adaptive.get():
+        if not self.limits.adaptive.get():
             limits = [self.limits.low.get(), self.limits.high.get()]
             # Allow negative values if we are in the log10 scale, but if we are in
             # any other scale then disable the log10 button

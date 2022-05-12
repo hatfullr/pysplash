@@ -192,9 +192,9 @@ class GUI(tk.Frame,object):
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
 
-        self.plottoolbar.pack(side='left',fill='x')
-        self.filecontrols.pack(side='left',fill='x',expand=True)
-        self.under_plot_frame.pack(side='bottom',fill='both',expand=True)
+        self.plottoolbar.pack(side='left',fill='both')
+        self.filecontrols.pack(side='left',fill='both',expand=True,padx=3,pady=3)
+        self.under_plot_frame.pack(side='bottom',fill='both')
 
         self.interactiveplot.pack(side='top',fill='both',expand=True)
 

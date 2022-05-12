@@ -39,9 +39,6 @@ class CustomToolbar(NavigationToolbar2Tk):
 
         self.toolbar.set_message = self.set_xy_message
 
-    def pack(self, *args, **kwargs):
-        super(CustomToolbar, self).pack(side=kwargs['side'],fill='y')
-        
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
