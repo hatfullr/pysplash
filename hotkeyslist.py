@@ -1,11 +1,24 @@
 # This dictionary determines the hotkey bindings for various things.
-# Do not edit the keys, only edit the values if you so desire.
+# You can edit the list in "keylist" to as you see fit. The "type"
+# can be either "global" or "local", where "global" means the
+# hotkey will work everywhere when the application has focus, even
+# when e.g. typing in an entry box, and "local" means the hotkey will
+# only work when the focus is not set on any particular widget.
 
 hotkeyslist = {
-    "next file" : ["<Right>"],
-    "previous file" : ["<Left>"],
+    "next file" : {
+        "keylist" : ["<Right>"],
+        "type" : "global",
+    },
+    "previous file" : {
+        "keylist" : ["<Left>"],
+        "type" : "global",
+    },
+    "update plot" : {
+        "keylist" : ["<space>"],
+        "type" : "local",
+    },
 }
 
 
-def hotkeys_to_string(name):
-    return ", ".join(["'"+key+"'" for key in hotkeyslist[name]])
+

@@ -22,5 +22,12 @@ class Entry(ttk.Entry, object):
             self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
             super(Entry,self).pack(fill='both')
 
+        self.root = self.winfo_toplevel()
+            
         # Bind the Enter key to focusout
-        self.bind("<Return>", lambda *args,**kwargs: self.winfo_toplevel().focus())
+        self.bind("<Return>", lambda *args,**kwargs: self.winfo_toplevel().focus(), add="+")
+
+        # These should be defaults but they aren't for some reason
+        self.bind("<FocusOut>", lambda *args,**kwargs: self.select_clear(), add="+")
+        self.bind("<FocusIn>", lambda *args,**kwargs: self.select_clear(), add="+")
+        

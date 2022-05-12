@@ -161,7 +161,8 @@ class MakeMovie(tk.Toplevel, object):
         
         def update(i):
             self.gui.filecontrols.current_file.set(filenames[i])
-            self.gui.controls.on_update_button_pressed()
+            #self.gui.controls.on_update_button_pressed()
+            self.gui.controls.update_button.invoke()
             
             # We need to wait until the plot has finished calculating
             while self.gui.interactiveplot.drawn_object.calculating:

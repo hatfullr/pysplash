@@ -14,7 +14,8 @@ from widgets.tooltip import ToolTip
 from widgets.autosizelabel import AutoSizeLabel
 from functions.getallchildren import get_all_children
 from functions.setwidgetsstates import set_widgets_states
-from hotkeyslist import hotkeyslist, hotkeys_to_string
+from functions.hotkeystostring import hotkeys_to_string
+from hotkeyslist import hotkeyslist
 
 class FileControls(tk.Frame,object):
     def __init__(self,master,gui,canvas,bg='white',*args,**kwargs):

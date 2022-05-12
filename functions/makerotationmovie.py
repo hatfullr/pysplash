@@ -27,7 +27,8 @@ def make_rotation_movie(gui):
             gui.controls.plotcontrols.rotation_z.set(anglez)
 
         print(i,nframes,anglex,anglez)
-        gui.controls.on_update_button_pressed()
+        gui.controls.update_button.invoke()
+        #gui.controls.on_update_button_pressed()
         #gui.data.rotate(anglex,0,anglez)
         #gui.interactiveplot.reset()
         #gui.interactiveplot.update()

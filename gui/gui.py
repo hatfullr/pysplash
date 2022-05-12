@@ -76,6 +76,10 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
+        # When the user clicks on widgets etc, those widgets should acquire
+        # the application focus... (why isn't this default?!)
+        self.window.bind("<Button-1>", lambda event: event.widget.focus())
+        
         self.create_hotkeys()
 
         self.filenames = []
@@ -115,7 +119,8 @@ class GUI(tk.Frame,object):
             if self.interactiveplot.drawn_object is None:
                 self.interactiveplot.update()
             else:
-                self.controls.on_update_button_pressed()
+                self.controls.update_button.invoke()
+                #self.controls.on_update_button_pressed()
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
@@ -210,8 +215,9 @@ class GUI(tk.Frame,object):
     def create_hotkeys(self, *args, **kwargs):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
-        self.hotkeys.bind("next file", (self.next_file, self.controls.on_update_button_pressed))
-        self.hotkeys.bind("previous file", (self.previous_file, self.controls.on_update_button_pressed))
+        self.hotkeys.bind("next file", (self.next_file, lambda *args,**kwargs: self.controls.update_button.invoke()))
+        self.hotkeys.bind("previous file", (self.previous_file, lambda *args,**kwargs: self.controls.update_button.invoke()))
+        self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
         
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")

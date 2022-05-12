@@ -14,6 +14,8 @@ from lib.integratedvalueplot import IntegratedValuePlot
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
+from functions.hotkeystostring import hotkeys_to_string
+from widgets.tooltip import ToolTip
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 import globals
@@ -60,6 +62,7 @@ class Controls(tk.Frame,object):
             state='disabled',
             command=self.on_update_button_pressed,
         )
+        ToolTip.createToolTip(self.update_button, "Redraw the plot using the controls below. Hotkey: "+hotkeys_to_string('update plot'))
         
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
