@@ -19,13 +19,25 @@ class ImportData(PopupWindow,object):
         if globals.debug > 1: print("importdata.__init__")
 
         # Setup the window
-        super(ImportData,self).__init__(gui,title="Import data",oktext="Import",okcommand=self.import_data)
+        super(ImportData,self).__init__(
+            gui,
+            title="Import data",
+            oktext="Import",
+            okcommand=self.import_data,
+            show=False,
+        )
 
         self.gui = gui
 
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
+
+        self.pathentry._entry.bind("<Return>", lambda *args, **kwargs: self.okbutton.invoke(), add="+")
+        #self.bind("<Configure>", lambda *args, **kwargs: print("event"), add="+")
+
+        self.deiconify()
+        self.pathentry._entry.focus()
 
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_variables")

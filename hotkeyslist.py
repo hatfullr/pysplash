@@ -18,6 +18,10 @@ hotkeyslist = {
         "keylist" : ["<space>"],
         "type" : "local",
     },
+    "import data" : {
+        "keylist" : ["<Control-i>"],
+        "type" : "global",
+    },
 }
 
 

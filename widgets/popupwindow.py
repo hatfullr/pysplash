@@ -10,11 +10,15 @@ import globals
 
 
 class PopupWindow(tk.Toplevel, object):
-    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, pad=5, *args, **kwargs):
+    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, *args, **kwargs):
         if globals.debug > 1: print("popupwindow.__init__")
-
+        
         # Setup the window
         super(PopupWindow, self).__init__(master,*args,**kwargs)
+
+        # When the user clicks on widgets etc, those widgets should acquire
+        # the application focus... (why isn't this default?!)
+        self.bind("<Button-1>", lambda event: event.widget.focus())
 
         self.root = self.master.winfo_toplevel()
 
@@ -43,21 +47,24 @@ class PopupWindow(tk.Toplevel, object):
         buttons_frame = tk.Frame(self)
         
         if okcommand is None:
-            Button(buttons_frame,text=oktext).pack(side='left')
+            self.okbutton = Button(buttons_frame,text=oktext)
         else:
-            Button(buttons_frame,text=oktext,command=okcommand).pack(side='left')
+            self.okbutton = Button(buttons_frame,text=oktext,command=okcommand)
+        self.okbutton.pack(side='left')
             
         if cancelcommand is None:
-            Button(buttons_frame,text=canceltext,command=self.close).pack(side='left',padx=(self.pad,0))
+            self.cancelbutton = Button(buttons_frame,text=canceltext,command=self.close)
         else:
-            Button(buttons_frame,text=canceltext,command=cancelcommand).pack(side='left',padx=(self.pad,0))
+            self.cancelbutton = Button(buttons_frame,text=canceltext,command=cancelcommand)
+        self.cancelbutton.pack(side='left',padx=(self.pad,0))
+            
         
         # Place the widgets
         self.contents.pack(side='top',padx=0,pady=(0,self.pad))
         buttons_frame.pack(side='bottom',anchor='e',padx=0,pady=0)
 
         # Now show the window
-        self.deiconify()
+        if show: self.deiconify()
 
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("popupwindow.close")

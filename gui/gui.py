@@ -23,6 +23,7 @@ from widgets.menubar import MenuBar
 from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
+from functions.importdata import importdata
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 
@@ -226,6 +227,7 @@ class GUI(tk.Frame,object):
         self.hotkeys.bind("next file", (self.next_file, lambda *args,**kwargs: self.controls.update_button.invoke()))
         self.hotkeys.bind("previous file", (self.previous_file, lambda *args,**kwargs: self.controls.update_button.invoke()))
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
+        self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
         
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")
