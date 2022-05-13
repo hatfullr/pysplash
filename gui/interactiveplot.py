@@ -10,6 +10,7 @@ import globals
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.collections import PathCollection, PolyCollection
+import matplotlib.backend_bases
 import matplotlib.colorbar
 import matplotlib.colors
 import numpy as np
@@ -60,6 +61,12 @@ class InteractivePlot(tk.Frame,object):
         self.keypresshandler.connect()
 
         self.keypresshandler.register('t',self.set_time_text)
+
+        self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
+        self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
+
+        self.bind("<ButtonPress-2>", self.on_ButtonPress2, add="+")
+        self.bind("<ButtonRelease-2>", self.on_ButtonRelease2, add="+")
         
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -75,6 +82,16 @@ class InteractivePlot(tk.Frame,object):
         if globals.debug > 1: print("interactiveplot.create_widgets")
         self.canvas = FigureCanvasTkAgg(self.fig,master=self)
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
+
+    def on_ButtonPress2(self, event):
+        # Trick Matplotlib into thinking we pressed the left mouse button
+        event.button = matplotlib.backend_bases.MouseButton.LEFT
+        # Strange that the y position gets mucked up, but this works
+        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
+        self.gui.plottoolbar.press_pan(event)
+        
+    def on_ButtonRelease2(self, event):
+        self.gui.plottoolbar.release_pan(event)
         
     def place_widgets(self):
         if globals.debug > 1: print("interactiveplot.place_widgets")
