@@ -48,8 +48,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.update_GUI_axis_limits()
         
         # Update the plot
-        self.gui.interactiveplot.reset()
-        self.gui.interactiveplot.update()
+        self.gui.controls.update_button.invoke()
         
     def get_home_xylimits(self, *args, **kwargs):
         # Simulate a Home button press, but without drawing the plot. Return
@@ -138,5 +137,5 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()
 
-        self.gui.interactiveplot.reset()
-        self.gui.interactiveplot.update()
+        self.gui.controls.update_button.invoke()
+        

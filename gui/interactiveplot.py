@@ -37,12 +37,7 @@ class InteractivePlot(tk.Frame,object):
 
         self.orientation = OrientationArrows(self.gui,self.ax)
         
-        #self.cax = None
         self.colorbar = CustomColorbar(self.ax)
-        #self.cax_cid = None
-        #self.cbwidth = 0.025
-        #self.cbbuff = 0.01
-        #self.colorbar_visible = False
         
         self.drawn_object = None
 
@@ -65,8 +60,12 @@ class InteractivePlot(tk.Frame,object):
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
 
+        self._after_id_update = None
+        
         self.bind("<ButtonPress-2>", self.on_ButtonPress2, add="+")
+        self.bind("<B2-Motion>", self.on_ButtonMotion2)#, add="+")
         self.bind("<ButtonRelease-2>", self.on_ButtonRelease2, add="+")
+        self._zoom_bid = self.canvas.mpl_connect('scroll_event', self.zoom)
         
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -84,14 +83,27 @@ class InteractivePlot(tk.Frame,object):
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
 
     def on_ButtonPress2(self, event):
+        # Disconnect the scroll wheel zoom binding while panning
+        self.canvas.mpl_disconnect(self._zoom_bid)
+        
         # Trick Matplotlib into thinking we pressed the left mouse button
         event.button = matplotlib.backend_bases.MouseButton.LEFT
         # Strange that the y position gets mucked up, but this works
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
         self.gui.plottoolbar.press_pan(event)
+
+    def on_ButtonMotion2(self, event):
+        event.key = matplotlib.backend_bases.MouseButton.LEFT
+        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
+        self.gui.plottoolbar.drag_pan(event)
+        self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
+        self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
+        self.wait_to_update()
         
     def on_ButtonRelease2(self, event):
         self.gui.plottoolbar.release_pan(event)
+        # Reconnect the scroll wheel zoom binding
+        self._zoom_bid = self.canvas.mpl_connect("scroll_event", self.zoom)
         
     def place_widgets(self):
         if globals.debug > 1: print("interactiveplot.place_widgets")
@@ -106,12 +118,22 @@ class InteractivePlot(tk.Frame,object):
         if self.drawn_object is not None:
             self.drawn_object.remove()
             self.drawn_object = None
+
+    def wait_to_update(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.wait_to_update")
+        if self._after_id_update is not None:
+            self.after_cancel(self._after_id_update)
+        self._after_id_update = self.after(globals.plot_update_delay, lambda *args,**kwargs: self.gui.controls.update_button.invoke())
     
     def update(self,*args, **kwargs):
         if globals.debug > 1:
             print("interactiveplot.update")
             print("    self.ax = ",self.ax)
 
+        if self._after_id_update is not None:
+            self.after_cancel(self._after_id_update)
+            self._after_id_update = None
+            
         self.gui.set_user_controlled(False)
         x = self.gui.controls.axis_controllers['XAxis'].value.get()
         y = self.gui.controls.axis_controllers['YAxis'].value.get()
@@ -255,13 +277,18 @@ class InteractivePlot(tk.Frame,object):
             kwargs['initialize'] = True
 
         if changed_args: self.reset() # Clear the current plot
-
+        
         # Update the orientation
         if self.gui.controls.plotcontrols.show_orientation.get():
             self.orientation.draw()
         else:
             self.orientation.clear()
 
+        # Make absolutely sure that there is only ever exactly 1 image in the plot
+        for child in self.ax.get_children():
+            if isinstance(child, CustomAxesImage):
+                child.remove()
+            
         self.drawn_object = method(*args,**kwargs)
         
         if globals.use_multiprocessing_on_scatter_plots:
@@ -270,7 +297,6 @@ class InteractivePlot(tk.Frame,object):
             
         # After creation
         if not self.gui.data.is_image:
-
             self.previous_args = args
             self.previous_kwargs = kwargs            
         
@@ -298,7 +324,6 @@ class InteractivePlot(tk.Frame,object):
 
             if self.colorbar.visible and (cadaptive or np.nan in controls_climits):
                 self.reset_clim(draw=False)
-                
 
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
@@ -405,3 +430,41 @@ class InteractivePlot(tk.Frame,object):
         else: return new_xlim, new_ylim
         
 
+    # Intended to be used with canvas.mpl_connect('scroll_event', zoom)
+    # https://stackoverflow.com/a/12793033/4954083
+    def zoom(self, event):
+        if globals.debug > 1: print("interactiveplot.zoom")
+
+        # Seems that sometimes this method can be called incorrectly, so we prevent that here
+        if event.xdata is None or event.ydata is None: return
+        
+        factor = 0.9
+        if event.button == 'down': factor = 1./factor
+
+        curr_xlim = self.gui.controls.axis_controllers['XAxis'].limits.get()
+        curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
+
+        new_width = (curr_xlim[1]-curr_xlim[0])*factor
+        new_height= (curr_ylim[1]-curr_ylim[0])*factor
+
+        relx = (curr_xlim[1]-event.xdata)/(curr_xlim[1]-curr_xlim[0])
+        rely = (curr_ylim[1]-event.ydata)/(curr_ylim[1]-curr_ylim[0])
+
+        xlim = (
+            event.xdata-new_width*(1-relx),
+            event.xdata+new_width*(relx),
+        )
+        ylim = (
+            event.ydata-new_height*(1-rely),
+            event.ydata+new_height*(rely),
+        )
+        
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
+
+        # Need to update the user's axis limits
+        self.gui.controls.axis_controllers['XAxis'].limits.set_limits(xlim)
+        self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
+        
+        self.canvas.draw_idle()
+        self.wait_to_update()

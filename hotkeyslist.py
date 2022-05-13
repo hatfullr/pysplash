@@ -22,6 +22,10 @@ hotkeyslist = {
         "keylist" : ["<Control-i>"],
         "type" : "global",
     },
+    "save" : {
+        "keylist" : ["<Control-s>"],
+        "type" : "global",
+    }
 }
 
 

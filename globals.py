@@ -17,4 +17,12 @@ debug = 1
 use_multiprocessing_on_scatter_plots = False
 
 # The width of a tooltip to determine text wrapping
-tooltip_wraplength=50
+tooltip_wraplength = 50
+
+# When interacting with the plot by panning or
+# zooming using the mouse, this parameter is used to
+# determine how long in miliseconds after the change
+# in the plot to wait before calculating the new
+# image. Lower values decrease performance but make
+# the application feel more responsive.
+plot_update_delay = 200

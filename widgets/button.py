@@ -7,11 +7,12 @@ else:
     import tkinter.ttk as ttk
 
 class Button(ttk.Label, object):
-    def __init__(self, master, switch=False, command=None, *args, padding="0 -1 0 0", style='TButton', **kwargs):
+    def __init__(self, master, *args, **kwargs):
+        self.switch = kwargs.pop('switch', False)
+        self.command = kwargs.pop('command', None)
+        padding = kwargs.pop('padding', "0 -1 0 0")
+        style = kwargs.pop('style','TButton')
         super(Button, self).__init__(master, *args, padding=padding, style=style, **kwargs)
-
-        self.switch = switch
-        self.command = command
 
         # Mouse hover behavior
         self.bind("<Enter>", self.on_enter, add='+')

@@ -160,8 +160,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     # Prevents double calculation when both x and y limits change
     def wait_to_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage.wait_to_calculate")
-        print(self,"wait to calculate",self.after_id_calculate, args,kwargs)
-        if not self.after_id_calculate:
+        #print(self,"wait to calculate",self.after_id_calculate, args,kwargs)
+        if self.after_id_calculate is None:
             self.after_id_calculate = self.widget.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
         else:
             self.widget.after_cancel(self.after_id_calculate)

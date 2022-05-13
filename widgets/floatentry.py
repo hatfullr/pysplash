@@ -42,7 +42,6 @@ class FloatEntry(FlashingEntry,object):
 
         self.format_text()
 
-
     def validatecommand(self, newtext):
         # Allow empty text
         if not newtext and self.allowblank:

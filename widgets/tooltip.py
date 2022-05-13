@@ -42,7 +42,7 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
         def motion(event):
             hide(event)
             if ToolTip.after_id is None:
-                ToolTip.after_id = root.after(500, lambda *args, event=event, **kwargs: show(event))
+                ToolTip.after_id = root.after(500, lambda event=event: show(event))
             else:
                 root.after_cancel(ToolTip.after_id)
                 ToolTip.after_id = None

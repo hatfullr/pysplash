@@ -28,6 +28,8 @@ class AxisLimits(tk.LabelFrame,object):
         self.create_widgets()
         self.place_widgets()
 
+        self.connected = False
+
     def get_variables(self, *args, **kwargs):
         return [
             self.low,
@@ -59,6 +61,9 @@ class AxisLimits(tk.LabelFrame,object):
             command=(self.adaptive_on, self.adaptive_off),
         )
         ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible.")
+
+    def get(self, *args, **kwargs):
+        return (self.low.get(), self.high.get())
         
     def place_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.place_widgets")
@@ -97,7 +102,7 @@ class AxisLimits(tk.LabelFrame,object):
                 self.cid = self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
             elif isinstance(self.axis, YAxis):
                 self.cid = self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
-            
+            self.connected = True
             # Update the entry widgets
             self.on_axis_limits_changed()
 
@@ -106,6 +111,7 @@ class AxisLimits(tk.LabelFrame,object):
         if self.axis and self.cid:
             self.axis.callbacks.disconnect(self.cid)
             self.cid = None
+        self.connected = False
             
     def on_axis_limits_changed(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.on_axis_limits_changed")
@@ -116,12 +122,6 @@ class AxisLimits(tk.LabelFrame,object):
         if globals.debug > 1: print("axislimits.set_limits")
         self.low.set(newlimits[0])
         self.high.set(newlimits[1])
-        #low = self.low.get()
-        #high = self.high.get()
-        #if low != round(limits[0],len(str(low))):
-        #    self.low.set(limits[0])
-        #if high != round(limits[1],len(str(high))):
-        #    self.high.set(limits[1])
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.set_adaptive_limits")

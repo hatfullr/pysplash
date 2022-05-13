@@ -14,7 +14,6 @@ exit 1
 
 
 
-import sys
 from signal import signal,SIGINT
 from lib.window import Window
 from gui.gui import GUI

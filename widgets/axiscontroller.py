@@ -173,7 +173,8 @@ class AxisController(LabelledFrame,object):
         if self.gui.data is not None:
             if self.value.get() not in self.gui.data['data'].keys(): return
         
-            if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
+            data = self.gui.get_display_data(self.value.get(), scaled=False)
+            if np.any(data <= 0):
                 self.scale.log_button.configure(state='disabled')
                 return
         

@@ -67,6 +67,7 @@ class GUI(tk.Frame,object):
         super(GUI,self).__init__(self.window)
         
         self.data = None
+        self.display_data = None
         
         self.preferences = {}
         self.preferences_file = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"preferences.json")
@@ -136,9 +137,6 @@ class GUI(tk.Frame,object):
         
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
-
-        self.controls.disconnect_state_listeners()
-        
         N = len(self.get_data('x'))
         found_first = False
         for key,val in self.data['data'].items():
@@ -151,7 +149,6 @@ class GUI(tk.Frame,object):
                         self.controls.axis_controllers['YAxis'].value.set(key)
                         break
         self.controls.update()
-        self.controls.connect_state_listeners()
         self.xy_controls_initialized = True
 
     def create_variables(self):
@@ -228,6 +225,7 @@ class GUI(tk.Frame,object):
         self.hotkeys.bind("previous file", (self.previous_file, lambda *args,**kwargs: self.controls.update_button.invoke()))
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
         self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
+        self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
         
     def message(self,text,*args,**kwargs):
         if globals.debug > 1: print("gui.message")
@@ -256,6 +254,12 @@ class GUI(tk.Frame,object):
             read_file(self.filecontrols.current_file.get()),
             #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
         )
+        self.display_data = {
+            key : self.get_data(key)*self.get_display_units(key) for key in self.data['data'].keys()
+        }
+        self.physical_data = {
+            key : self.get_data(key)*self.get_physical_units(key) for key in self.data['data'].keys()
+        }
         # Enable the colorbar
         self.controls.axis_controllers['Colorbar'].enable()
         if self.data.is_image:
@@ -297,7 +301,8 @@ class GUI(tk.Frame,object):
         else:
             if self.data.is_image:
                 return self.data
-            data = copy.copy(self.data['data'][key])
+            #data = copy.copy(self.data['data'][key])
+            data = self.data['data'][key]
             if key == 'h': return data*globals.compact_support
             else: return data
 
@@ -311,7 +316,8 @@ class GUI(tk.Frame,object):
 
     def get_display_data(self,key,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
-        d = self.get_data(key)*self.get_display_units(key)
+        #d = self.get_data(key)*self.get_display_units(key)
+        d = self.display_data[key]
         if scaled:
             # Check to see if the key matches
             xaxis = self.controls.axis_controllers['XAxis'].value.get()
@@ -326,10 +332,6 @@ class GUI(tk.Frame,object):
                 if scale == 'log10': d = np.log10(d)
                 elif scale == '^10': d = 10**d
         return d
-    
-    def get_physical_data(self,key):
-        if globals.debug > 1: print("gui.get_physical_data")
-        return self.get_data(key)*self.get_physical_units(key)
     
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
