@@ -92,7 +92,7 @@ class AxisController(LabelledFrame,object):
             textvariable=self.label,
         )
         
-        self.limits = AxisLimits(self,allowadaptive=self.allowadaptive)
+        self.limits = AxisLimits(self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
         self.units_and_scale_frame = tk.Frame(self)
         self.units = AxisUnits(self.units_and_scale_frame)
         self.scale = AxisScale(self.units_and_scale_frame)
@@ -170,24 +170,25 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
         
         # Never allow log10 when <= 0 data is present
-        if self.gui.data is not None:
-            if self.value.get() not in self.gui.data['data'].keys(): return
-        
-            data = self.gui.get_display_data(self.value.get(), scaled=False)
-            if np.any(data <= 0):
-                self.scale.log_button.configure(state='disabled')
-                return
+        #if self.gui.data is not None:
+        #    if self.value.get() not in self.gui.data['data'].keys(): return
+        #
+        #    data = self.gui.get_display_data(self.value.get(), scaled=False)
+        #    if np.any(data <= 0):
+        #        self.scale.log_button.configure(state='disabled')
+        #        return
         
         # Only do this if we are not using adaptive limits
-        if not self.limits.adaptive.get():
-            limits = [self.limits.low.get(), self.limits.high.get()]
-            # Allow negative values if we are in the log10 scale, but if we are in
-            # any other scale then disable the log10 button
-            if self.scale.get() != 'log10' and any([l <= 0 for l in limits]):
-                self.scale.log_button.configure(state='disabled')
-            else:
-                self.scale.log_button.configure(state='normal')
-    
+        #if not self.limits.adaptive.get():
+        limits = [self.limits.low.get(), self.limits.high.get()]
+        
+        # Allow negative values if we are in the log10 scale, but if we are in
+        # any other scale then disable the log10 button
+        if self.scale.get() != 'log10' and any([l <= 0. for l in limits]):
+            self.scale.log_button.state(['disabled'])
+        else:
+            self.scale.log_button.state(['!disabled'])
+            
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
 
@@ -236,14 +237,34 @@ class AxisController(LabelledFrame,object):
                 else: # Must be log10
                     self.limits.low.set(np.log10(np.log10(low)))
                     self.limits.high.set(np.log10(np.log10(high)))
-
+                    
             self.previous_scale = current_scale
     
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print('axiscontroller.update_limits')
-
         units = self.units.value.get()
         if abs((self.previous_units-units)/units) > 0.001:
             for limit in [self.limits.low, self.limits.high]:
                 limit.set(limit.get() * self.previous_units / units)
             self.previous_units = units
+
+
+    def set_adaptive_limits(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
+        # Set the limit entries to be the data's true, total limits
+        if self.axis is not None:
+            # Check if this axis is the colorbar
+            if self.axis._axes is self.gui.interactiveplot.colorbar.cax:
+                newlim = self.gui.interactiveplot.colorbar.calculate_limits()
+                # This axis is either the x or y axes of the main plot (not the colorbar)
+            elif isinstance(self.axis, XAxis):
+                newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
+            elif isinstance(self.axis, YAxis):
+                dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
+
+            if None not in newlim:
+                # Apply the current scale to the new limits
+                if self.scale.get() == 'log10': newlim = np.log10(newlim)
+                elif self.scale.get() == '^10': newlim = 10.**newlim
+                print("here newlim = ",newlim)
+                self.limits.set_limits(newlim)

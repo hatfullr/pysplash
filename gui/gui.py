@@ -90,6 +90,7 @@ class GUI(tk.Frame,object):
         self.initialize(first=True)
         self.controls.connect()
         self.controls.save_state()
+        
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
@@ -113,24 +114,13 @@ class GUI(tk.Frame,object):
                 self.filecontrols.current_file.set(self.filenames[0])
             
             self.read()
-
-            # Disable the colorbar initially
-            self.controls.axis_controllers['Colorbar'].disable()
             
             # Set the x and y limits
-            xmargin, ymargin = self.interactiveplot.ax.margins()
-            xlim = self.data.xlim()
-            ylim = self.data.ylim()
-            dx = (xlim[1]-xlim[0])*xmargin
-            dy = (ylim[1]-ylim[0])*ymargin
-            self.interactiveplot.ax.set_xlim(xlim[0]-dx,xlim[1]+dx)
-            self.interactiveplot.ax.set_ylim(ylim[0]-dy,ylim[1]+dy)
-
+            self.interactiveplot.reset_xylim()
             if self.interactiveplot.drawn_object is None:
                 self.interactiveplot.update()
             else:
                 self.controls.update_button.invoke()
-                #self.controls.on_update_button_pressed()
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()

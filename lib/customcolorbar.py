@@ -29,15 +29,19 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.set_clim")
 
         axesimage = self.find_axesimage()
-        if axesimage:
-            self.vmin = cminmax[0]
-            self.vmax = cminmax[1]
-            self.norm = matplotlib.colors.Normalize(
-                vmin=self.vmin,
-                vmax=self.vmax,
-            )
-            #axesimage.set_clim(self.vmin,self.vmax)
-            self.draw_all()
+        if axesimage is not None:
+            if None not in cminmax:
+                lim = self.get_cax_limits()
+                if any(np.abs((np.array(cminmax)-lim[lim != 0])/lim[lim != 0]) > 0.001):
+                    self.vmin = cminmax[0]
+                    self.vmax = cminmax[1]
+                    self.norm = matplotlib.colors.Normalize(
+                        vmin=self.vmin,
+                        vmax=self.vmax,
+                    )
+                    
+                    #axesimage.set_clim(self.vmin,self.vmax)
+                    self.draw_all()
     
     def find_axesimage(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.find_axesimage")
@@ -54,9 +58,11 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 axesimage = self.find_axesimage()
                 if axesimage:
                     data = axesimage._data
-            if data is None: return [None, None]
+            if data is None:
+                return [None, None]
             vmin = np.nanmin(data[np.isfinite(data)])
             vmax = np.nanmax(data[np.isfinite(data)])
+            print(vmin,vmax)
             return [vmin, vmax]
         else: return [None, None]
         
@@ -78,12 +84,12 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if self.side in ['right', 'left']:
             self.image_cid = self.cax.callbacks.connect(
                 "ylim_changed",
-                lambda *args, **kwargs: axesimage.set_clim(self.vmin,self.vmax)
+                lambda *args, **kwargs: axesimage.set_clim(self.get_cax_limits())
             )
         elif seld.side in ['top', 'bottom']:
             self.image_cid = self.cax.callbacks.connect(
                 "xlim_changed",
-                lambda *args, **kwargs: axesimage.set_clim(self.vmin,self.vmax)
+                lambda *args, **kwargs: axesimage.set_clim(self.get_cax_limits())
             )
         else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
         

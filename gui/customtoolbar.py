@@ -10,6 +10,7 @@ else:
 from widgets.button import Button
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
+from functions.hotkeystostring import hotkeys_to_string
 import numpy as np
 import sys
 
@@ -20,7 +21,7 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Pan', u'Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect', u'move', u'pan'),
             (u'Zoom', u'Zoom to rectangle\nx/y fixes axis', u'zoom_to_rect', u'zoom'),
             (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
-            (u'Save', u'Save the figure', u'filesave', u'save_figure'),
+            (u'Save', u'Save the figure '+hotkeys_to_string('save'), u'filesave', u'save_figure'),
         )
         self.gui = gui
         self.canvas = canvas
@@ -42,7 +43,8 @@ class CustomToolbar(NavigationToolbar2Tk):
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
-        super(CustomToolbar, self).home(*args, **kwargs)
+        self.gui.interactiveplot.reset_xylim()
+        self.gui.interactiveplot.reset_clim()
 
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()

@@ -40,6 +40,7 @@ class InteractivePlot(tk.Frame,object):
         self.colorbar = CustomColorbar(self.ax)
         
         self.drawn_object = None
+        self.previously_drawn_object = None
 
         self.create_variables()
         self.create_widgets()
@@ -121,6 +122,8 @@ class InteractivePlot(tk.Frame,object):
 
     def wait_to_update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.wait_to_update")
+        # If we are waiting to update, then make sure the controls' update button is disabled
+        self.gui.controls.update_button.state(['disabled', 'pressed'])
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
         self._after_id_update = self.after(globals.plot_update_delay, lambda *args,**kwargs: self.gui.controls.update_button.invoke())
@@ -129,6 +132,8 @@ class InteractivePlot(tk.Frame,object):
         if globals.debug > 1:
             print("interactiveplot.update")
             print("    self.ax = ",self.ax)
+
+        
 
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
@@ -152,9 +157,9 @@ class InteractivePlot(tk.Frame,object):
         kwargs = {}
         kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
         kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
-        kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
-
+        #kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        #kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
+        
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
         # Scatter plot
@@ -176,6 +181,7 @@ class InteractivePlot(tk.Frame,object):
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
+                kwargs['aftercalculate'] = [self.after_scatter_calculate]
                 self.colorbar.hide()
 
         elif colorbar_text.strip() or colorbar_text.strip() != "":
@@ -221,11 +227,14 @@ class InteractivePlot(tk.Frame,object):
             kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['aspect'] = aspect
             kwargs['colorbar'] = self.colorbar
+            kwargs['aftercalculate'] = [self.after_ivp_calculate]
 
             self.colorbar.show()
         else:
             raise Exception("Unable to decide on scatter plot or integrated value plot. This should never happen.")
 
+        kwargs['aftercalculate'] += [self.after_calculate]
+        
         changed_args = False
         
         # If the plot we are going to make is the same as the plot already
@@ -233,8 +242,7 @@ class InteractivePlot(tk.Frame,object):
         if self.drawn_object is not None and self.previous_args is not None:
             xmin,xmax = self.ax.get_xlim()
             ymin,ymax = self.ax.get_ylim()
-            #vmin,vmax = self.colorbar.vmin, self.colorbar.vmax
-            #xmin,xmax,ymin,ymax = self.drawn_object._extent
+            #vmin,vmax = self.colorbar.get_cax_limits()
             if (self.previous_xlim[0] == xmin and
                 self.previous_xlim[1] == xmax and
                 self.previous_ylim[0] == ymin and
@@ -284,18 +292,46 @@ class InteractivePlot(tk.Frame,object):
         else:
             self.orientation.clear()
 
-        # Make absolutely sure that there is only ever exactly 1 image in the plot
-        for child in self.ax.get_children():
-            if isinstance(child, CustomAxesImage):
-                child.remove()
-            
+        # Remove the previously drawn object if it is still on the axis
+        if self.previously_drawn_object in self.ax.get_children():
+            self.previously_drawn_object.remove()
+        
         self.drawn_object = method(*args,**kwargs)
         
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
                 raise RuntimeError("Failed to spawn thread to draw the plot")
-            
-        # After creation
+
+    def after_calculate(self, *args, **kwargs):
+        # If we just switched to an integrated value plot, update the colorbar limits
+        #if (isinstance(self.drawn_object, IntegratedValuePlot) and
+        #    not isinstance(self.previously_drawn_object, IntegratedValuePlot)):
+        #    self.reset_clim(draw=False)
+        
+        self.previous_xlim = self.ax.get_xlim()
+        self.previous_ylim = self.ax.get_ylim()
+
+        self.previously_drawn_object = self.drawn_object
+
+        # Put the filename in the axis title for now
+        f = self.gui.filecontrols.current_file.get()
+        if len(f) > 30:
+            f = "..."+f[-27:]
+        self.ax.set_title(f)
+        
+        self.gui.set_user_controlled(True)
+
+        for axis_controller in self.gui.controls.axis_controllers.values():
+            axis_controller.update_scale_buttons()
+
+        # Store the axis limits
+        self.gui.controls.previous_xaxis_limits = self.ax.get_xlim()
+        self.gui.controls.previous_yaxis_limits = self.ax.get_ylim()
+        self.gui.controls.previous_caxis_limits = self.colorbar.get_cax_limits()
+        
+        self.gui.controls.save_state()
+
+    def after_scatter_calculate(self, *args, **kwargs):
         if not self.gui.data.is_image:
             self.previous_args = args
             self.previous_kwargs = kwargs            
@@ -322,21 +358,12 @@ class InteractivePlot(tk.Frame,object):
             elif xadaptive or np.nan in controls_xlimits: self.reset_xylim(which='xlim',draw=False)
             elif yadaptive or np.nan in controls_ylimits: self.reset_xylim(which='ylim',draw=False)
 
-            if self.colorbar.visible and (cadaptive or np.nan in controls_climits):
-                self.reset_clim(draw=False)
-
-        self.previous_xlim = self.ax.get_xlim()
-        self.previous_ylim = self.ax.get_ylim()
-        self.previous_vmin = self.colorbar.vmin
-        self.previous_vmax = self.colorbar.vmax
-
-        # Put the filename in the axis title for now
-        f = self.gui.filecontrols.current_file.get()
-        if len(f) > 30:
-            f = "..."+f[-27:]
-        self.ax.set_title(f)
-        
-        self.gui.set_user_controlled(True)
+    def after_ivp_calculate(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.after_ivp_calculate")
+        if ((isinstance(self.drawn_object, IntegratedValuePlot) and
+            not isinstance(self.previously_drawn_object, IntegratedValuePlot)) or
+            self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()):
+            self.reset_clim(draw=False)
         
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")
@@ -360,17 +387,15 @@ class InteractivePlot(tk.Frame,object):
 
     def reset_clim(self, draw=True):
         if globals.debug > 1: print("interactiveplot.reset_clim")
-        self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
+        #self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
         newlim = np.array(self.colorbar.calculate_limits(data=self.drawn_object._data))
-        lim = np.array([self.colorbar.vmin, self.colorbar.vmax])
-        if None not in newlim:
-            if any(np.abs((newlim-lim[lim != 0])/lim[lim != 0]) > 0.001):
-                self.colorbar.set_clim(newlim)
-                self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
+        self.colorbar.set_clim(newlim)
+        self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
         if draw: self.canvas.draw_idle()
 
     def reset_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_xylim")
+        print("reset_xylim")
         
         new_xlim, new_ylim = self.calculate_xylim(which=which)
 
@@ -419,11 +444,11 @@ class InteractivePlot(tk.Frame,object):
         new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
             
         # Apply the units to the limits
-        xunits = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        yunits = self.gui.controls.axis_controllers['YAxis'].units.value.get()
+        #xunits = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        #yunits = self.gui.controls.axis_controllers['YAxis'].units.value.get()
         
-        new_xlim /= xunits
-        new_ylim /= yunits
+        #new_xlim /= xunits
+        #new_ylim /= yunits
             
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim
@@ -435,6 +460,15 @@ class InteractivePlot(tk.Frame,object):
     def zoom(self, event):
         if globals.debug > 1: print("interactiveplot.zoom")
 
+        # Cancel any queued zoom
+        self.gui.plottoolbar.cancel_queued_zoom()
+
+        # Make the limits not be adaptive
+
+        for axis_controller in self.gui.controls.axis_controllers.values():
+            axis_controller.limits.adaptive_off()
+
+        
         # Seems that sometimes this method can be called incorrectly, so we prevent that here
         if event.xdata is None or event.ydata is None: return
         
@@ -465,6 +499,6 @@ class InteractivePlot(tk.Frame,object):
         # Need to update the user's axis limits
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(xlim)
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
-        
+
         self.canvas.draw_idle()
         self.wait_to_update()

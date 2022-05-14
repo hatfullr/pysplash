@@ -62,11 +62,11 @@ class Controls(tk.Frame,object):
         # Update button
         self.update_button = Button(
             self,
-            text="Update",
+            text="Update "+hotkeys_to_string('update plot'),
             state='disabled',
             command=self.on_update_button_pressed,
         )
-        ToolTip.createToolTip(self.update_button, "Redraw the plot using the controls below. Hotkey: "+hotkeys_to_string('update plot'))
+        ToolTip.createToolTip(self.update_button, "Redraw the plot using the controls below.")
         
         # Axis controls
         self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
@@ -99,20 +99,22 @@ class Controls(tk.Frame,object):
         current_state = self.get_state()
         for item in current_state:
             if item not in self.saved_state:
+                # Current state has changed since last saved state
                 if globals.debug > 1: print("   ",item)
-                self.update_button.configure(relief='raised',state='normal')
-                break
-        else: # No break
+                self.update_button.configure(state='!disabled',relief='raised')
+        else: # Current state is the same as the last saved state
             if self.gui.plottoolbar.queued_zoom is not None:
-                self.update_button.configure(relief='raised',state='normal')
-            else:
-                self.update_button.configure(relief='sunken',state='disabled')
+                self.update_button.configure(state='!disabled',relief='raised')
+            #else:
+            #    self.update_button.configure(state='disabled',relief='sunken')
 
 
     def get_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.get_state")
         state = []
         for v in self.get_variables():
+            #if hasattr(v,'get'): state.append([v,v.get])
+            #else: state.append([v,v])
             try:
                 state.append([v,v.get()])
             except: pass
@@ -206,13 +208,14 @@ class Controls(tk.Frame,object):
             if axis_controller.value in changed_variables:
                 need_reset = True
                 break
-                
+
         # Note: changing the units also changes the associated axis controls limits
             
         # Check if the user changed any of the x or y axis limits
-        if self.is_limits_changed(('XAxis','YAxis')):
+        if self.is_limits_changed(('XAxis','YAxis','Colorbar')):
             # Cancel any queued zoom
-            self.gui.plottoolbar.cancel_queued_zoom()
+            if self.is_limits_changed(('XAxis','YAxis')):
+                self.gui.plottoolbar.cancel_queued_zoom()
             
             user_xlims = self.axis_controllers['XAxis'].limits.get()
             user_ylims = self.axis_controllers['YAxis'].limits.get()
@@ -229,8 +232,7 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.ax.set_xlim(user_xlims)
             self.gui.interactiveplot.ax.set_ylim(user_ylims)
             self.gui.interactiveplot.colorbar.set_clim(user_clims)
-            self.gui.interactiveplot.canvas.draw_idle()
-            #need_reset = True
+            need_reset = True
             
         
         # Perform the queued zoom if there is one
@@ -249,25 +251,14 @@ class Controls(tk.Frame,object):
                     self.plotcontrols.rotation_z.get(),
                 )
                 need_reset = True
-
-        # Check if the user changed the colorbar axis limits
-        if self.is_limits_changed('Colorbar'):
-            # If we aren't going to be resetting the plot, then simply update
-            # the colorbar limits. This will automatically update the colors in the image
-            self.gui.interactiveplot.colorbar.set_clim(self.axis_controllers['Colorbar'].limits.get())
         
         # Draw the new plot
         if need_reset:
-            print("Resetting")
             self.gui.interactiveplot.reset()
             self.gui.interactiveplot.update()
-
-        # Store the axis limits
-        self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()
-        self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()
-        self.previous_caxis_limits = (self.gui.interactiveplot.colorbar.vmin, self.gui.interactiveplot.colorbar.vmax)
-        
-        self.save_state()
+            
+        # Everything after this is done in interactiveplot.update
+        # because we need to wait for the plot to finish calculating
 
     def connect(self):
         if globals.debug > 1: print("controls.connect")

@@ -4,7 +4,7 @@ else: import Tkinter as tk
 
 from functions.downloaddatafromserver import download_data_from_server
 from functions.importdata import importdata
-from hotkeyslist import hotkeyslist
+from functions.hotkeystostring import hotkeys_to_string
 
 class DataMenuBar(tk.Menu, object):
     def __init__(self, master, gui, name='data', tearoff=0, *args, **kwargs):
@@ -16,9 +16,7 @@ class DataMenuBar(tk.Menu, object):
             **kwargs
         )
 
-        label = "Import data"
-        if "import data" in hotkeyslist.keys():
-            label += " ("+hotkeyslist["import data"]["keylist"][0]+")"
+        label = "Import data "+hotkeys_to_string("import data")
         self.add_command(label=label, command=lambda: importdata(gui))
         self.add_command(label='Download data from server', command=lambda: download_data_from_server(gui))
         

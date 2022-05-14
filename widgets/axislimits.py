@@ -16,10 +16,11 @@ import globals
 import numpy as np
 
 class AxisLimits(tk.LabelFrame,object):
-    def __init__(self, master, text="Limits", allowadaptive=True, **kwargs):
+    def __init__(self, master, text="Limits", adaptivecommands=(None, None), allowadaptive=True, **kwargs):
         if globals.debug > 1: print("axislimits.__init__")
         super(AxisLimits, self).__init__(master,text=text,**kwargs)
 
+        self.adaptivecommands = adaptivecommands
         self.allowadaptive = allowadaptive
         self.axis = None
         self.cid = None
@@ -123,28 +124,6 @@ class AxisLimits(tk.LabelFrame,object):
         self.low.set(newlimits[0])
         self.high.set(newlimits[1])
 
-    def set_adaptive_limits(self, *args, **kwargs):
-        if globals.debug > 1: print("axislimits.set_adaptive_limits")
-        if self.adaptive.get():
-            # Set the limit entries to be the data's true, total limits
-            if self.axis:
-                # Try to locate the GUI widget
-                for child in self.winfo_toplevel().winfo_children():
-                    if isinstance(child, gui.gui.GUI):
-                        # Check if this axis is the colorbar
-                        if self.axis._axes is child.interactiveplot.colorbar.cax:
-                            newlim = child.interactiveplot.colorbar.calculate_limits()
-                        # This axis is either the x or y axes of the main plot (not the colorbar)
-                        else:
-                            if isinstance(self.axis, XAxis):
-                                newlim, dummy = child.interactiveplot.calculate_xylim(which='xlim')
-                            elif isinstance(self.axis, YAxis):
-                                dummy, newlim = child.interactiveplot.calculate_xylim(which='ylim')
-
-                        if None not in newlim: self.set_limits(newlim)
-                        break
-        
-
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
         if not self.allowadaptive: return
@@ -155,8 +134,7 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.configure(state='disabled')
         self.entry_high.configure(state='disabled')
 
-        self.set_adaptive_limits()
-            
+        if self.adaptivecommands[0] is not None: self.adaptivecommands[0](*args, **kwargs)
 
     def adaptive_off(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_off")
@@ -167,3 +145,8 @@ class AxisLimits(tk.LabelFrame,object):
         # Enable the limit entries
         self.entry_low.configure(state='normal')
         self.entry_high.configure(state='normal')
+        
+        # Reset the entry boxes to have the current view
+        self.on_axis_limits_changed()
+
+        if self.adaptivecommands[1] is not None: self.adaptivecommands[1](*args, **kwargs)
