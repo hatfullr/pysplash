@@ -7,7 +7,7 @@ compact_support = 2.
 # more information will be printed to the terminal.
 # Set this to 0 to get no output to the terminal at
 # all.
-debug = 1
+debug = 0
 
 # In some cases you might get a performance boost if
 # you allow the use of multiprocessing. It depends
