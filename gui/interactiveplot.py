@@ -157,8 +157,8 @@ class InteractivePlot(tk.Frame,object):
         kwargs = {}
         kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
         kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
-        #kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        #kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
+        kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
         
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         

@@ -47,7 +47,7 @@ class AxisController(LabelledFrame,object):
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
-        self.units.value.trace('w',self.update_limits)
+        #self.units.value.trace('w',self.update_limits)
 
         if self.usecombobox:
             self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
@@ -94,7 +94,7 @@ class AxisController(LabelledFrame,object):
         
         self.limits = AxisLimits(self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
         self.units_and_scale_frame = tk.Frame(self)
-        self.units = AxisUnits(self.units_and_scale_frame)
+        self.units = AxisUnits(self.units_and_scale_frame, self)
         self.scale = AxisScale(self.units_and_scale_frame)
         
     def place_widgets(self,*args,**kwargs):
@@ -116,8 +116,6 @@ class AxisController(LabelledFrame,object):
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
         if self.usecombobox:
-            if self.previous_value != self.value.get():
-                self.units.value.set(1.) # Reset the units
             if self.value.get() in self.gui.data['data'].keys():
                 if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
                     if self.scale.get() == "log10":
@@ -133,14 +131,12 @@ class AxisController(LabelledFrame,object):
         if axis is not None:
             self.axis = axis
             self.limits.connect(self.axis)
-            #self.units.connect(self.axis)
             self.scale.connect(self.axis)
             self.cid = self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
     
     def disconnect(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.disconnect")
         self.limits.disconnect()
-        #self.units.disconnect()
         self.scale.disconnect()
         if self.axis and self.cid:
             self.axis.get_figure().canvas.mpl_disconnect(self.cid)
@@ -195,7 +191,7 @@ class AxisController(LabelledFrame,object):
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             # First reset the units so that things don't get mucked up
-            self.units.value.set(1.)
+            self.units.reset()
 
             low = self.limits.low.get()
             high = self.limits.high.get()
