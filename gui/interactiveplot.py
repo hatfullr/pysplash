@@ -395,7 +395,6 @@ class InteractivePlot(tk.Frame,object):
 
     def reset_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_xylim")
-        print("reset_xylim")
         
         new_xlim, new_ylim = self.calculate_xylim(which=which)
 
@@ -440,9 +439,12 @@ class InteractivePlot(tk.Frame,object):
         xmargin, ymargin = self.ax.margins()
         dx = new_xlim[1]-new_xlim[0]
         dy = new_ylim[1]-new_ylim[0]
+        # When dy or dx are zero, Matplotlib uses -margin, +margin limits
+        if dy == 0: dy = 1.
+        if dx == 0: dx = 1.
         new_xlim = np.array([new_xlim[0]-dx*xmargin,new_xlim[1]+dx*xmargin])
         new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
-            
+        
         # Apply the units to the limits
         #xunits = self.gui.controls.axis_controllers['XAxis'].units.value.get()
         #yunits = self.gui.controls.axis_controllers['YAxis'].units.value.get()

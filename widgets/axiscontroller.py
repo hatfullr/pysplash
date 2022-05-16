@@ -124,7 +124,7 @@ class AxisController(LabelledFrame,object):
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
         #else: # If all values in the data are positive and non-zero
-        self.limits.set_adaptive_limits()
+        self.set_adaptive_limits()
         
         self.previous_value = self.value.get()
         
@@ -261,10 +261,9 @@ class AxisController(LabelledFrame,object):
                 newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
             elif isinstance(self.axis, YAxis):
                 dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
-
+            
             if None not in newlim:
                 # Apply the current scale to the new limits
                 if self.scale.get() == 'log10': newlim = np.log10(newlim)
                 elif self.scale.get() == '^10': newlim = 10.**newlim
-                print("here newlim = ",newlim)
                 self.limits.set_limits(newlim)
