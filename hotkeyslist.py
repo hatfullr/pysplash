@@ -23,13 +23,13 @@ hotkeyslist = {
         "type" : "local",
     },
     "import data" : {
-        "keylist" : ["<Control-i>"],
-        "modifiers" : [],
+        "keylist" : ["<i>"],
+        "modifiers" : ["<Control>"],
         "type" : "global",
     },
     "save" : {
-        "keylist" : ["<Control-s>"],
-        "modifiers" : [],
+        "keylist" : ["<s>"],
+        "modifiers" : ["<Control>"],
         "type" : "global",
     },
 
