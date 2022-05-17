@@ -19,6 +19,15 @@ class Hotkeys(object):
         self.root = root
         self.registry = {}
 
+        # Bind all the modifiers so that we know when they are pressed/released
+        self.root.bind("<KeyPress>", self.on_keypress,add="+")
+        self.root.bind("<KeyRelease>", self.on_keyrelease,add="+")
+        self.modifiers = {
+            '<Control>' : False,
+            '<Shift>': False,
+            '<Alt>' : False,
+        }
+
     def bind(self, name, commands):
         if globals.debug > 1: print("hotkeys.bind")
         if name not in hotkeyslist.keys():
@@ -27,17 +36,19 @@ class Hotkeys(object):
         if not isinstance(commands, (list, tuple, np.ndarray)):
             commands = [commands]
 
-        def command(*args, **kwargs):
-            for c in commands: c(*args, **kwargs)
-            
+        #def command(modifiers, *args, **kwargs):
+        #    for modifier in modifiers:
+        #        if not self.modifiers[modifier]: return
+        #    for c in commands: c(*args, **kwargs)
+        
         if name in self.registry:
             raise KeyError("The hotkey action '"+name+"' is already bound")
         
         for key in hotkeyslist[name]["keylist"]:
             if hotkeyslist[name]["type"] == "global":
-                self.bind_global(name, key, command)
+                self.bind_global(name, key, lambda event: self.command(name,commands,event))#lambda *args, **kwargs: command(hotkeyslist[name]["modifiers"],*args,**kwargs))
             elif hotkeyslist[name]["type"] == "local":
-                self.bind_local(name, key, command)
+                self.bind_local(name, key, lambda event: self.command(name,commands,event))#lambda *args, **kwargs: command(hotkeyslist[name]["modifiers"],*args,**kwargs))
             else:
                 raise ValueError("Hotkey '"+name+"' has type '"+hotkeyslist[name]["type"]+"', but must be 'global' or 'local'")
 
@@ -62,4 +73,30 @@ class Hotkeys(object):
         for child in get_all_children(self.root):
             if not isinstance(child, (tk.Entry, ttk.Entry, ttk.Combobox)):
                 self.registry[name].append([child, key, child.bind(key, command, add="+")])
+
+
+    def on_keypress(self, event):
+        if "Control" in event.keysym: key = "<Control>"
+        elif "Shift" in event.keysym: key = "<Shift>"
+        elif "Alt" in event.keysym: key = "<Alt>"
+        else: return
+        self.modifiers[key] = True
+
+    def on_keyrelease(self, event):
+        if "Control" in event.keysym: key = "<Control>"
+        elif "Shift" in event.keysym: key = "<Shift>"
+        elif "Alt" in event.keysym: key = "<Alt>"
+        else: return
+        self.modifiers[key] = False
+
+
+    def command(self, name, commands, event):
+        pressed_modifiers = [key for key in self.modifiers.keys() if self.modifiers[key]]
+        if hotkeyslist[name]['modifiers'] == []:
+            if pressed_modifiers == []:
+                for c in commands: c(event)
+        else:
+            for modifier in hotkeyslist[name]['modifiers']:
+                if modifier not in pressed_modifiers: return
+            for c in commands: c(event)
 

@@ -6,25 +6,64 @@
 # only work when the focus is not set on any particular widget.
 
 hotkeyslist = {
+    # Controls hotkeys
     "next file" : {
         "keylist" : ["<Right>"],
+        "modifiers" : [],
         "type" : "global",
     },
     "previous file" : {
         "keylist" : ["<Left>"],
+        "modifiers" : [],
         "type" : "global",
     },
     "update plot" : {
         "keylist" : ["<space>"],
+        "modifiers" : [],
         "type" : "local",
     },
     "import data" : {
         "keylist" : ["<Control-i>"],
+        "modifiers" : [],
         "type" : "global",
     },
     "save" : {
         "keylist" : ["<Control-s>"],
+        "modifiers" : [],
         "type" : "global",
+    },
+
+    # Plot hotkeys
+    "start pan" : {
+        "keylist" : ["<ButtonPress-2>"],
+        "modifiers" : [],
+        "type" : "local",
+    },
+    "drag pan" : {
+        "keylist" : ["<B2-Motion>"],
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "stop pan" : {
+        "keylist" : ["<ButtonRelease-2>"],
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "zoom" : {
+        # Bind <Button-4> and <Button-5> for tkinter on Linux machines
+        "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
+        "modifiers" : [],
+        "type" : "local",
+    },
+    "zoom x" : {
+        "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
+        "modifiers" : ["<Control>"],
+        "type" : "local",
+    },
+    "zoom y" : {
+        "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
+        "modifiers" : ["<Shift>"],
+        "type" : "local",
     }
 }
 
