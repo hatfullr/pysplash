@@ -41,6 +41,11 @@ class ImportData(PopupWindow,object):
 
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_variables")
+        # Gather the preferences
+        preference = self.gui.get_preference("importdata")
+        if preference is None:
+            preference = {'path':''}
+        self.path = tk.StringVar(value=preference['path'])
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_widgets")
@@ -50,7 +55,7 @@ class ImportData(PopupWindow,object):
             wraplength=self._width-2*self.pad,
             justify='left',
         )
-        self.pathentry = PathEntry(self.contents,"open filenames")
+        self.pathentry = PathEntry(self.contents,"open filenames",textvariable=self.path)
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.place_widgets")
@@ -62,6 +67,9 @@ class ImportData(PopupWindow,object):
         # First validate the path names
         if not self.pathentry.validate() or self.pathentry.textvariable.get() in [[],(),""]: return
         error = False
+
+        # Save the path names in the gui preferences
+        self.gui.set_preference("importdata",{'path':self.path.get()})
         
         # The value of the path entry is always a list when mode = "open filenames"
 
