@@ -22,6 +22,7 @@ class Hotkeys(object):
         # Bind all the modifiers so that we know when they are pressed/released
         self.root.bind("<KeyPress>", self.on_keypress,add="+")
         self.root.bind("<KeyRelease>", self.on_keyrelease,add="+")
+        self.root.bind("<FocusOut>", self.on_focusout, add="+")
         self.modifiers = {
             '<Control>' : False,
             '<Shift>': False,
@@ -89,6 +90,8 @@ class Hotkeys(object):
         else: return
         self.modifiers[key] = False
 
+    def on_focusout(self, event):
+        for key in self.modifiers.keys(): self.modifiers[key] = False
 
     def command(self, name, commands, event):
         pressed_modifiers = [key for key in self.modifiers.keys() if self.modifiers[key]]
