@@ -413,13 +413,10 @@ class InteractivePlot(tk.Frame,object):
             y = self.gui.controls.axis_controllers['YAxis'].value.get()
             xdata = self.gui.get_display_data(x)
             ydata = self.gui.get_display_data(y)
-            #print(ydata)
-            #print(np.nanmin(ydata[np.isfinite(ydata)]))
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
             new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
-            print(new_ylim)
         else:
             # Get the home view and use its limits as the new limits
             xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
