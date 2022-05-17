@@ -53,3 +53,5 @@ class AxisUnits(tk.LabelFrame, object):
         if self.axis_controller.usecombobox:
             if self.axis_controller.previous_value != self.axis_controller.value.get():
                 self.reset()
+    
+    

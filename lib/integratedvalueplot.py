@@ -36,9 +36,6 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.h = np.ascontiguousarray(h,dtype=np.double)
         self.rho = np.ascontiguousarray(rho,dtype=np.double)
 
-        self.x /= kwargs.get('xunits', 1.)
-        self.y /= kwargs.get('yunits', 1.)
-
         # We are given all the quantities in display units. For now,
         # we want to show integrated value plots only in physical units.
         

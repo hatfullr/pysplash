@@ -42,9 +42,6 @@ class ScatterPlot(CustomAxesImage,object):
             np.full((1,1),False,dtype='bool'),
             **kwargs
         )
-
-        self.x /= self.xunits
-        self.y /= self.yunits
         
         self.initializing = False
         

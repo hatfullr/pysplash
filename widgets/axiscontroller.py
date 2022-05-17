@@ -49,9 +49,13 @@ class AxisController(LabelledFrame,object):
         self.limits.high.trace('w',self.update_scale_buttons)
         #self.units.value.trace('w',self.update_limits)
 
+        self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
+        
         if self.usecombobox:
             self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
+            
         self.previous_value = None
+
         
 
     def get_variables(self,*args,**kwargs):
@@ -117,7 +121,7 @@ class AxisController(LabelledFrame,object):
         # the user is in log10 scale mode, we need to switch them out of it
         if self.usecombobox:
             if self.value.get() in self.gui.data['data'].keys():
-                if any(self.gui.get_display_data(self.value.get(), scaled=False) <= 0):
+                if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
                     if self.scale.get() == "log10":
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
@@ -169,7 +173,7 @@ class AxisController(LabelledFrame,object):
         #if self.gui.data is not None:
         #    if self.value.get() not in self.gui.data['data'].keys(): return
         #
-        #    data = self.gui.get_display_data(self.value.get(), scaled=False)
+        #    data = self.gui.get_display_data(self.value.get(), raw=True)
         #    if np.any(data <= 0):
         #        self.scale.log_button.configure(state='disabled')
         #        return
@@ -244,7 +248,6 @@ class AxisController(LabelledFrame,object):
                 limit.set(limit.get() * self.previous_units / units)
             self.previous_units = units
 
-
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
         # Set the limit entries to be the data's true, total limits
@@ -263,3 +266,4 @@ class AxisController(LabelledFrame,object):
                 if self.scale.get() == 'log10': newlim = np.log10(newlim)
                 elif self.scale.get() == '^10': newlim = 10.**newlim
                 self.limits.set_limits(newlim)
+        

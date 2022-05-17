@@ -47,6 +47,8 @@ class Controls(tk.Frame,object):
         
         for variable in self.get_variables():
             variable.trace('w',self.on_state_change)
+
+        self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
         
         self.saved_state = None
         self.previous_state = None
@@ -203,15 +205,13 @@ class Controls(tk.Frame,object):
             self.gui.read()
             need_reset = True
 
-        # If the x, y, or colorbar axes' combobox values
+        # If the x, y, or colorbar axes' combobox/entry values changed
         for axis_controller in self.axis_controllers.values():
             if axis_controller.value in changed_variables:
                 need_reset = True
                 break
 
-        # Note: changing the units also changes the associated axis controls limits
-            
-        # Check if the user changed any of the x or y axis limits
+        # Check if the user changed any of the x or y axis limits (changing units also changes limits)
         if self.is_limits_changed(('XAxis','YAxis','Colorbar')):
             # Cancel any queued zoom
             if self.is_limits_changed(('XAxis','YAxis')):
@@ -220,7 +220,7 @@ class Controls(tk.Frame,object):
             user_xlims = self.axis_controllers['XAxis'].limits.get()
             user_ylims = self.axis_controllers['YAxis'].limits.get()
             user_clims = self.axis_controllers['Colorbar'].limits.get()
-
+            
             if np.isnan(user_xlims[0]): user_xlims = (None, user_xlims[1])
             if np.isnan(user_xlims[1]): user_xlims = (user_xlims[0], None)
             if np.isnan(user_ylims[0]): user_ylims = (None, user_ylims[1])
@@ -285,3 +285,14 @@ class Controls(tk.Frame,object):
                 result.append(item[0])
         
         return result
+
+
+    def on_plot_update(self, *args, **kwargs):
+        if globals.debug > 1: print("controls.on_plot_update")
+
+        # Store the axis limits
+        self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()
+        self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()
+        self.previous_caxis_limits = self.gui.interactiveplot.colorbar.get_cax_limits()
+
+        self.save_state()

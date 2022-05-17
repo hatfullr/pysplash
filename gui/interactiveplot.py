@@ -157,8 +157,8 @@ class InteractivePlot(tk.Frame,object):
         kwargs = {}
         kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
         kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
-        kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
+        #kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
+        #kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
         
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
@@ -303,14 +303,11 @@ class InteractivePlot(tk.Frame,object):
                 raise RuntimeError("Failed to spawn thread to draw the plot")
 
     def after_calculate(self, *args, **kwargs):
-        # If we just switched to an integrated value plot, update the colorbar limits
-        #if (isinstance(self.drawn_object, IntegratedValuePlot) and
-        #    not isinstance(self.previously_drawn_object, IntegratedValuePlot)):
-        #    self.reset_clim(draw=False)
+        if globals.debug > 1: print("interactiveplot.after_calculate")
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
-
+        
         self.previously_drawn_object = self.drawn_object
 
         # Put the filename in the axis title for now
@@ -321,15 +318,7 @@ class InteractivePlot(tk.Frame,object):
         
         self.gui.set_user_controlled(True)
 
-        for axis_controller in self.gui.controls.axis_controllers.values():
-            axis_controller.update_scale_buttons()
-
-        # Store the axis limits
-        self.gui.controls.previous_xaxis_limits = self.ax.get_xlim()
-        self.gui.controls.previous_yaxis_limits = self.ax.get_ylim()
-        self.gui.controls.previous_caxis_limits = self.colorbar.get_cax_limits()
-        
-        self.gui.controls.save_state()
+        self.gui.event_generate("<<PlotUpdate>>")
 
     def after_scatter_calculate(self, *args, **kwargs):
         if not self.gui.data.is_image:
