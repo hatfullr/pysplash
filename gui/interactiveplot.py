@@ -157,8 +157,6 @@ class InteractivePlot(tk.Frame,object):
         kwargs = {}
         kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
         kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
-        #kwargs['xunits'] = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        #kwargs['yunits'] = self.gui.controls.axis_controllers['YAxis'].units.value.get()
         
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
@@ -415,10 +413,13 @@ class InteractivePlot(tk.Frame,object):
             y = self.gui.controls.axis_controllers['YAxis'].value.get()
             xdata = self.gui.get_display_data(x)
             ydata = self.gui.get_display_data(y)
+            #print(ydata)
+            #print(np.nanmin(ydata[np.isfinite(ydata)]))
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
             new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
+            print(new_ylim)
         else:
             # Get the home view and use its limits as the new limits
             xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
@@ -433,13 +434,6 @@ class InteractivePlot(tk.Frame,object):
         if dx == 0: dx = 1.
         new_xlim = np.array([new_xlim[0]-dx*xmargin,new_xlim[1]+dx*xmargin])
         new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
-        
-        # Apply the units to the limits
-        #xunits = self.gui.controls.axis_controllers['XAxis'].units.value.get()
-        #yunits = self.gui.controls.axis_controllers['YAxis'].units.value.get()
-        
-        #new_xlim /= xunits
-        #new_ylim /= yunits
             
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim

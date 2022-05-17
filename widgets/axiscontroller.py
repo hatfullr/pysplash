@@ -262,8 +262,5 @@ class AxisController(LabelledFrame,object):
                 dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
             
             if None not in newlim:
-                # Apply the current scale to the new limits
-                if self.scale.get() == 'log10': newlim = np.log10(newlim)
-                elif self.scale.get() == '^10': newlim = 10.**newlim
                 self.limits.set_limits(newlim)
         

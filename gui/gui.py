@@ -318,7 +318,7 @@ class GUI(tk.Frame,object):
             else:
                 raise RuntimeError("None of the AxisControllers have the value '"+xaxis+"' or '"+yaxis+"'")
             units = controller.units.value.get()
-            previous_units = controller.previous_units
+            #previous_units = controller.previous_units
             scale = controller.scale.get()
             if scale == 'linear': return self.display_data[key]/units
             elif scale == 'log10': return np.log10(self.display_data[key]/units)
