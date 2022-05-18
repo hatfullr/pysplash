@@ -28,6 +28,8 @@ class MathCombobox(ttk.Combobox, object):
 
         mathentrytextvariable = tk.StringVar(value=textvariable.get())
         self.mathentry = MathEntry(self, self.gui, textvariable=textvariable)
+
+        self.mathentry.bind("<FocusOut>", lambda *args,**kwargs: self.event_generate("<<ComboboxSelected>>"), add="+")
         
         self.bind("<Map>", self.on_map, add="+")
         # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,

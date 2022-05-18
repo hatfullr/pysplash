@@ -106,11 +106,9 @@ class Controls(tk.Frame,object):
         # Compare the current state to the previous state
         if self.saved_state is None: return
 
-        strlist = [str(v) for v in globals.state_variables]
-        var = globals.state_variables[strlist.index(variable)]
-        value = var.get()
-
-        self.current_state[variable] = value
+        var = self.string_to_state_variable(variable)
+        if var is None: return
+        self.current_state[variable] = var.get()
         
         if len(self.compare_states(self.current_state,self.saved_state)) > 0:
             self.update_button.configure(state='!disabled',relief='raised')
@@ -120,6 +118,7 @@ class Controls(tk.Frame,object):
     def string_to_state_variable(self, string):
         if globals.debug > 1: print("controls.string_to_state_variable")
         strlist = [str(v) for v in globals.state_variables]
+        if string not in strlist: return None
         return globals.state_variables[strlist.index(string)]
 
     def compare_states(self, state1, state2):

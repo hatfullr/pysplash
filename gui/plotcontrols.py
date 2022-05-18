@@ -75,6 +75,33 @@ class PlotControls(LabelledFrame, object):
 
         # Show Orientation
         self.show_orientation_checkbutton.pack(side='top',fill='x',expand=True)
+
+    def disable_rotations(self, *args, **kwargs):
+        if globals.debug > 1: print("plotcontrols.disable_rotations")
+        if 'disabled' not in self.rotation_x_entry.state():
+            self.rotation_x_entry.state(["disabled"])
+            globals.state_variables.remove(self.rotation_x)
+            self.rotation_x.set(0)
+        if 'disabled' not in self.rotation_y_entry.state():
+            self.rotation_y_entry.state(["disabled"])
+            globals.state_variables.remove(self.rotation_y)
+            self.rotation_y.set(0)
+        if 'disabled' not in self.rotation_z_entry.state():
+            self.rotation_z_entry.state(["disabled"])
+            globals.state_variables.remove(self.rotation_z)
+            self.rotation_z.set(0)
+
+    def enable_rotations(self, *args, **kwargs):
+        if globals.debug > 1: print("plotcontrols.enable_rotations")
+        if 'disabled' in self.rotation_x_entry.state():
+            self.rotation_x_entry.state(["!disabled"])
+            globals.state_variables.append(self.rotation_x)
+        if 'disabled' in self.rotation_y_entry.state():
+            self.rotation_y_entry.state(["!disabled"])
+            globals.state_variables.append(self.rotation_y)
+        if 'disabled' in self.rotation_z_entry.state():
+            self.rotation_z_entry.state(["!disabled"])
+            globals.state_variables.append(self.rotation_z)
         
     def disable(self,temporarily=False):
         if globals.debug > 1: print("plotcontrols.disable")
@@ -94,27 +121,3 @@ class PlotControls(LabelledFrame, object):
         else:
             children = get_all_children(self)
             set_widgets_states(children,'normal')
-    """
-    def set_widget_state(self,widgets,state):
-        if globals.debug > 1: print("plotcontrols.set_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                current_state = widget.cget('state')
-                if current_state != state:
-                    if isinstance(widget,ttk.Combobox):
-                        if state == 'normal': widget.configure(state='readonly')
-                    else:
-                        widget.configure(state=state)
-
-    def get_widget_state(self,widgets):
-        if globals.debug > 1: print("plotcontrols.get_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        states = []
-        for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                states.append([widget,widget.cget('state')])
-        return states
-    """

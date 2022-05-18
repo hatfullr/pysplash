@@ -112,12 +112,20 @@ class AxisController(LabelledFrame,object):
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
         if self.usecombobox:
-            if self.value.get() in self.gui.data['data'].keys():
+            value = self.value.get()
+            if value in self.gui.data['data'].keys():
                 if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
                     if self.scale.get() == "log10":
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
-        #else: # If all values in the data are positive and non-zero
+                # Disable rotation controls if we're not in the spatial domain
+                if value in ['x','y','z']:
+                    self.gui.controls.plotcontrols.enable_rotations()
+                else:
+                    self.gui.controls.plotcontrols.disable_rotations()
+            else:
+                self.gui.controls.plotcontrols.disable_rotations()
+                    
         self.set_adaptive_limits()
         
         self.previous_value = self.value.get()
