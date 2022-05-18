@@ -3,6 +3,7 @@ if sys.version_info.major < 3:
     import Tkinter as tk
 else:
     import tkinter as tk
+from functions.getallchildren import get_all_children
 import globals
 import os
     
@@ -43,6 +44,11 @@ class Window(tk.Tk):
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
         for filename in os.listdir(tmp_path):
             os.remove(os.path.join(tmp_path,filename))
-                
-        #self.quit()
+        
+        # Destroy all the widgets in the application starting from the widgets
+        # which have no children, moving up the heirarchy all the way to this
+        # root window. This hopefully prevents any Tcl errors that can occur
+        # from only using self.destroy()
+        for child in get_all_children(self, order_by_level = True):
+            child.destroy()
         self.destroy()
