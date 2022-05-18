@@ -29,15 +29,17 @@ class MathCombobox(ttk.Combobox, object):
         mathentrytextvariable = tk.StringVar(value=textvariable.get())
         self.mathentry = MathEntry(self, self.gui, textvariable=textvariable)
 
+        # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,
+        # while still retaining the default keybindings inherent to MathEntry widgets.
+        bindtags = list(self.mathentry.bindtags())
+        bindtags[1] = "TCombobox"
+        print(bindtags)
+        self.mathentry.bindtags(tuple(bindtags))
+        
         self.mathentry.bind("<FocusOut>", lambda *args,**kwargs: self.event_generate("<<ComboboxSelected>>"), add="+")
         
         self.bind("<Map>", self.on_map, add="+")
-        # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,
-        # while still retaining the default keybindings inherent to MathEntry widgets.
-        bindtags = list(self.bindtags())
-        bindtags[0] = self.mathentry
-        self.mathentry.bindtags(tuple(bindtags))
-
+        
     def get(self, *args, **kwargs):
         return self.mathentry.get_data()
         

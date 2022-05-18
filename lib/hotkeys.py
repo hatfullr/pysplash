@@ -5,7 +5,6 @@ if sys.version_info.major < 3:
 else:
     import tkinter as tk
     from tkinter import ttk
-from functions.getallchildren import get_all_children
 import globals
 import numpy as np
 from hotkeyslist import hotkeyslist
@@ -36,7 +35,7 @@ class Hotkeys(object):
 
         if not isinstance(commands, (list, tuple, np.ndarray)):
             commands = [commands]
-        
+
         if name in self.registry:
             raise KeyError("The hotkey action '"+name+"' is already bound")
         

@@ -214,7 +214,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
         self.hotkeys.bind("next file", (
-            lambda *args, **kwargs: self.filecontrols.next_button.invoke(),
+            self.next_file,
             lambda *args,**kwargs: self.controls.update_button.invoke(),
         ))
         self.hotkeys.bind("previous file", (

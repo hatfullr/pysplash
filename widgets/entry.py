@@ -24,11 +24,14 @@ class Entry(ttk.Entry, object):
             self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
             super(Entry, self).place(relx=0,rely=0,relwidth=1,relheight=1,bordermode="outside")
             self.container.bind("<Map>", self.on_map, add="+")
-            
-        self.root = self.winfo_toplevel()
+
+        bindtags = list(self.bindtags())
+        bindtags[2] = ""
+        bindtags[3] = ""
+        self.bindtags(tuple(bindtags))
             
         # Bind the Enter key to focusout
-        self.bind("<Return>", lambda *args,**kwargs: self.winfo_toplevel().focus(), add="+")
+        self.bind("<Return>", lambda *args,**kwargs: master.focus(), add="+")
 
         # These should be defaults but they aren't for some reason
         self.bind("<FocusOut>", lambda *args,**kwargs: self.select_clear(), add="+")

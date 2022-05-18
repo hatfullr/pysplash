@@ -10,12 +10,12 @@ hotkeyslist = {
     "next file" : {
         "keylist" : ["<Right>"],
         "modifiers" : [],
-        "type" : "local",
+        "type" : "global",
     },
     "previous file" : {
         "keylist" : ["<Left>"],
         "modifiers" : [],
-        "type" : "local",
+        "type" : "global",
     },
     "update plot" : {
         "keylist" : ["<space>"],
