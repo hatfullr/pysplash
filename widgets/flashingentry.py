@@ -2,9 +2,11 @@ from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
     import ttk
+    from tkFont import Font as tkFont
 else:
     import tkinter as tk
     from tkinter import ttk
+    import tkinter.font as tkFont
 from widgets.entry import Entry
     
 class FlashingEntry(Entry,object):
@@ -14,15 +16,27 @@ class FlashingEntry(Entry,object):
         self.flashing = False
 
         self.container = tk.Frame(master,borderwidth=1)
-        super(FlashingEntry,self).__init__(self.container,**kwargs)
-
+        super(FlashingEntry, self).__init__(self.container,**kwargs)
+        super(FlashingEntry, self).place(relx=0,rely=0,relwidth=1,relheight=1,bordermode="outside")
+        
         self.pack = lambda *args,**kwargs: self.container.pack(*args,**kwargs)
         self.place = lambda *args,**kwargs: self.container.place(*args,**kwargs)
         self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
 
-        super(FlashingEntry, self).pack(fill='both',expand=True)
-
         self.previous_style = None
+        self.container.bind("<Map>", self.on_map, add="+")
+
+    def on_map(self, *args, **kwargs):
+        # If it's 0 do nothing and let the widget auto-fit its surroundings.
+        # Otherwise, give it a minimum required width
+        width = self.cget('width')
+        if width > 0:
+            # Measure the width of N characters where N = self.cget('width')
+            fontname = str(self.cget('font'))
+            if version_info.major < 3: font = tkFont(name=fontname, exists=True)
+            else: font = tkFont.nametofont(fontname)
+
+            self.container.configure(width=font.measure("A")*width)
         
     def flash(self,time=1000):
         if not self.flashing:
