@@ -1,16 +1,22 @@
-import globals
+# Setting order_by_level to True will return the list of all children
+# in order of their "depth" in the heirarchy. That is, the end of the
+# list will be populated by widgets which have no children and the
+# beginning by widgets which do have children.
+import numpy as np
 
-def get_all_children(widget, wid=None):
+def get_all_children(widget, wid=None, order_by_level=False):
     children = widget.winfo_children()
     for child in children:
         for grandchild in get_all_children(child):
-            children.append(grandchild)
-    # Reduce the list down to only unique entries
-    seen = set()
-    uniq = []
-    for x in children:
-        if x not in seen:
-            uniq.append(x)
-            seen.add(x)
-    return uniq
+            # Only add to the list if the widget isn't already in the list
+            if grandchild not in children:
+                children.append(grandchild)
+
+    # The "order" of a widget in the heirarchy is given simply by
+    # counting how many "." are in the widget's name
+    if order_by_level:
+        orders = [child._w.count(".") for child in children]
+        idxs = np.argsort(orders)
+        children = [children[i] for i in idxs[::-1]]
+    return children
 
