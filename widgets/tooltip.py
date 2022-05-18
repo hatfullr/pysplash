@@ -16,15 +16,8 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
     @staticmethod
     def createToolTip(widget, text):
         def show(event):
-            #if(root.winfo_pointerx()
             toolTip.tipwindow.wm_geometry("+%d+%d" % (event.x_root+1,event.y_root+1))
             toolTip.tipwindow.deiconify()
-            # ttk widgets have an attribute called "state" which they use
-            # to set the widget styling. When the user is hovering over
-            # the widget, we should make sure the widget's style is set
-            # to the "active" state
-            if hasattr(widget, "state") and 'disabled' not in widget.state():
-                widget.state(['active'])
             def command(event):
                 toolTip.tipwindow.withdraw()
                 if ToolTip.bid is not None:
@@ -33,8 +26,6 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
 
         def hide(event):
             toolTip.tipwindow.withdraw()
-            if hasattr(widget, "state") and widget.state() != 'disabled':
-                widget.state(["!active"])
             if ToolTip.after_id is not None:
                 root.after_cancel(ToolTip.after_id)
                 ToolTip.after_id = None
