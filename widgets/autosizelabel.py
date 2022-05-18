@@ -64,3 +64,4 @@ class AutoSizeLabel(ttk.Label, object):
                         text = "..."+text[i:-(i+1)]+"..."
                         break
         self.textvariable.set(text)
+    

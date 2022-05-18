@@ -19,7 +19,7 @@ from widgets.tooltip import ToolTip
 from widgets.button import Button
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
-from copy import copy
+from copy import deepcopy
 import globals
 
 class Controls(tk.Frame,object):
@@ -50,17 +50,16 @@ class Controls(tk.Frame,object):
 
         self.current_state = None
         self.saved_state = None
-        #self.previous_state = None
+        
+        self.bid = self.winfo_toplevel().bind("<Visibility>", self.on_visible, add="+")
 
-        # This callback function runs a single time, after the application has been loaded
-        def callback(*args,**kwargs):
-            self.current_state = {str(v):v.get() for v in globals.state_variables}
-            self.save_state()
-            for variable in globals.state_variables:
-                variable.trace('w',self.on_state_change)
-            self.winfo_toplevel().unbind("<Visibility>", bid)
-        bid = self.winfo_toplevel().bind("<Visibility>", callback, add="+")
-
+    # This callback function runs a single time, after the application has been loaded
+    def on_visible(self, *args, **kwargs):
+        self.current_state = {str(v):v.get() for v in globals.state_variables}
+        for i,variable in enumerate(globals.state_variables):
+            variable.trace('w',self.on_state_change)
+        self.winfo_toplevel().unbind("<Visibility>", self.bid)
+        self.save_state()
         
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
@@ -101,14 +100,15 @@ class Controls(tk.Frame,object):
         
     def on_state_change(self,variable,index,mode):
         if globals.debug > 1: print("controls.on_state_change")
+        
+        # This needs to happen always
+        var = self.string_to_state_variable(variable)
+        self.current_state[variable] = var.get()
+        
         # Don't mess with the update button any time that we're pressing hotkeys
         if globals.hotkey_pressed: return
         # Compare the current state to the previous state
         if self.saved_state is None: return
-
-        var = self.string_to_state_variable(variable)
-        if var is None: return
-        self.current_state[variable] = var.get()
         
         if len(self.compare_states(self.current_state,self.saved_state)) > 0:
             self.update_button.configure(state='!disabled',relief='raised')
@@ -130,7 +130,7 @@ class Controls(tk.Frame,object):
 
     def save_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.save_state")
-        self.saved_state = copy(self.current_state)
+        self.saved_state = deepcopy(self.current_state)
         self.update_button.configure(state='disabled',relief='sunken')
     
     def disable(self,temporarily=False):
@@ -185,14 +185,14 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.on_update_button_pressed")
         need_full_redraw = False
         need_quick_redraw = False
-        
-        changed_variables = self.compare_states(self.current_state,self.saved_state)
 
+        changed_variables = self.compare_states(self.current_state,self.saved_state)
+        
         # If the data file changed, read the new one
         if self.gui.filecontrols.current_file in changed_variables:
             self.gui.read()
             need_full_redraw = True
-
+        
         # If the x, y, or colorbar axes' combobox/entry values changed
         for axis_controller in self.axis_controllers.values():
             if axis_controller.value in changed_variables:
@@ -227,7 +227,22 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.ax.set_xlim(user_xlims)
             self.gui.interactiveplot.ax.set_ylim(user_ylims)
             self.gui.interactiveplot.colorbar.set_clim(user_clims)
-            need_full_redraw = True
+
+            # Check if any of the plot's data is outside these limits
+            xlim, ylim = self.gui.interactiveplot.calculate_xylim(which='both')
+            if (min(xlim) < min(user_xlims) or max(xlim) > max(user_xlims) or
+                min(ylim) < min(user_ylims) or max(ylim) > max(user_ylims)):
+                need_full_redraw = True
+
+            # Check if the image's extents cut off any data
+            if self.gui.interactiveplot.drawn_object is not None:
+                extent = np.array(self.gui.interactiveplot.drawn_object._extent)
+                exlim = extent[:2]
+                eylim = extent[2:]
+                if (min(exlim) > min(xlim) or max(exlim) < max(xlim) or
+                    min(eylim) > min(ylim) or max(eylim) < max(ylim)):
+                    need_full_redraw = True
+                
             
         
         # Perform the queued zoom if there is one
@@ -249,7 +264,7 @@ class Controls(tk.Frame,object):
 
         # Draw the new plot
         if need_full_redraw:
-            self.gui.interactiveplot.reset()
+            #self.gui.interactiveplot.clear()
             self.gui.interactiveplot.update()
             # Everything after this is done in interactiveplot.update
             # because we need to wait for the plot to finish calculating
@@ -258,8 +273,7 @@ class Controls(tk.Frame,object):
             self.update_idletasks()
             self.gui.interactiveplot.canvas.draw_idle()
             self.gui.interactiveplot.canvas.draw()
-            
-        
+            #self.save_state()
 
     def connect(self):
         if globals.debug > 1: print("controls.connect")
@@ -272,23 +286,6 @@ class Controls(tk.Frame,object):
         else:
             self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.colorbar.cax.xaxis)
 
-    """
-    def get_which_variables_changed_between_states(self,state1,state2):
-        if globals.debug > 1: print("controls.get_which_variables_changed_between_states")
-        # A state is just a list of tkinter variables and their values
-        # [[v0, v0.get()], [v1, v1.get()], ... ]
-
-        result = []
-        for item in state1:
-            if item not in state2 and item[0] not in result:
-                result.append(item[0])
-        for item in state2:
-            if item not in state1 and item[0] not in result:
-                result.append(item[0])
-        
-        return result
-    """
-
     def on_plot_update(self, *args, **kwargs):
         if globals.debug > 1: print("controls.on_plot_update")
 
@@ -296,5 +293,4 @@ class Controls(tk.Frame,object):
         self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()
         self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()
         self.previous_caxis_limits = self.gui.interactiveplot.colorbar.get_cax_limits()
-
         self.save_state()

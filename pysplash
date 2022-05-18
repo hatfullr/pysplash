@@ -17,10 +17,13 @@ exit 1
 from signal import signal,SIGINT
 from lib.window import Window
 from gui.gui import GUI
+import globals
 
 if __name__ == '__main__':
-    win = Window()
-    gui = GUI(win)
-    win.protocol("WM_DELETE_WINDOW",win.close)
-    signal(SIGINT,win.close)
-    win.launch()
+   globals.init()
+   
+   win = Window()
+   gui = GUI(win)
+   win.protocol("WM_DELETE_WINDOW",win.close)
+   signal(SIGINT,win.close)
+   win.launch()

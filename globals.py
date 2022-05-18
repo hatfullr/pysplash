@@ -39,5 +39,8 @@ plot_update_delay = 200
 
 # Internal use variables. Only edit these variables
 # if you really know what you are doing.
-state_variables = []
 hotkey_pressed = False
+
+def init():
+    global state_variables
+    state_variables = []

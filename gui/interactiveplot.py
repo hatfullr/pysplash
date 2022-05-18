@@ -306,8 +306,11 @@ class InteractivePlot(tk.Frame,object):
         #    self.orientation.clear()
 
         # Remove the previously drawn object if it is still on the axis
-        if self.previously_drawn_object in self.ax.get_children():
-            self.previously_drawn_object.remove()
+        if self.drawn_object is not None:
+            if self.drawn_object in self.ax.get_children():
+                self.drawn_object.remove()
+        #if self.previously_drawn_object in self.ax.get_children():
+        #    self.previously_drawn_object.remove()
         
         self.drawn_object = method(*args,**kwargs)
         

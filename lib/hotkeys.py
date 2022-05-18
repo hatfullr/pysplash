@@ -95,8 +95,8 @@ class Hotkeys(object):
                 for c in commands:
                     try:
                         c(event)
-                    except Exception as e:
-                        print(e)
+                    except:
+                        raise
                         break
                 globals.hotkey_pressed = False
         else:
@@ -106,8 +106,8 @@ class Hotkeys(object):
             for c in commands:
                 try:
                     c(event)
-                except Exception as e:
-                    print(e)
+                except:
+                    raise
                     break
             globals.hotkey_pressed = False
 
