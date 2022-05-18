@@ -183,21 +183,28 @@ class Controls(tk.Frame,object):
 
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
-
-        need_reset = False
+        need_full_redraw = False
+        need_quick_redraw = False
         
         changed_variables = self.compare_states(self.current_state,self.saved_state)
 
         # If the data file changed, read the new one
         if self.gui.filecontrols.current_file in changed_variables:
             self.gui.read()
-            need_reset = True
+            need_full_redraw = True
 
         # If the x, y, or colorbar axes' combobox/entry values changed
         for axis_controller in self.axis_controllers.values():
             if axis_controller.value in changed_variables:
-                need_reset = True
+                need_full_redraw = True
                 break
+
+        # If the axis labels changed, then we only need a quick update
+        for axis_controller in self.axis_controllers.values():
+            if axis_controller.label in changed_variables:
+                need_quick_redraw = True
+                break
+        
 
         # Check if the user changed any of the x or y axis limits (changing units also changes limits)
         if self.is_limits_changed(('XAxis','YAxis','Colorbar')):
@@ -220,13 +227,13 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.ax.set_xlim(user_xlims)
             self.gui.interactiveplot.ax.set_ylim(user_ylims)
             self.gui.interactiveplot.colorbar.set_clim(user_clims)
-            need_reset = True
+            need_full_redraw = True
             
         
         # Perform the queued zoom if there is one
         if self.gui.plottoolbar.queued_zoom:
             self.gui.plottoolbar.queued_zoom()
-            need_reset = True
+            need_full_redraw = True
         
         # Perform any rotations necessary
         if (self.plotcontrols.rotation_x in changed_variables or
@@ -238,15 +245,20 @@ class Controls(tk.Frame,object):
                     self.plotcontrols.rotation_y.get(),
                     self.plotcontrols.rotation_z.get(),
                 )
-                need_reset = True
-        
+                need_full_redraw = True
+
         # Draw the new plot
-        if need_reset:
+        if need_full_redraw:
             self.gui.interactiveplot.reset()
             self.gui.interactiveplot.update()
+            # Everything after this is done in interactiveplot.update
+            # because we need to wait for the plot to finish calculating
+        elif need_quick_redraw:
+            # Not sure why both of these are required, but they are.
+            self.gui.interactiveplot.canvas.draw_idle()
+            self.gui.interactiveplot.canvas.draw()
             
-        # Everything after this is done in interactiveplot.update
-        # because we need to wait for the plot to finish calculating
+        
 
     def connect(self):
         if globals.debug > 1: print("controls.connect")

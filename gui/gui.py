@@ -134,9 +134,11 @@ class GUI(tk.Frame,object):
                 if len(val) == N:
                     if not found_first:
                         self.controls.axis_controllers['XAxis'].value.set(key)
+                        self.controls.axis_controllers['XAxis'].label.set(key)
                         found_first = True
                     else:
                         self.controls.axis_controllers['YAxis'].value.set(key)
+                        self.controls.axis_controllers['YAxis'].label.set(key)
                         break
         self.controls.update()
         self.xy_controls_initialized = True

@@ -111,8 +111,8 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.on_combobox_selected")
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
+        value = self.value.get()
         if self.usecombobox:
-            value = self.value.get()
             if value in self.gui.data['data'].keys():
                 if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
                     if self.scale.get() == "log10":
@@ -127,8 +127,9 @@ class AxisController(LabelledFrame,object):
                 self.gui.controls.plotcontrols.disable_rotations()
                     
         self.set_adaptive_limits()
+        self.label.set(value)
         
-        self.previous_value = self.value.get()
+        self.previous_value = value
         
     def connect(self,axis,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.connect")
