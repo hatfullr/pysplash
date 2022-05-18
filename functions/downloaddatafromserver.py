@@ -5,6 +5,9 @@ if version_info.major >= 3:
 else:
     import Tkinter as tk
     import ttk
+from widgets.button import Button
+from widgets.entry import Entry
+from widgets.popupwindow import PopupWindow
 import os
 import signal
 import subprocess
@@ -22,32 +25,28 @@ except ImportError:
 def download_data_from_server(gui):
     DownloadDataFromServer(gui)
 
-class DownloadDataFromServer(tk.Toplevel,object):
+class DownloadDataFromServer(PopupWindow,object):
+    default_scp_options = "-Cp"
+    default_rsync_options = "-a"
+    
     def __init__(self,gui):
-        if globals.debug > 1: print("datafromserver.__init__")
+        if globals.debug > 1: print("downloaddatafromserver.__init__")
         # Setup the window
-        super(DownloadDataFromServer,self).__init__(gui)
+        super(DownloadDataFromServer,self).__init__(
+            gui,
+            title="Download data from server",
+            oktext="Download",
+            canceltext="Close",
+            okcommand=self.download_pressed,
+            cancelcommand=self.close_soft,
+        )
         
         self.gui = gui
         self.root = self.gui.winfo_toplevel()
-        
-        self.pad = 5
-        aspect = self.root.winfo_screenheight()/self.root.winfo_screenwidth()
-        self.width = int(self.root.winfo_screenwidth() / 6)
-        height = self.width*aspect
 
         root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         self.tmp_path = os.path.join(root_path,"tmp")
-
         
-        
-        self.withdraw()
-
-        self.protocol("WM_DELETE_WINDOW",self.close)
-        self.resizable(False,False)
-        self.title("Get data from server")
-        self.configure(width=self.width,height=height)
-
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
@@ -57,49 +56,57 @@ class DownloadDataFromServer(tk.Toplevel,object):
         self.filenames = []
         self.server = ""
 
-        self.thread = None
+        if self.command_choice.get() == 'scp':
+            self.previous_scp_options = self.command_options.get()
+            self.previous_rsync_options = DownloadDataFromServer.default_rsync_options
+        elif self.command_choice.get() == 'rsync':
+            self.previous_scp_options = DownloadDataFromServer.default_scp_options
+            self.previous_rsync_options = self.command_options.get()
 
-        # Show the window
-        self.tk.eval('tk::PlaceWindow '+str(self)+' center')
+        self.thread = None
 
         self.canceled = False
         self.subprocess = None
         
-        #self.grab_set()
-
     def create_variables(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.create_variables")
+        if globals.debug > 1: print("downloaddatafromserver.create_variables")
         # Gather the preferences
-        preference = self.gui.get_preference("getdatafromserver") 
+        preference = self.gui.get_preference("downloaddatafromserver")
         if preference is None:
-            preference = {'username':'','address':'','path':''}
-        
+            preference = {'username':'','address':'','path':'','command':'','command options':''}
+            
         # Create variables
         self.username = tk.StringVar(value=preference['username'])
         self.address = tk.StringVar(value=preference['address'])
         self.path = tk.StringVar(value=preference['path'])
 
-        self.command_choice = tk.StringVar(value='scp')
-        self.command_options = tk.StringVar(value='-Cp')
+        command = preference.get('command', 'scp')
+        self.command_choice = tk.StringVar(value=command)
+
+        if command == 'scp':
+            self.command_options = tk.StringVar(value=preference.get('command options', DownloadDataFromServer.default_scp_options))
+        elif command == 'rsync':
+            self.command_options = tk.StringVar(value=preference.get('command options', DownloadDataFromServer.default_rsync_options))
+        else:
+            raise ValueError("Preference 'command' in 'downloaddatafromserver' must be either 'scp' or 'rsync'. Received '"+preference['command']+"'")
         
     def create_widgets(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.create_widgets")
+        if globals.debug > 1: print("downloaddatafromserver.create_widgets")
         # Create widgets
         self.description = ttk.Label(
-            self,
+            self.contents,
             text="You must first ensure that you can ssh to the specified server without a password prompt. You can either specify a path to a single file, such as '/home/myuser/data0.dat' or to a pattern of files, such as '/home/myuser/data*.dat'.",
-            wraplength=self.width-2*self.pad,
+            wraplength=self.width-2*self.cget('padx'),
             justify='left',
         )
-        self.server_info_frame = tk.Frame(self)
+        self.server_info_frame = tk.Frame(self.contents)
 
         self.server_username_label = tk.Label(
             self.server_info_frame,
             text="Username:",
         )
-        self.server_username_entry = tk.Entry(
+        self.server_username_entry = Entry(
             self.server_info_frame,
-            width=30,
             textvariable=self.username,
         )
 
@@ -107,9 +114,8 @@ class DownloadDataFromServer(tk.Toplevel,object):
             self.server_info_frame,
             text="Server address:",
         )
-        self.server_address_entry = tk.Entry(
+        self.server_address_entry = Entry(
             self.server_info_frame,
-            width=30,
             textvariable=self.address,
         )
 
@@ -117,14 +123,10 @@ class DownloadDataFromServer(tk.Toplevel,object):
             self.server_info_frame,
             text="Remote file path:",
         )
-        self.filepath_entry = tk.Entry(
+        self.filepath_entry = Entry(
             self.server_info_frame,
-            width=30,
             textvariable=self.path,
         )
-
-
-
         
         self.command_choice_label = tk.Label(
             self.server_info_frame,
@@ -155,34 +157,16 @@ class DownloadDataFromServer(tk.Toplevel,object):
             self.server_info_frame,
             textvariable=self.command_options,
         )
-
         
-
         self.progressbar = ProgressBar(
-            self,
-            #orient='horizontal',
+            self.buttons_frame,
             maximum=100,
-            #mode='determinate'
-        )
-
-
-        self.buttons_frame = tk.Frame(self)
-        self.download_button = tk.Button(
-            self.buttons_frame,
-            text="Download",
-            width=len("Download"),
-            command=self.download_pressed,
-        )
-        self.close_button = tk.Button(
-            self.buttons_frame,
-            text="Close",
-            command=self.close_soft,
         )
 
     
     def place_widgets(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.place_widgets")
-        self.description.pack(side='top',fill='x',padx=self.pad,pady=(self.pad,0))
+        if globals.debug > 1: print("downloaddatafromserver.place_widgets")
+        self.description.pack(side='top',fill='x',pady=(0,self.cget('pady')))
     
         self.server_username_label.grid(row=0,column=0,sticky='nes')
         self.server_username_entry.grid(row=0,column=1,sticky='news')
@@ -200,29 +184,20 @@ class DownloadDataFromServer(tk.Toplevel,object):
         self.command_options_entry.grid(row=4,column=1,sticky='news')
         
         self.server_info_frame.columnconfigure(1,weight=1)
-        self.server_info_frame.pack(side='top',padx=self.pad,pady=(0,self.pad),fill='x',expand=True)
+        self.server_info_frame.pack(side='top',fill='x',expand=True)
         
-        self.progressbar.pack(anchor='center',side='left',fill='both',expand=True,padx=(self.pad,0),pady=(0,self.pad))
-        self.download_button.pack(side='right')
-        self.close_button.pack(side='right')
-        self.buttons_frame.pack(side='right', fill='y', pady=(0,self.pad),padx=self.pad)
-
-    def close(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.close")
-        self.grab_release()
-        self.destroy()
+        self.progressbar.pack(anchor='center',side='left',fill='both',expand=True,padx=(0,self.cget('padx')))
         
     def close_soft(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.close_soft")
-        self.grab_release()
+        if globals.debug > 1: print("downloaddatafromserver.close_soft")
         self.cancel()
-        self.destroy()
+        self.close()
         
     def cancel(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.cancel")
+        if globals.debug > 1: print("downloaddatafromserver.cancel")
         self.canceled = True
 
-        self.download_button.configure(relief='raised',text='Download',command=self.download_pressed)
+        self.okbutton.configure(relief='raised',text='Download',command=self.download_pressed)
         self.progressbar.set_text("Download canceled")
         self.progressbar.configure(value=0)
         self.enable_widgets()
@@ -233,46 +208,50 @@ class DownloadDataFromServer(tk.Toplevel,object):
                 os.killpg(os.getpgid(self.subprocess.pid), signal.SIGTERM)
             except OSError:
                 pass
-        
-        
 
     def on_scp_button_pressed(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.on_scp_button_pressed")
-        self.command_options.set("-Cp")
+        if globals.debug > 1: print("downloaddatafromserver.on_scp_button_pressed")
+        if self.command_choice.get() != 'scp':
+            self.previous_rsync_options = self.command_options.get()
+            self.command_options.set(self.previous_scp_options)
         
     def on_rsync_button_pressed(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.on_rsync_button_pressed")
-        self.command_options.set("-a")
+        if globals.debug > 1: print("downloaddatafromserver.on_rsync_button_pressed")
+        if self.command_choice.get() != 'scp':
+            self.previous_scp_options = self.command_options.get()
+            self.command_options.set(self.previous_rsync_options)
 
     def set_widget_states(self,state):
-        if globals.debug > 1: print("datafromserver.set_widget_states")
+        if globals.debug > 1: print("downloaddatafromserver.set_widget_states")
         for child in self.server_info_frame.winfo_children():
             if hasattr(child,"configure") and 'state' in child.configure():
                 child.configure(state=state)
         
     def disable_widgets(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.disable_widgets")
+        if globals.debug > 1: print("downloaddatafromserver.disable_widgets")
         self.set_widget_states('disabled')
         # Don't know why, but the radio buttons don't behave normally
         self.rsync_button.configure(state='disabled')
         self.scp_button.configure(state='disabled')
     def enable_widgets(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.enable_widgets")
+        if globals.debug > 1: print("downloaddatafromserver.enable_widgets")
         self.set_widget_states('normal')
         # Don't know why, but the radio buttons don't behave normally
         self.rsync_button.configure(state='normal')
         self.scp_button.configure(state='normal')
 
     def download_pressed(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.download_pressed")
+        if globals.debug > 1: print("downloaddatafromserver.download_pressed")
         # Save the entries in the gui preferences so they pop up
         # automatically the next time we want to use them
         self.gui.set_preference(
-            "getdatafromserver",
+            "downloaddatafromserver",
             {
                 'username' : self.username.get(),
                 'address' : self.address.get(),
                 'path' : self.path.get(),
+                'command' : self.command_choice.get(),
+                'command options' : self.command_options.get(),
             },
         )
 
@@ -291,7 +270,7 @@ class DownloadDataFromServer(tk.Toplevel,object):
         )
 
         self.canceled = False
-        self.download_button.configure(relief='sunken',text="Cancel",command=self.cancel)
+        self.okbutton.configure(relief='sunken',text="Cancel",command=self.cancel)
 
         # Block until the task has finished
         while self.thread.isAlive():
@@ -327,7 +306,7 @@ class DownloadDataFromServer(tk.Toplevel,object):
         self.progressbar.configure(value=0)
 
     def download_files(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.download_files")
+        if globals.debug > 1: print("downloaddatafromserver.download_files")
         cmd = self.command_choice.get()+" "+self.command_options.get()+" "+self.server+":"+self.path.get()+" "+self.tmp_path
         self.subprocess = subprocess.Popen(
             cmd.split(" "),
@@ -338,7 +317,7 @@ class DownloadDataFromServer(tk.Toplevel,object):
         self.subprocess.communicate()
                 
     def get_file_list(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.get_file_list")
+        if globals.debug > 1: print("downloaddatafromserver.get_file_list")
         # Get the list of files that will be downloaded
         self.progressbar.set_text("Retrieving file list...")
         self.subprocess = subprocess.Popen([
@@ -356,7 +335,7 @@ class DownloadDataFromServer(tk.Toplevel,object):
             self.total_size = sum([int(f[0].strip("'")) for f in self.filelist])
 
     def download_update(self,*args,**kwargs):
-        if globals.debug > 1: print("datafromserver.download_update")
+        if globals.debug > 1: print("downloaddatafromserver.download_update")
         filebasenames = [os.path.basename(filename) for filename in self.filenames]
 
         filesintmp = os.listdir(self.tmp_path)

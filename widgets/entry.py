@@ -27,12 +27,11 @@ class Entry(ttk.Entry, object):
 
         bindtags = list(self.bindtags())
         bindtags[2] = ""
-        bindtags[3] = ""
         self.bindtags(tuple(bindtags))
-            
+        
         # Bind the Enter key to focusout
         self.bind("<Return>", lambda *args,**kwargs: master.focus(), add="+")
-
+        
         # These should be defaults but they aren't for some reason
         self.bind("<FocusOut>", lambda *args,**kwargs: self.select_clear(), add="+")
         self.bind("<FocusIn>", lambda *args,**kwargs: self.select_clear(), add="+")

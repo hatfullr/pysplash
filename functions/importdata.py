@@ -43,8 +43,7 @@ class ImportData(PopupWindow,object):
         if globals.debug > 1: print("importdata.create_variables")
         # Gather the preferences
         preference = self.gui.get_preference("importdata")
-        if preference is None:
-            preference = {'path':''}
+        if preference is None: preference = {'path':''}
         self.path = tk.StringVar(value=preference['path'])
         
     def create_widgets(self,*args,**kwargs):
@@ -52,7 +51,7 @@ class ImportData(PopupWindow,object):
         self.description = ttk.Label(
             self.contents,
             text="Specify below a list of files to import. Once imported, all data currently loaded in PySplash will be unloaded and inaccessible to PySplash. The list you provide should be separated by spaces and can include wildcard search patterns such as file*.dat.",
-            wraplength=self._width-2*self.pad,
+            wraplength=self.width-2*self.cget('padx'),
             justify='left',
         )
         self.pathentry = PathEntry(self.contents,"open filenames",textvariable=self.path)

@@ -3,10 +3,11 @@ if sys.version_info.major < 3:
     import Tkinter as tk
 else:
     import tkinter as tk
-from functions.getallchildren import get_all_children
+
+from functions.closewindow import close_window
 import globals
 import os
-    
+
 class Window(tk.Tk):
     def __init__(self):
         if globals.debug > 1: print("window.__init__")
@@ -45,10 +46,4 @@ class Window(tk.Tk):
         for filename in os.listdir(tmp_path):
             os.remove(os.path.join(tmp_path,filename))
         
-        # Destroy all the widgets in the application starting from the widgets
-        # which have no children, moving up the heirarchy all the way to this
-        # root window. This hopefully prevents any Tcl errors that can occur
-        # from only using self.destroy()
-        for child in get_all_children(self, order_by_level = True):
-            child.destroy()
-        self.destroy()
+        close_window(self)

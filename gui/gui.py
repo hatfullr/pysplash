@@ -89,8 +89,6 @@ class GUI(tk.Frame,object):
         self.xy_controls_initialized = False
         self.initialize(first=True)
         self.controls.connect()
-        #self.controls.save_state()
-        
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")

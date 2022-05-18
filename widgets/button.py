@@ -10,7 +10,7 @@ class Button(ttk.Label, object):
     def __init__(self, master, *args, **kwargs):
         self.switch = kwargs.pop('switch', False)
         self.command = kwargs.pop('command', None)
-        padding = kwargs.pop('padding', "0 -1 0 0")
+        padding = kwargs.pop('padding', "1 1 1 1") #"0 -1 0 0")
         style = kwargs.pop('style','TButton')
         super(Button, self).__init__(master, *args, padding=padding, style=style, **kwargs)
 
