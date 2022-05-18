@@ -128,7 +128,7 @@ class CustomToolbar(NavigationToolbar2Tk):
                 self.zoom_event = event
                 self.queued_zoom = self.on_queued_zoom
         if self.queued_zoom is not None:
-            self.gui.controls.save_state()
+            #self.gui.controls.save_state()
             self.gui.controls.on_state_change()
 
 

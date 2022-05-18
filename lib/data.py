@@ -43,22 +43,9 @@ class Data(collections.OrderedDict,object):
 
     def rotate(self,anglexdeg,angleydeg,anglezdeg):
         if globals.debug > 1: print("data.rotate")
-
         if not self.is_image:
-            x = copy.copy(self._original['data']['x'])
-            y = copy.copy(self._original['data']['y'])
-            z = copy.copy(self._original['data']['z'])
-        
+            x = self._original['data']['x']
+            y = self._original['data']['y']
+            z = self._original['data']['z']
             self['data']['x'], self['data']['y'], self['data']['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
 
-    def xlim(self,*args,**kwargs):
-        if globals.debug > 1: print("data.xlim")
-        x = self['data']['x']
-        x = x[np.isfinite(x)]
-        return np.array([np.nanmin(x), np.nanmax(x)]) * self.display_units['x']
-    
-    def ylim(self,*args,**kwargs):
-        if globals.debug > 1: print("data.ylim")
-        y = self['data']['y']
-        y = y[np.isfinite(y)]
-        return np.array([np.nanmin(y), np.nanmax(y)]) * self.display_units['y']

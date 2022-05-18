@@ -14,22 +14,14 @@ from functions.getallchildren import get_all_children
 import globals
 
 class PlotControls(LabelledFrame, object):
-    def __init__(self, master, relief='sunken', bd=1, *args, **kwargs):
+    def __init__(self, master, gui, relief='sunken', bd=1, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.__init__")
         super(PlotControls, self).__init__(master, "Plot Controls", *args, relief=relief, bd=bd, **kwargs)
-
+        self.gui = gui
+        
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
-
-    def get_variables(self, *args, **kwargs):
-        return [
-            self.point_size,
-            self.rotation_x,
-            self.rotation_y,
-            self.rotation_z,
-            self.show_orientation,
-        ]
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_variables")
@@ -38,6 +30,10 @@ class PlotControls(LabelledFrame, object):
         self.rotation_y = tk.DoubleVar(value = 0.)
         self.rotation_z = tk.DoubleVar(value = 0.)
         self.show_orientation = tk.BooleanVar(value = False)
+        globals.state_variables.append(self.point_size)
+        globals.state_variables.append(self.rotation_x)
+        globals.state_variables.append(self.rotation_y)
+        globals.state_variables.append(self.rotation_z)
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_widgets")
@@ -59,6 +55,7 @@ class PlotControls(LabelledFrame, object):
             self,
             text="Show orientation",
             variable=self.show_orientation,
+            command=self.gui.interactiveplot.orientation.switch_on_off,
         )
 
     def place_widgets(self, *args, **kwargs):

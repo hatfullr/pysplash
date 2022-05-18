@@ -300,10 +300,10 @@ class InteractivePlot(tk.Frame,object):
         if changed_args: self.reset() # Clear the current plot
         
         # Update the orientation
-        if self.gui.controls.plotcontrols.show_orientation.get():
-            self.orientation.draw()
-        else:
-            self.orientation.clear()
+        #if self.gui.controls.plotcontrols.show_orientation.get():
+        #    self.orientation.draw()
+        #else:
+        #    self.orientation.clear()
 
         # Remove the previously drawn object if it is still on the axis
         if self.previously_drawn_object in self.ax.get_children():

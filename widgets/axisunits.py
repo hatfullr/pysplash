@@ -41,9 +41,6 @@ class AxisUnits(tk.LabelFrame, object):
         if globals.debug > 1: print("axisunits.place_widgets")
         self.entry.pack(side='right',fill='both',expand=True,padx=2,pady=(0,2))
 
-    def get_variables(self, *args, **kwargs):
-        return [self.value]
-
     def reset(self, *args, **kwargs):
         if globals.debug > 1: print("axisunits.reset")
         self.value.set(1.)

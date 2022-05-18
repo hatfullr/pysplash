@@ -18,6 +18,7 @@ class OrientationArrows:
         self.kwargs = kwargs
 
         self.visible = True
+        self.cid = None
 
         self.artists = []
 
@@ -26,6 +27,20 @@ class OrientationArrows:
             artist.remove()
         self.artists = []
         self.ax.get_figure().canvas.draw_idle()
+
+    def switch_on_off(self, *args, **kwargs):
+        if self.cid is None: self.connect()
+        else: self.disconnect()
+        
+    def connect(self,*args,**kwargs):
+        self.cid = self.ax.get_figure().canvas.mpl_connect("draw event", self.draw)
+        self.draw()
+    
+    def disconnect(self,*args,**kwargs):
+        if self.cid is not None:
+            self.ax.get_figure().canvas.mpl_disconnect(self.cid)
+            self.clear()
+            self.cid = None
         
     def draw(self,*args,**kwargs):
         # This function gets called only when the Update button gets pressed
@@ -40,9 +55,9 @@ class OrientationArrows:
         ])
         
         # Get the current rotation from the gui
-        anglexdeg = self.gui.controls.rotation_x.get()
-        angleydeg = self.gui.controls.rotation_y.get()
-        anglezdeg = self.gui.controls.rotation_z.get()
+        anglexdeg = self.gui.controls.plotcontrols.rotation_x.get()
+        angleydeg = self.gui.controls.plotcontrols.rotation_y.get()
+        anglezdeg = self.gui.controls.plotcontrols.rotation_z.get()
 
         for i, row in enumerate(unit_vectors):
             unit_vectors[i] = rotate(
@@ -53,7 +68,8 @@ class OrientationArrows:
                 angleydeg,
                 anglezdeg,
             )
-
+            
+        # Reset the current orientation drawing and draw a new one
         self.clear()
 
         # This is the size of 1 pixel in axis coordinates

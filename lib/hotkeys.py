@@ -36,20 +36,15 @@ class Hotkeys(object):
 
         if not isinstance(commands, (list, tuple, np.ndarray)):
             commands = [commands]
-
-        #def command(modifiers, *args, **kwargs):
-        #    for modifier in modifiers:
-        #        if not self.modifiers[modifier]: return
-        #    for c in commands: c(*args, **kwargs)
         
         if name in self.registry:
             raise KeyError("The hotkey action '"+name+"' is already bound")
         
         for key in hotkeyslist[name]["keylist"]:
             if hotkeyslist[name]["type"] == "global":
-                self.bind_global(name, key, lambda event: self.command(name,commands,event))#lambda *args, **kwargs: command(hotkeyslist[name]["modifiers"],*args,**kwargs))
+                self.bind_global(name, key, lambda event: self.command(name,commands,event))
             elif hotkeyslist[name]["type"] == "local":
-                self.bind_local(name, key, lambda event: self.command(name,commands,event))#lambda *args, **kwargs: command(hotkeyslist[name]["modifiers"],*args,**kwargs))
+                self.bind_local(name, key, lambda event: self.command(name,commands,event))
             else:
                 raise ValueError("Hotkey '"+name+"' has type '"+hotkeyslist[name]["type"]+"', but must be 'global' or 'local'")
 
@@ -97,9 +92,23 @@ class Hotkeys(object):
         pressed_modifiers = [key for key in self.modifiers.keys() if self.modifiers[key]]
         if hotkeyslist[name]['modifiers'] == []:
             if pressed_modifiers == []:
-                for c in commands: c(event)
+                globals.hotkey_pressed = True
+                for c in commands:
+                    try:
+                        c(event)
+                    except Exception as e:
+                        print(e)
+                        break
+                globals.hotkey_pressed = False
         else:
             for modifier in hotkeyslist[name]['modifiers']:
                 if modifier not in pressed_modifiers: return
-            for c in commands: c(event)
+            globals.hotkey_pressed = True
+            for c in commands:
+                try:
+                    c(event)
+                except Exception as e:
+                    print(e)
+                    break
+            globals.hotkey_pressed = False
 

@@ -55,22 +55,14 @@ class AxisController(LabelledFrame,object):
             self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
             
         self.previous_value = None
-
-        
-
-    def get_variables(self,*args,**kwargs):
-        return [
-            self.value,
-            self.scale,
-            self.label,
-        ]
-    
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
         self.value = tk.StringVar(value='')
         self.scale = tk.StringVar(value='linear')
         self.label = tk.StringVar()
+        globals.state_variables.append(self.value)
+        globals.state_variables.append(self.label)
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_widgets")

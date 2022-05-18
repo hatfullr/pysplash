@@ -38,6 +38,7 @@ class FileControls(tk.Frame,object):
         self.skip_amount = tk.IntVar()
         self.current_file = tk.StringVar()
         self.current_file_displayed = tk.StringVar()
+        globals.state_variables.append(self.current_file)
         
     def create_widgets(self):
         if globals.debug > 1: print("filecontrols.create_widgets")

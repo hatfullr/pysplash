@@ -31,17 +31,13 @@ class AxisLimits(tk.LabelFrame,object):
 
         self.connected = False
 
-    def get_variables(self, *args, **kwargs):
-        return [
-            self.low,
-            self.high,
-        ]
-
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.create_variables")
         self.low = tk.DoubleVar(value=0.)
         self.high = tk.DoubleVar(value=0.)
         self.adaptive = tk.BooleanVar(value=False)
+        globals.state_variables.append(self.low)
+        globals.state_variables.append(self.high)
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.create_widgets")

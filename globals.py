@@ -26,3 +26,18 @@ tooltip_wraplength = 50
 # image. Lower values decrease performance but make
 # the application feel more responsive.
 plot_update_delay = 200
+
+
+
+
+
+
+
+
+
+
+
+# Internal use variables. Only edit these variables
+# if you really know what you are doing.
+state_variables = []
+hotkey_pressed = False

@@ -19,6 +19,7 @@ from widgets.tooltip import ToolTip
 from widgets.button import Button
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
+from copy import copy
 import globals
 
 class Controls(tk.Frame,object):
@@ -45,15 +46,20 @@ class Controls(tk.Frame,object):
         self.previous_yaxis_limits = None
         self.previous_caxis_limits = None
         
-        for variable in self.get_variables():
-            variable.trace('w',self.on_state_change)
-
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
-        
+
+        self.current_state = None
         self.saved_state = None
-        self.previous_state = None
-        
-        self.save_state()
+        #self.previous_state = None
+
+        # This callback function runs a single time, after the application has been loaded
+        def callback(*args,**kwargs):
+            self.current_state = {str(v):v.get() for v in globals.state_variables}
+            self.save_state()
+            for variable in globals.state_variables:
+                variable.trace('w',self.on_state_change)
+            self.winfo_toplevel().unbind("<Visibility>", bid)
+        bid = self.winfo_toplevel().bind("<Visibility>", callback, add="+")
 
         
     def create_variables(self):
@@ -77,9 +83,9 @@ class Controls(tk.Frame,object):
             'YAxis' : AxisController(self,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
             'Colorbar' : AxisController(self,self.gui,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False),
         }
-            
+        
         # Plot controls
-        self.plotcontrols = PlotControls(self,padx=3,pady=3,relief='sunken')
+        self.plotcontrols = PlotControls(self,self.gui,padx=3,pady=3,relief='sunken')
     
     def place_widgets(self):
         if globals.debug > 1: print("controls.place_widgets")
@@ -92,61 +98,45 @@ class Controls(tk.Frame,object):
 
         # Plot controls
         self.plotcontrols.pack(side='top',fill='x')
-
-    def on_state_change(self,*args,**kwargs):
+        
+    def on_state_change(self,variable,index,mode):
         if globals.debug > 1: print("controls.on_state_change")
+        # Don't mess with the update button any time that we're pressing hotkeys
+        if globals.hotkey_pressed: return
         # Compare the current state to the previous state
         if self.saved_state is None: return
+
+        strlist = [str(v) for v in globals.state_variables]
+        var = globals.state_variables[strlist.index(variable)]
+        value = var.get()
+
+        self.current_state[variable] = value
         
-        current_state = self.get_state()
-        for item in current_state:
-            if item not in self.saved_state:
-                # Current state has changed since last saved state
-                if globals.debug > 1: print("   ",item)
-                self.update_button.configure(state='!disabled',relief='raised')
-        else: # Current state is the same as the last saved state
-            if self.gui.plottoolbar.queued_zoom is not None:
-                self.update_button.configure(state='!disabled',relief='raised')
-            #else:
-            #    self.update_button.configure(state='disabled',relief='sunken')
+        if len(self.compare_states(self.current_state,self.saved_state)) > 0:
+            self.update_button.configure(state='!disabled',relief='raised')
+        else:
+            self.update_button.configure(state='disabled',relief='sunken')
 
+    def string_to_state_variable(self, string):
+        if globals.debug > 1: print("controls.string_to_state_variable")
+        strlist = [str(v) for v in globals.state_variables]
+        return globals.state_variables[strlist.index(string)]
 
-    def get_state(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.get_state")
-        state = []
-        for v in self.get_variables():
-            #if hasattr(v,'get'): state.append([v,v.get])
-            #else: state.append([v,v])
-            try:
-                state.append([v,v.get()])
-            except: pass
-        return state
+    def compare_states(self, state1, state2):
+        if globals.debug > 1: print("controls.compare_states")
+        changed_variables = []
+        for key, value in state1.items():
+            if state2[key] != value: changed_variables.append(self.string_to_state_variable(key))
+        return changed_variables
 
     def save_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.save_state")
-        self.saved_state = self.get_state()
-        self.update_button.configure(relief='sunken',state='disabled')
-
-    def get_variables(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.get_variables")
-        variables = []
-
-        variables.append(self.gui.filecontrols.current_file)
-        #children = get_all_children(self)
-        for child in self._children:
-            if hasattr(child,"get_variables"):
-                variables += child.get_variables()
-        
-        for name in dir(self):
-            attr = getattr(self,name)
-            if isinstance(attr,(tk.IntVar,tk.DoubleVar,tk.StringVar,tk.BooleanVar)):
-                variables.append(attr)
-        return variables
+        self.saved_state = copy(self.current_state)
+        self.update_button.configure(state='disabled',relief='sunken')
     
     def disable(self,temporarily=False):
         if globals.debug > 1: print("controls.disable")
         
-        #children = get_all_children(self)
         if temporarily: self.previous_state = get_widgets_states(self._children)
         else: self.previous_state = None
         
@@ -159,7 +149,6 @@ class Controls(tk.Frame,object):
                 widget.configure(state=state)
             self.previous_state = None
         else:
-            #children = get_all_children(self)
             set_widgets_states(self._children,'normal')
     
 
@@ -198,7 +187,7 @@ class Controls(tk.Frame,object):
 
         need_reset = False
         
-        changed_variables = self.get_which_variables_changed_between_states(self.get_state(),self.saved_state)
+        changed_variables = self.compare_states(self.current_state,self.saved_state)
 
         # If the data file changed, read the new one
         if self.gui.filecontrols.current_file in changed_variables:
@@ -271,6 +260,7 @@ class Controls(tk.Frame,object):
         else:
             self.axis_controllers['Colorbar'].connect(self.gui.interactiveplot.colorbar.cax.xaxis)
 
+    """
     def get_which_variables_changed_between_states(self,state1,state2):
         if globals.debug > 1: print("controls.get_which_variables_changed_between_states")
         # A state is just a list of tkinter variables and their values
@@ -285,7 +275,7 @@ class Controls(tk.Frame,object):
                 result.append(item[0])
         
         return result
-
+    """
 
     def on_plot_update(self, *args, **kwargs):
         if globals.debug > 1: print("controls.on_plot_update")
