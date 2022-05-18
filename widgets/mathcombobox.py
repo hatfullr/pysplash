@@ -33,7 +33,6 @@ class MathCombobox(ttk.Combobox, object):
         # while still retaining the default keybindings inherent to MathEntry widgets.
         bindtags = list(self.mathentry.bindtags())
         bindtags[1] = "TCombobox"
-        print(bindtags)
         self.mathentry.bindtags(tuple(bindtags))
         
         self.mathentry.bind("<FocusOut>", lambda *args,**kwargs: self.event_generate("<<ComboboxSelected>>"), add="+")
