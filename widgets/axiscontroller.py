@@ -49,6 +49,8 @@ class AxisController(LabelledFrame,object):
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
 
+        self.label.trace('w', self.update_label)
+
         self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
         
         if self.usecombobox:
@@ -137,17 +139,12 @@ class AxisController(LabelledFrame,object):
             self.axis = axis
             self.limits.connect(self.axis)
             self.scale.connect(self.axis)
-            self.cid = self.axis.get_figure().canvas.mpl_connect("draw_event", self.update_labels)
+            self.update_label()
     
     def disconnect(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.disconnect")
         self.limits.disconnect()
         self.scale.disconnect()
-        if self.axis and self.cid:
-            self.axis.get_figure().canvas.mpl_disconnect(self.cid)
-            self.cid = None
-     
-    
         
     def disable(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.disable")
@@ -157,15 +154,15 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.enable")
         set_widgets_states(get_all_children(self), 'normal')
     
-
-    def update_labels(self,*args,**kwargs):
-        if globals.debug > 1: print("axiscontroller.update_labels")
-        if self.axis.get_label_text() != self.label.get():
-            parent_ax = self.axis.axes
-            if isinstance(self.axis, XAxis):
-                parent_ax.set_xlabel(self.label.get())
-            elif isinstance(self.axis, YAxis):
-                parent_ax.set_ylabel(self.label.get())
+    def update_label(self,*args,**kwargs):
+        if globals.debug > 1: print("axiscontroller.update_label")
+        if self.axis:
+            if self.axis.get_label_text() != self.label.get():
+                parent_ax = self.axis.axes
+                if isinstance(self.axis, XAxis):
+                    parent_ax.set_xlabel(self.label.get())
+                elif isinstance(self.axis, YAxis):
+                    parent_ax.set_ylabel(self.label.get())
 
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
@@ -263,5 +260,4 @@ class AxisController(LabelledFrame,object):
                 dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
             
             if None not in newlim:
-                self.limits.set_limits(newlim)
-        
+                self.limits.set_limits(newlim)        

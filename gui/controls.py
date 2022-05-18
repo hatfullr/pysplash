@@ -255,6 +255,7 @@ class Controls(tk.Frame,object):
             # because we need to wait for the plot to finish calculating
         elif need_quick_redraw:
             # Not sure why both of these are required, but they are.
+            self.update_idletasks()
             self.gui.interactiveplot.canvas.draw_idle()
             self.gui.interactiveplot.canvas.draw()
             

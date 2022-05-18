@@ -2,9 +2,11 @@ from sys import version_info
 if version_info.major < 3:
     import Tkinter as tk
     import ttk
+    from tkFont import Font as tkFont
 else:
     import tkinter as tk
     from tkinter import ttk
+    import tkinter.font as tkFont
 
 # This custom entry widget automatically expands to fill
 # a frame when its width is set to 0.
@@ -20,8 +22,9 @@ class Entry(ttk.Entry, object):
             self.pack = lambda *args,**kwargs: self.container.pack(*args,**kwargs)
             self.place = lambda *args,**kwargs: self.container.place(*args,**kwargs)
             self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
-            super(Entry,self).pack(fill='both')
-
+            super(Entry, self).place(relx=0,rely=0,relwidth=1,relheight=1,bordermode="outside")
+            self.container.bind("<Map>", self.on_map, add="+")
+            
         self.root = self.winfo_toplevel()
             
         # Bind the Enter key to focusout
@@ -31,3 +34,14 @@ class Entry(ttk.Entry, object):
         self.bind("<FocusOut>", lambda *args,**kwargs: self.select_clear(), add="+")
         self.bind("<FocusIn>", lambda *args,**kwargs: self.select_clear(), add="+")
         
+    def on_map(self, *args, **kwargs):
+        # If it's 0 do nothing and let the widget auto-fit its surroundings.
+        # Otherwise, give it a minimum required width
+        width = self.cget('width')
+        if width > 0:
+            # Measure the width of N characters where N = self.cget('width')
+            fontname = str(self.cget('font'))
+            if version_info.major < 3: font = tkFont(name=fontname, exists=True)
+            else: font = tkFont.nametofont(fontname)
+
+            self.container.configure(width=font.measure("A")*width)
