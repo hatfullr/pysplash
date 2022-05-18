@@ -15,7 +15,7 @@ class IntegerEntry(FlashingEntry,object):
         self.disallowed_values = disallowed_values
         self.extra_validatecommands = extra_validatecommands
         self.allowblank = allowblank
-        
+        self._textvariable = tk.StringVar()
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         if 'textvariable' in kwargs.keys():
             raise TypeError("Keyword 'textvariable' is not valid")
@@ -23,7 +23,6 @@ class IntegerEntry(FlashingEntry,object):
         self.bid = None
         
         self.variable = variable
-        self._textvariable = tk.StringVar()
         
         super(IntegerEntry,self).__init__(master,textvariable=self._textvariable,**kwargs)
         self.configure(

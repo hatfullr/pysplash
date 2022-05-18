@@ -13,6 +13,7 @@ from widgets.axisscale import AxisScale
 from functions.getallchildren import get_all_children
 from widgets.mathentry import MathEntry
 from widgets.entry import Entry
+from widgets.mathcombobox import MathCombobox
 from functions.setwidgetsstates import set_widgets_states
 from matplotlib.axis import XAxis, YAxis
 import globals
@@ -47,7 +48,6 @@ class AxisController(LabelledFrame,object):
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
         self.limits.high.trace('w',self.update_scale_buttons)
-        #self.units.value.trace('w',self.update_limits)
 
         self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
         
@@ -68,16 +68,16 @@ class AxisController(LabelledFrame,object):
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
-        self.value = tk.StringVar(value='None')
+        self.value = tk.StringVar(value='')
         self.scale = tk.StringVar(value='linear')
         self.label = tk.StringVar()
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_widgets")
         if self.usecombobox:
-            self.combobox = ttk.Combobox(
+            self.combobox = MathCombobox(
                 self,
-                state='readonly',
+                self.gui,
                 width=0,
                 values=[self.value.get()],
                 textvariable=self.value,

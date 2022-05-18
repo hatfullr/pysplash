@@ -22,7 +22,7 @@ class ImportData(PopupWindow,object):
         super(ImportData,self).__init__(
             gui,
             title="Import data",
-            oktext="Import",
+            oktext="Import (Enter)",
             okcommand=self.import_data,
             show=False,
         )
@@ -51,7 +51,7 @@ class ImportData(PopupWindow,object):
         if globals.debug > 1: print("importdata.create_widgets")
         self.description = ttk.Label(
             self.contents,
-            text="Specify below a list of files to import. Once imported, all data currently loaded in PySplash will be unloaded an inaccessible to PySplash. The list you provide should be separated by spaces and can include wildcard search patterns such as file*.dat.",
+            text="Specify below a list of files to import. Once imported, all data currently loaded in PySplash will be unloaded and inaccessible to PySplash. The list you provide should be separated by spaces and can include wildcard search patterns such as file*.dat.",
             wraplength=self._width-2*self.pad,
             justify='left',
         )

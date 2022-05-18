@@ -269,7 +269,7 @@ class GUI(tk.Frame,object):
                 if len(val) == N: keys.append(key)
         
         # Check for requisite keys for colorbar plots
-        values = ['None']
+        values = ['']
         ckeys = self.data['data'].keys()
         for key in ['x','y','m','h','rho']:
             if key not in ckeys:
@@ -304,17 +304,16 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.get_physical_units")
         return self.data['physical_units'][key]
 
-    def get_display_data(self,key,raw=False):
+    def get_display_data(self,key,raw=False,identifier=None):
         if globals.debug > 1: print("gui.get_display_data")
         if raw: return self.display_data[key]
         else: # Apply the axis scale and units to the data
             # Check to see if the key matches
             xaxis = self.controls.axis_controllers['XAxis'].value.get()
             yaxis = self.controls.axis_controllers['YAxis'].value.get()
-            if key == xaxis:
-                controller = self.controls.axis_controllers['XAxis']
-            elif key == yaxis:
-                controller = self.controls.axis_controllers['YAxis']
+            if identifier is None: identifier = key
+            if identifier == xaxis: controller = self.controls.axis_controllers['XAxis']
+            elif identifier == yaxis: controller = self.controls.axis_controllers['YAxis']
             else:
                 raise RuntimeError("None of the AxisControllers have the value '"+xaxis+"' or '"+yaxis+"'")
             units = controller.units.value.get()

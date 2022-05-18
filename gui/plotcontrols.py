@@ -66,14 +66,14 @@ class PlotControls(LabelledFrame, object):
 
         # Point size
         self.point_size_label.pack(side='left')
-        self.point_size_entry.pack(side='left',fill='x',expand=True)
+        self.point_size_entry.pack(side='left',fill='both',expand=True)
         self.point_size_frame.pack(side='top',fill='x',expand=True)
         
         # Rotations
         self.rotation_label.pack(side='left')
-        self.rotation_x_entry.pack(side='left',fill='x',expand=True)
-        self.rotation_y_entry.pack(side='left',fill='x',expand=True)
-        self.rotation_z_entry.pack(side='left',fill='x',expand=True)
+        self.rotation_x_entry.pack(side='left',fill='both',expand=True)
+        self.rotation_y_entry.pack(side='left',fill='both',expand=True)
+        self.rotation_z_entry.pack(side='left',fill='both',expand=True)
         self.rotations_frame.pack(side='top',fill='x',expand=True)
 
         # Show Orientation

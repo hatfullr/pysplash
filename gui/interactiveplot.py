@@ -142,10 +142,14 @@ class InteractivePlot(tk.Frame,object):
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
             
-        self.gui.set_user_controlled(False)
-        x = self.gui.controls.axis_controllers['XAxis'].value.get()
-        y = self.gui.controls.axis_controllers['YAxis'].value.get()
-        if x in ['x','y','z'] and y in ['x','y','z']:
+        #self.gui.set_user_controlled(False)
+        #x = self.gui.controls.axis_controllers['XAxis'].value.get()
+        #y = self.gui.controls.axis_controllers['YAxis'].value.get()
+        x, x_physical_units, x_display_units = self.gui.controls.axis_controllers['XAxis'].combobox.get()
+        y, y_physical_units, y_display_units = self.gui.controls.axis_controllers['YAxis'].combobox.get()
+
+        if (self.gui.controls.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
+            self.gui.controls.axis_controllers['YAxis'].value.get() in ['x','y','z']):
             aspect = 'equal'
         else:
             aspect = None
@@ -153,7 +157,7 @@ class InteractivePlot(tk.Frame,object):
         # If there's no data to plot, stop here
         if not self.gui.data:
             self.canvas.draw_idle()
-            self.gui.set_user_controlled(True)
+            #self.gui.set_user_controlled(True)
             return
 
         
@@ -177,8 +181,10 @@ class InteractivePlot(tk.Frame,object):
                 method = ScatterPlot
                 args = (
                     self.ax,
-                    self.gui.get_display_data(x),
-                    self.gui.get_display_data(y),
+                    x,
+                    y,
+                    #self.gui.get_display_data(x),
+                    #self.gui.get_display_data(y),
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
@@ -200,23 +206,29 @@ class InteractivePlot(tk.Frame,object):
             args = (
                 self.ax,
                 A[idx],
-                self.gui.get_display_data(x)[idx],
-                self.gui.get_display_data(y)[idx],
+                x[idx],
+                y[idx],
+                #self.gui.get_display_data(x)[idx],
+                #self.gui.get_display_data(y)[idx],
                 m[idx],
                 h[idx],
                 rho[idx],
                 [ # physical units
                     Ap,
-                    self.gui.get_physical_units(x),
-                    self.gui.get_physical_units(y),
+                    x_physical_units,
+                    y_physical_units,
+                    #self.gui.get_physical_units(x),
+                    #self.gui.get_physical_units(y),
                     self.gui.get_physical_units('m'),
                     self.gui.get_physical_units('h'),
                     self.gui.get_physical_units('rho'),
                 ],
                 [ # display units
                     Ad,
-                    self.gui.get_display_units(x),
-                    self.gui.get_display_units(y),
+                    x_display_units,
+                    y_display_units,
+                    #self.gui.get_display_units(x),
+                    #self.gui.get_display_units(y),
                     self.gui.get_display_units('m'),
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
@@ -270,7 +282,7 @@ class InteractivePlot(tk.Frame,object):
                                 if key not in keys or self.previous_kwargs[key] != val:
                                     break
                             else:
-                                self.gui.set_user_controlled(True)
+                                #self.gui.set_user_controlled(True)
                                 print("   all args and kwargs were the same as the previous plot")
                                 print("   ",args)
                                 print("   ",self.previous_args)
@@ -317,7 +329,7 @@ class InteractivePlot(tk.Frame,object):
             f = "..."+f[-27:]
         self.ax.set_title(f)
         
-        self.gui.set_user_controlled(True)
+        #self.gui.set_user_controlled(True)
 
         self.gui.event_generate("<<PlotUpdate>>")
 
@@ -412,10 +424,8 @@ class InteractivePlot(tk.Frame,object):
         new_ylim = [None, None]
         
         if hasattr(self.gui, "data") and self.gui.data:
-            x = self.gui.controls.axis_controllers['XAxis'].value.get()
-            y = self.gui.controls.axis_controllers['YAxis'].value.get()
-            xdata = self.gui.get_display_data(x)
-            ydata = self.gui.get_display_data(y)
+            xdata = self.gui.controls.axis_controllers['XAxis'].combobox.get()[0]
+            ydata = self.gui.controls.axis_controllers['YAxis'].combobox.get()[0]
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
