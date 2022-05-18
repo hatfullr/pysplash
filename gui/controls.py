@@ -103,7 +103,8 @@ class Controls(tk.Frame,object):
         
         # This needs to happen always
         var = self.string_to_state_variable(variable)
-        self.current_state[variable] = var.get()
+        if var is not None:
+            self.current_state[variable] = var.get()
         
         # Don't mess with the update button any time that we're pressing hotkeys
         if globals.hotkey_pressed: return
