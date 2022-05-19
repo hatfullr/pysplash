@@ -11,7 +11,7 @@ from collections import OrderedDict
 from lib.customcolorbar import CustomColorbar
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=[],**kwargs):
+    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
@@ -75,11 +75,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if globals.debug > 1: print("customaxesimage.remove")
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
+        if self.after_id_calculate is not None: self.widget.after_cancel(self.after_id_calculate)
         
-        #if not self.data_is_image: self._disconnect()
         if self.colorbar: self.colorbar.disconnect_axesimage()
         super(CustomAxesImage,self).remove(*args,**kwargs)
-
     
     def equalize_aspect_ratio(self,xlim=None,ylim=None):
         if globals.debug > 1: print("customaxesimage.equalize_aspect_ratio")
@@ -144,20 +143,15 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.thread = None
         self._unscaled_data = copy(self._data)
         self.set_data(self._data)
-        self.after_calculate()
-
-        for command in self.aftercalculate: command(*args, **kwargs)
         
         # Update this image's colors based on the colorbar's limits
         if self.colorbar:
             self.set_clim(self.colorbar.get_cax_limits())
-
-        if self._axes is not None:
-            canvas = self._axes.get_figure().canvas
-            canvas.get_tk_widget().update_idletasks()
-            canvas.draw_idle()
+        
         self.after_id_calculate = None
         self.calculating = False
+        self.after_calculate()
+        if self.aftercalculate is not None: self.aftercalculate(*args,**kwargs)
     
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change

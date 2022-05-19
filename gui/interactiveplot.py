@@ -38,7 +38,7 @@ class InteractivePlot(tk.Frame,object):
         self.orientation = OrientationArrows(self.gui,self.ax)
         
         self.colorbar = CustomColorbar(self.ax)
-        
+
         self.drawn_object = None
         self.previously_drawn_object = None
 
@@ -85,6 +85,17 @@ class InteractivePlot(tk.Frame,object):
         self.hotkeys.bind("zoom", self.zoom)
         self.hotkeys.bind("zoom x", lambda event: self.zoom(event, which='x'))
         self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
+
+    def destroy(self, *args, **kwargs):
+        if self._after_id_update is not None: self.after_cancel(self._after_id_update)
+        # The artists we drew onto the plot need to be removed so that
+        # their "after" methods get cancelled properly before we
+        # destroy this widget
+        if self.drawn_object is not None: self.drawn_object.remove()
+        if (self.previously_drawn_object is not None and
+            self.previously_drawn_object in self.ax.get_children()):
+            self.previously_drawn_object.remove()
+        super(InteractivePlot,self).destroy(*args, **kwargs)
         
     def start_pan(self, event):
         # Disconnect the scroll wheel zoom binding while panning
@@ -126,7 +137,7 @@ class InteractivePlot(tk.Frame,object):
     def wait_to_update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.wait_to_update")
         # If we are waiting to update, then make sure the controls' update button is disabled
-        self.gui.controls.update_button.state(['disabled', 'pressed'])
+        self.gui.controls.update_button.state(['disabled'])
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
         self._after_id_update = self.after(globals.plot_update_delay, lambda *args,**kwargs: self.gui.controls.update_button.invoke())
@@ -156,8 +167,7 @@ class InteractivePlot(tk.Frame,object):
 
         # If there's no data to plot, stop here
         if not self.gui.data:
-            self.canvas.draw_idle()
-            #self.gui.set_user_controlled(True)
+            self.after_calculate()
             return
 
         
@@ -188,7 +198,7 @@ class InteractivePlot(tk.Frame,object):
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
-                kwargs['aftercalculate'] = [self.after_scatter_calculate]
+                kwargs['aftercalculate'] = self.after_scatter_calculate
                 self.colorbar.hide()
 
         elif colorbar_text.strip() or colorbar_text.strip() != "":
@@ -240,78 +250,14 @@ class InteractivePlot(tk.Frame,object):
             kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['aspect'] = aspect
             kwargs['colorbar'] = self.colorbar
-            kwargs['aftercalculate'] = [self.after_ivp_calculate]
+            kwargs['aftercalculate'] = self.after_ivp_calculate
 
             self.colorbar.show()
         else:
             raise Exception("Unable to decide on scatter plot or integrated value plot. This should never happen.")
+        
+        if self.drawn_object is None: kwargs['initialize'] = True
 
-        kwargs['aftercalculate'] += [self.after_calculate]
-        
-        changed_args = False
-        
-        # If the plot we are going to make is the same as the plot already
-        # on the canvas, then don't draw a new one
-        if self.drawn_object is not None and self.previous_args is not None:
-            xmin,xmax = self.ax.get_xlim()
-            ymin,ymax = self.ax.get_ylim()
-            #vmin,vmax = self.colorbar.get_cax_limits()
-            if (self.previous_xlim[0] == xmin and
-                self.previous_xlim[1] == xmax and
-                self.previous_ylim[0] == ymin and
-                self.previous_ylim[1] == ymax):
-                kwargs['initialize'] = False
-                
-                if len(args) == len(self.previous_args):
-                    # We break out of this for-loop if any of the current arguments
-                    # have changed compared to the previous arguments
-                    for arg in args:
-                        for prev_arg in self.previous_args:
-                            try:
-                                if arg == prev_arg: break
-                            except ValueError:
-                                if np.array_equal(arg,prev_arg):
-                                    break
-                        else:
-                            changed_args = True
-                            break
-                    else: # The args are the same as before
-                        keys = self.previous_kwargs.keys()
-                        if len(keys) == len(kwargs.keys()):
-                            for key,val in kwargs.items():
-                                if key not in keys or self.previous_kwargs[key] != val:
-                                    break
-                            else:
-                                #self.gui.set_user_controlled(True)
-                                print("   all args and kwargs were the same as the previous plot")
-                                print("   ",args)
-                                print("   ",self.previous_args)
-                                print("   ",kwargs)
-                                print("   ",self.previous_kwargs)
-                                return
-
-        # We only get here if the plot we are going to draw won't be
-        # the same as the previous plot
-        
-        
-        if self.drawn_object is None:
-            kwargs['initialize'] = True
-
-        if changed_args: self.reset() # Clear the current plot
-        
-        # Update the orientation
-        #if self.gui.controls.plotcontrols.show_orientation.get():
-        #    self.orientation.draw()
-        #else:
-        #    self.orientation.clear()
-
-        # Remove the previously drawn object if it is still on the axis
-        if self.drawn_object is not None:
-            if self.drawn_object in self.ax.get_children():
-                self.drawn_object.remove()
-        #if self.previously_drawn_object in self.ax.get_children():
-        #    self.previously_drawn_object.remove()
-        
         self.drawn_object = method(*args,**kwargs)
         
         if globals.use_multiprocessing_on_scatter_plots:
@@ -320,10 +266,10 @@ class InteractivePlot(tk.Frame,object):
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
-        
-        self.previous_xlim = self.ax.get_xlim()
-        self.previous_ylim = self.ax.get_ylim()
-        
+
+        # Remove the previously drawn object
+        if self.previously_drawn_object in self.ax.get_children():
+            self.previously_drawn_object.remove()
         self.previously_drawn_object = self.drawn_object
 
         # Put the filename in the axis title for now
@@ -331,12 +277,16 @@ class InteractivePlot(tk.Frame,object):
         if len(f) > 30:
             f = "..."+f[-27:]
         self.ax.set_title(f)
-        
-        #self.gui.set_user_controlled(True)
 
+        self.canvas.draw_idle()
+        
+        self.previous_xlim = self.ax.get_xlim()
+        self.previous_ylim = self.ax.get_ylim()
+        
         self.gui.event_generate("<<PlotUpdate>>")
 
     def after_scatter_calculate(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
         if not self.gui.data.is_image:
             self.previous_args = args
             self.previous_kwargs = kwargs            
@@ -362,6 +312,7 @@ class InteractivePlot(tk.Frame,object):
                 (yadaptive or np.nan in controls_ylimits)): self.reset_xylim(which='both',draw=False)
             elif xadaptive or np.nan in controls_xlimits: self.reset_xylim(which='xlim',draw=False)
             elif yadaptive or np.nan in controls_ylimits: self.reset_xylim(which='ylim',draw=False)
+        self.after_calculate(*args, **kwargs)
 
     def after_ivp_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_ivp_calculate")
@@ -369,6 +320,7 @@ class InteractivePlot(tk.Frame,object):
             not isinstance(self.previously_drawn_object, IntegratedValuePlot)) or
             self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()):
             self.reset_clim(draw=False)
+        self.after_calculate(self, *args, **kwargs)
         
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")

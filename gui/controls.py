@@ -23,12 +23,27 @@ from copy import deepcopy
 import globals
 
 class Controls(tk.Frame,object):
+    update_button_style_initialized = False
     def __init__(self,gui,*args,**kwargs):
         if globals.debug > 1: print("controls.__init__")
+        style = ttk.Style()
+        
+        if not Controls.update_button_style_initialized:
+            # Only edit the relief settings of the button style
+            
+            style.map(
+                "UpdateButton.TButton",
+                relief = [
+                    (['!disabled','!pressed'], style.lookup('TButton','relief',state=['!pressed'])),
+                    (['!disabled','pressed'], style.lookup('TButton','relief',state=['pressed'])),
+                    ('disabled', style.lookup('TButton','relief',state=['pressed'])),
+                ],
+            )
+            Controls.update_button_style_initialized = True
+        
         self.gui = gui
         super(Controls,self).__init__(self.gui,*args,**kwargs)
         
-        style = ttk.Style()
         style.map('TCombobox', fieldbackground=[('readonly','white')])
         style.map('TCombobox', selectbackground=[('readonly', 'white')])
         style.map('TCombobox', selectforeground=[('readonly', 'black')])
@@ -71,6 +86,7 @@ class Controls(tk.Frame,object):
             self,
             text="Update "+hotkeys_to_string('update plot'),
             state='disabled',
+            style="UpdateButton.TButton",
             command=self.on_update_button_pressed,
         )
         ToolTip.createToolTip(self.update_button, "Redraw the plot using the controls below.")
@@ -112,9 +128,9 @@ class Controls(tk.Frame,object):
         if self.saved_state is None: return
         
         if len(self.compare_states(self.current_state,self.saved_state)) > 0:
-            self.update_button.configure(state='!disabled',relief='raised')
+            self.update_button.configure(state='!disabled')#,relief='raised')
         else:
-            self.update_button.configure(state='disabled',relief='sunken')
+            self.update_button.configure(state='disabled')#,relief='sunken')
 
     def string_to_state_variable(self, string):
         if globals.debug > 1: print("controls.string_to_state_variable")
@@ -132,7 +148,7 @@ class Controls(tk.Frame,object):
     def save_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.save_state")
         self.saved_state = deepcopy(self.current_state)
-        self.update_button.configure(state='disabled',relief='sunken')
+        self.update_button.configure(state='disabled')#,relief='sunken')
     
     def disable(self,temporarily=False):
         if globals.debug > 1: print("controls.disable")
@@ -265,16 +281,12 @@ class Controls(tk.Frame,object):
 
         # Draw the new plot
         if need_full_redraw:
-            #self.gui.interactiveplot.clear()
             self.gui.interactiveplot.update()
-            # Everything after this is done in interactiveplot.update
+            # Everything after this is done in interactiveplot.after_calculate
             # because we need to wait for the plot to finish calculating
         elif need_quick_redraw:
-            # Not sure why both of these are required, but they are.
-            self.update_idletasks()
             self.gui.interactiveplot.canvas.draw_idle()
-            self.gui.interactiveplot.canvas.draw()
-            #self.save_state()
+        self.save_state()
 
     def connect(self):
         if globals.debug > 1: print("controls.connect")
@@ -289,7 +301,7 @@ class Controls(tk.Frame,object):
 
     def on_plot_update(self, *args, **kwargs):
         if globals.debug > 1: print("controls.on_plot_update")
-
+        
         # Store the axis limits
         self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()
         self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()

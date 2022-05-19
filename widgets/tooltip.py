@@ -15,8 +15,10 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
     
     @staticmethod
     def createToolTip(widget, text):
+        root = widget.winfo_toplevel()
+        
         def show(event):
-            toolTip.tipwindow.wm_geometry("+%d+%d" % (event.x_root+1,event.y_root+1))
+            toolTip.tipwindow.geometry("+%d+%d" % (event.x_root+1,event.y_root+1))
             toolTip.tipwindow.deiconify()
             def command(event):
                 toolTip.tipwindow.withdraw()
@@ -33,7 +35,7 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
         def motion(event):
             hide(event)
             if ToolTip.after_id is None:
-                ToolTip.after_id = root.after(500, lambda event=event: show(event))
+                ToolTip.after_id = root.after(500, lambda e=event: show(e))
             else:
                 root.after_cancel(ToolTip.after_id)
                 ToolTip.after_id = None
@@ -42,8 +44,7 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
         toolTip = ToolTip(widget)
         toolTip.tipwindow = tk.Toplevel(widget)
         hide(None)
-        toolTip.tipwindow.wm_overrideredirect(1)
-        root = widget.winfo_toplevel()
+        toolTip.tipwindow.overrideredirect(True)
         try:
             # For Mac OS
             toolTip.tipwindow.tk.call("::tk::unsupported::MacWindowStyle",
@@ -52,8 +53,9 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
         except tk.TclError:
             pass
         tk.Label(toolTip.tipwindow, text=text, justify='left',relief='solid',borderwidth=1).pack(ipadx=1)
-
+        
         toolTip.tipwindow.bind("<Enter>", hide, add="+")
+        toolTip.tipwindow.bind("<Button-1>", lambda *args,**kwargs: print("Button1"), add="+")
         widget.bind("<Motion>", motion, add="+")
         widget.bind("<Leave>", hide, add="+")
 

@@ -16,13 +16,16 @@ class FlashingEntry(Entry,object):
         self.container = tk.Frame(master,borderwidth=1)
         super(FlashingEntry, self).__init__(self.container,**kwargs)
         super(FlashingEntry, self).pack(fill='both',expand=True)
-        #super(FlashingEntry, self).place(relx=0,rely=0,relwidth=1,relheight=1,bordermode="outside")
         
         self.pack = lambda *args,**kwargs: self.container.pack(*args,**kwargs)
         self.place = lambda *args,**kwargs: self.container.place(*args,**kwargs)
         self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
 
         self.previous_style = None
+
+    def destroy(self, *args, **kwargs):
+        if self._flash_after_id is not None: self.after_cancel(self._flash_after_id)
+        super(FlashingEntry,self).destroy(*args,**kwargs)
 
     def flash(self,time=1000):
         if not self.flashing:

@@ -19,7 +19,7 @@ class Button(ttk.Label, object):
         self.bind("<Leave>", self.on_leave, add='+')
 
         # Mouse click behavior
-        self.bind("<Button-1>", self.on_button1,add='+')
+        self.bind("<ButtonPress-1>", self.on_button1,add='+')
         self.bind("<ButtonRelease-1>", self.on_buttonrelease1,add='+')
 
         self._button1pressed = False
@@ -28,12 +28,13 @@ class Button(ttk.Label, object):
     def destroy(self, *args, **kwargs):
         self.unbind("<Enter>")
         self.unbind("<Leave>")
-        self.unbind("<Button-1>")
+        self.unbind("<ButtonPress-1>")
         self.unbind("<ButtonRelease-1>")
         super(Button,self).destroy(*args, **kwargs)
 
     def on_button1(self, *args, **kwargs):
         self._button1pressed = True
+        #print(self.state())
         if 'disabled' not in self.state(): self.state(['pressed'])
 
     def on_buttonrelease1(self, *args, **kwargs):
@@ -57,14 +58,14 @@ class Button(ttk.Label, object):
     def on_enter(self, *args, **kwargs):
         self._mousein = True
         if 'disabled' not in self.state():
-            self.state(['active','hover'])
-            if self._button1pressed: self.state(['pressed','hover'])
+            self.state(['active'])
+            if self._button1pressed: self.state(['pressed'])
 
     def on_leave(self, *args, **kwargs):
         self._mousein = False
         if 'disabled' not in self.state():
-            self.state(['!active','!hover'])
-            if self._button1pressed: self.state(['!active','pressed','!hover'])
+            self.state(['!active'])
+            if self._button1pressed: self.state(['!active','pressed'])
 
     def configure(self, *args, **kwargs):
         self.command = kwargs.pop('command',self.command)

@@ -30,7 +30,7 @@ class ScatterPlot(CustomAxesImage,object):
         self.y = y
         self.s = s
 
-        self.initializing = True
+        #self.initializing = True
         #self.set_size(s)
 
         self.cpu_mp_time = 0.
@@ -43,7 +43,7 @@ class ScatterPlot(CustomAxesImage,object):
             **kwargs
         )
         
-        self.initializing = False
+        #self.initializing = False
         
     """
     def set_size(self,size):

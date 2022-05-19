@@ -32,6 +32,8 @@ if support_threading:
 
         def stop(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.stop")
+            if self._after_id is not None:
+                self.root.after_cancel(self._after_id)
             self.isStop = True
 
         def start(self,*args,**kwargs):
@@ -55,6 +57,8 @@ if support_threading:
                     self.root.after_cancel(self._after_id)
                 self._after_id = self.root.after(10, self.process_queue)
             else: # Finished
+                if self._after_id is not None:
+                    self.root.after_cancel(self._after_id)
                 if self.isStop: return
                 self.queue.get(0)
                 if globals.debug > 1: print("threadedtask finished")
