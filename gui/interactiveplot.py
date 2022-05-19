@@ -91,7 +91,8 @@ class InteractivePlot(tk.Frame,object):
         # The artists we drew onto the plot need to be removed so that
         # their "after" methods get cancelled properly before we
         # destroy this widget
-        if self.drawn_object is not None: self.drawn_object.remove()
+        if (self.drawn_object is not None and
+            self.drawn_object in self.ax.get_children()): self.drawn_object.remove()
         if (self.previously_drawn_object is not None and
             self.previously_drawn_object in self.ax.get_children()):
             self.previously_drawn_object.remove()
@@ -134,17 +135,17 @@ class InteractivePlot(tk.Frame,object):
             self.drawn_object.remove()
             self.drawn_object = None
 
-    def wait_to_update(self,*args,**kwargs):
-        if globals.debug > 1: print("interactiveplot.wait_to_update")
+    def update(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.update")
         # If we are waiting to update, then make sure the controls' update button is disabled
-        self.gui.controls.update_button.state(['disabled'])
+        #self.gui.controls.update_button.state(['disabled'])
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
-        self._after_id_update = self.after(globals.plot_update_delay, lambda *args,**kwargs: self.gui.controls.update_button.invoke())
+        self._after_id_update = self.after(globals.plot_update_delay, self._update)
     
-    def update(self,*args, **kwargs):
+    def _update(self,*args, **kwargs):
         if globals.debug > 1:
-            print("interactiveplot.update")
+            print("interactiveplot._update")
             print("    self.ax = ",self.ax)
 
         
@@ -459,5 +460,6 @@ class InteractivePlot(tk.Frame,object):
             self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
 
         self.canvas.draw_idle()
-        self.wait_to_update()
+        self.update()
+        #self.wait_to_update()
 
