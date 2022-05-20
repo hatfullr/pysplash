@@ -22,6 +22,8 @@ from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 
+from functions.getallchildren import get_all_children
+
 class InteractivePlot(tk.Frame,object):
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
@@ -96,20 +98,19 @@ class InteractivePlot(tk.Frame,object):
         if (self.previously_drawn_object is not None and
             self.previously_drawn_object in self.ax.get_children()):
             self.previously_drawn_object.remove()
-        super(InteractivePlot,self).destroy(*args, **kwargs)
         
     def start_pan(self, event):
         # Disconnect the scroll wheel zoom binding while panning
         self.hotkeys.unbind("zoom")
         
         # Trick Matplotlib into thinking we pressed the left mouse button
-        event.button = matplotlib.backend_bases.MouseButton.LEFT
+        event.button = 1#matplotlib.backend_bases.MouseButton.LEFT
         # Strange that the y position gets mucked up, but this works
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
         self.gui.plottoolbar.press_pan(event)
 
     def drag_pan(self, event):
-        event.key = matplotlib.backend_bases.MouseButton.LEFT
+        event.key = 1#matplotlib.backend_bases.MouseButton.LEFT
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
         self.gui.plottoolbar.drag_pan(event)
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
@@ -147,8 +148,6 @@ class InteractivePlot(tk.Frame,object):
         if globals.debug > 1:
             print("interactiveplot._update")
             print("    self.ax = ",self.ax)
-
-        
 
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
@@ -255,17 +254,23 @@ class InteractivePlot(tk.Frame,object):
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
-
+        
         # Remove the previously drawn object
-        if self.previously_drawn_object in self.ax.get_children():
-            self.previously_drawn_object.remove()
-        self.previously_drawn_object = self.drawn_object
+        #if self.previously_drawn_object in self.ax.get_children():
+        #    self.previously_drawn_object.remove()
+        #self.previously_drawn_object = self.drawn_object
 
         # Put the filename in the axis title for now
         f = self.gui.filecontrols.current_file.get()
         if len(f) > 30:
             f = "..."+f[-27:]
         self.ax.set_title(f)
+
+        # Make absolutely sure that the only drawn object on the axis is
+        # the one we just created
+        for child in self.ax.get_children():
+            if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
+                child.remove()
 
         self.canvas.draw_idle()
         

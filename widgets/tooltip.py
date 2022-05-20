@@ -55,7 +55,6 @@ class ToolTip(matplotlib.backends._backend_tk.ToolTip,object):
         tk.Label(toolTip.tipwindow, text=text, justify='left',relief='solid',borderwidth=1).pack(ipadx=1)
         
         toolTip.tipwindow.bind("<Enter>", hide, add="+")
-        toolTip.tipwindow.bind("<Button-1>", lambda *args,**kwargs: print("Button1"), add="+")
         widget.bind("<Motion>", motion, add="+")
         widget.bind("<Leave>", hide, add="+")
 

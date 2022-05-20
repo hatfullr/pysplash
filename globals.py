@@ -25,7 +25,7 @@ tooltip_wraplength = 50
 # in the plot to wait before calculating the new
 # image. Lower values decrease performance but make
 # the application feel more responsive.
-plot_update_delay = 0
+plot_update_delay = 10
 
 # When using math expressions in the axis controllers
 # such as "x * x", you can import installed Python

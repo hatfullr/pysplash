@@ -107,7 +107,7 @@ class ScatterPlot(CustomAxesImage,object):
         @cuda.jit
         def calculate_indices_gpu(data,delta_xy,invdx,invdy):
             i = cuda.grid(1)
-            if i < delta_xy.size:
+            if i < delta_xy.shape[0]:
                 data[int(delta_xy[i][1]*invdy),int(delta_xy[i][0]*invdx)] = True
 
         def calculate_data_gpu(self,x,y):
@@ -116,9 +116,14 @@ class ScatterPlot(CustomAxesImage,object):
             N = len(x)
             # Center on each pixel, so -0.5*dx and -0.5*dy
             delta_xy = np.column_stack((x,y))-np.array([self._extent[0]-0.5*self.dx,self._extent[2]-0.5*self.dy])
-            device_delta_xy = cuda.to_device(delta_xy)
-
-            device_data = cuda.to_device(self._data)
+            try:
+                device_delta_xy = cuda.to_device(delta_xy)
+                device_data = cuda.to_device(self._data)
+            except Exception as e:
+                print("Unexpected error encountered while copying data from the host to the gpu")
+                print(e)
+                cuda.get_current_device().reset()
+                return
 
             blockspergrid = N // threadsperblock + 1
             
@@ -128,7 +133,13 @@ class ScatterPlot(CustomAxesImage,object):
                 1./self.dx,
                 1./self.dy,
             )
-            cuda.synchronize()
+            try:
+                cuda.synchronize()
+            except Exception as e:
+                print("Unexpected error encountered while copying data from the gpu to the host")
+                print(e)
+                cuda.get_current_device().reset()
+                return
             self._data = device_data.copy_to_host()
 
     def calculate_data_cpu(self,x,y):

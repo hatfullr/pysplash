@@ -11,7 +11,7 @@ import globals
 
 
 class PopupWindow(tk.Toplevel, object):
-    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, *args, width=None, height=None, **kwargs):
+    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, width=None, height=None, **kwargs):
         if globals.debug > 1: print("popupwindow.__init__")
         
         # Setup the window
