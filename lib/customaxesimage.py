@@ -11,12 +11,10 @@ from collections import OrderedDict
 from lib.customcolorbar import CustomColorbar
 
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,xscale='linear',yscale='linear',cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,**kwargs):
+    def __init__(self,ax,data,cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
-        self.xscale = xscale
-        self.yscale = yscale
         self.cscale = cscale
         self.xunits = xunits
         self.yunits = yunits
@@ -39,6 +37,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             extent = list(self._axes.get_xlim())+list(self._axes.get_ylim())
 
         kwargs['origin'] = 'lower'
+
         matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,**kwargs)
         self._extent = extent
         
@@ -164,9 +163,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             self.widget.after_cancel(self.after_id_calculate)
             self.after_id_calculate = None
 
-    def set_data(self,new_data,scaled=True):
+    def set_data(self,new_data,raw=False):
         if globals.debug > 1: print("customaxesimage.set_data")
-        if scaled:
+        if not raw:
             if new_data.dtype != 'bool':
                 if self.cscale == 'log10': new_data = np.log10(new_data)
                 elif self.cscale == '^10': new_data = 10.**new_data

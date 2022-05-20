@@ -21,26 +21,27 @@ from widgets.mathentry import MathEntry
     
 class MathCombobox(ttk.Combobox, object):
     def __init__(self, master, gui, *args, **kwargs):
+        allowempty = kwargs.pop('allowempty', False)
         kwargs['textvariable'] = kwargs.get('textvariable', tk.StringVar())
         textvariable = kwargs['textvariable']
         super(MathCombobox,self).__init__(master,*args,**kwargs)
         self.gui = gui
 
         mathentrytextvariable = tk.StringVar(value=textvariable.get())
-        self.mathentry = MathEntry(self, self.gui, textvariable=textvariable)
+        self.mathentry = MathEntry(self, self.gui, textvariable=textvariable, allowempty=allowempty)
 
         # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,
         # while still retaining the default keybindings inherent to MathEntry widgets.
         bindtags = list(self.mathentry.bindtags())
         bindtags[1] = "TCombobox"
         self.mathentry.bindtags(tuple(bindtags))
-        
-        self.mathentry.bind("<FocusOut>", lambda *args,**kwargs: self.event_generate("<<ComboboxSelected>>"), add="+")
+
+        self.mathentry.bind("<<MathEntrySaved>>", lambda *args, **kwargs: self.event_generate("<<ComboboxSelected>>"), add="+")
         
         self.bind("<Map>", self.on_map, add="+")
         
     def get(self, *args, **kwargs):
-        return self.mathentry.get_data()
+        return self.mathentry.get_data(*args, **kwargs)
         
     def set_entry_size(self, *args, **kwargs):
         self.update_idletasks()

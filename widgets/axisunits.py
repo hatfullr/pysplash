@@ -4,7 +4,8 @@ if version_info.major < 3:
 else:
     import tkinter as tk
     
-from widgets.floatentry import FloatEntry
+from widgets.floatmathentry import FloatMathEntry
+#from widgets.mathentry import MathEntry
 from functions.getallchildren import get_all_children
 from matplotlib.axis import XAxis, YAxis
 import matplotlib.image
@@ -31,10 +32,10 @@ class AxisUnits(tk.LabelFrame, object):
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axisunits.create_widgets")
-        self.entry = FloatEntry(
+        self.entry = FloatMathEntry(
             self,
             variable=self.value,
-            disallowed_values=[0,0.,-0,-0.],
+            #disallowed_values=[0,0.,-0,-0.],
         )
 
     def place_widgets(self, *args, **kwargs):
@@ -47,8 +48,6 @@ class AxisUnits(tk.LabelFrame, object):
 
     def on_axis_controller_combobox_selected(self,*args,**kwargs):
         if globals.debug > 1: print('axisunits.on_axis_controller_combobox_selected')
-        if self.axis_controller.usecombobox:
-            if self.axis_controller.previous_value != self.axis_controller.value.get():
-                self.reset()
+        self.reset()
     
     

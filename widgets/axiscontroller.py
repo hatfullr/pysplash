@@ -196,51 +196,40 @@ class AxisController(LabelledFrame,object):
             # First reset the units so that things don't get mucked up
             self.units.reset()
 
-            low = self.limits.low.get()
-            high = self.limits.high.get()
-            
-            if self.previous_scale == 'linear':
-                if current_scale == 'log10':
-                    self.limits.low.set(np.log10(low))
-                    self.limits.high.set(np.log10(high))
-                else: # Must be ^10
-                    self.limits.low.set(10**(low))
-                    self.limits.high.set(10**(high))
-            elif self.previous_scale == 'log10':
-                # If we are switching off of log10 then it's possible that the limits
-                # could be nan. If this is the case, then we need to recalculate that
-                # bound if possible
-                #re_low = None
-                #re_high = None
-                #if np.isnan(low) and np.isnan(high): re_low, re_high = self.recalculate_limit(which='both')
-                #elif np.isnan(low): re_low = self.recalculate_limit(which='low')
-                #elif np.isnan(high): re_high = self.recalculate_limit(which='high')
-                if current_scale == 'linear':
-                    self.limits.low.set(10**low)
-                    self.limits.high.set(10**high)
-                    #if re_low: self.limits.low.set(re_low)
-                    #else: self.limits.low.set(10**(low))
-                    #if re_high: self.limits.high.set(re_high)
-                    #else: self.limits.high.set(10**(high))
-                else: # Must be ^10
-                    self.limits.low.set(10**(10**low))
-                    self.limits.high.set(10**(10**high))
-                    #if re_low: self.limits.low.set(10**re_low)
-                    #else: self.limits.low.set(10**(10**(low)))
-                    #if re_high: self.limits.high.set(10**re_high)
-                    #else: self.limits.high.set(10**(10**(high)))
-            elif self.previous_scale == '^10':
-                if current_scale == 'linear':
-                    self.limits.low.set(np.log10(low))
-                    self.limits.high.set(np.log10(high))
-                else: # Must be log10
-                    self.limits.low.set(np.log10(np.log10(low)))
-                    self.limits.high.set(np.log10(np.log10(high)))
-                    
+            # Recalculate the axis limits if we are in adaptive mode
+            if self.limits.adaptive.get():
+                self.set_adaptive_limits()
+            # Otherwise, try to calculate the new limits given the old
+            else:
+                low = self.limits.low.get()
+                high = self.limits.high.get()
+
+                if self.previous_scale == 'linear':
+                    if current_scale == 'log10':
+                        self.limits.low.set(np.log10(low))
+                        self.limits.high.set(np.log10(high))
+                    else: # Must be ^10
+                        self.limits.low.set(10**(low))
+                        self.limits.high.set(10**(high))
+                elif self.previous_scale == 'log10':
+                    if current_scale == 'linear':
+                        self.limits.low.set(10**low)
+                        self.limits.high.set(10**high)
+                    else: # Must be ^10
+                        self.limits.low.set(10**(10**low))
+                        self.limits.high.set(10**(10**high))
+                elif self.previous_scale == '^10':
+                    if current_scale == 'linear':
+                        self.limits.low.set(np.log10(low))
+                        self.limits.high.set(np.log10(high))
+                    else: # Must be log10
+                        self.limits.low.set(np.log10(np.log10(low)))
+                        self.limits.high.set(np.log10(np.log10(high)))
             self.previous_scale = current_scale
     
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print('axiscontroller.update_limits')
+        if self.units.entry.get() == "": return
         units = self.units.value.get()
         if abs((self.previous_units-units)/units) > 0.001:
             for limit in [self.limits.low, self.limits.high]:
@@ -262,3 +251,18 @@ class AxisController(LabelledFrame,object):
             
             if None not in newlim:
                 self.limits.set_limits(newlim)        
+
+    def get_data(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.get_data")
+
+        if self.usecombobox: widget = self.combobox
+        else: widget = self.entry
+            
+        data, physical_units, display_units = widget.get()
+        
+        # Apply the scaling to the resulting data
+        scale = self.scale.get()
+        if scale == 'log10': data = np.log10(data)
+        elif scale == '^10': data = 10.**data
+        
+        return data, physical_units, display_units

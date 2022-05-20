@@ -29,7 +29,7 @@ class PopupWindow(tk.Toplevel, object):
             self.width = int(self.root.winfo_screenwidth() / 6.)
         else: self.width = width
         
-        # If height keyword is not given, then try to give an appropraite height
+        # If height keyword is not given, then try to give an appropriate height
         if height is None:
             aspect = self.root.winfo_screenheight()/self.root.winfo_screenwidth()
             self.height = int(self.width*aspect)
@@ -43,12 +43,14 @@ class PopupWindow(tk.Toplevel, object):
 
         center_x = int(self.root.winfo_rootx() + 0.5*self.root.winfo_width() - 0.5*self.width)
         center_y = int(self.root.winfo_rooty() + 0.5*self.root.winfo_height() - 0.5*self.height)
-        # Adjust a little bit as a guess for hte bar height of the window
+        # Adjust a little bit as a guess for the bar height of the window
         center_y -= int(self.winfo_screenheight() / 20.)
-        self.geometry("+%d+%d" % (center_x, center_y))
-        
-        self.minsize(self.width,0)
-        self.maxsize(self.width, self.winfo_screenheight())
+        if height is not None and width is not None:
+            self.geometry("%dx%d+%d+%d" % (self.width, self.height, center_x, center_y))
+        else:
+            self.geometry("+%d+%d" % (center_x, center_y))
+            self.minsize(self.width, 0)
+            self.maxsize(self.width, self.winfo_screenheight())
 
         # Create the contents frame
         self.contents = tk.Frame(self)
@@ -65,13 +67,12 @@ class PopupWindow(tk.Toplevel, object):
             self.cancelbutton = Button(self.buttons_frame,text=canceltext,command=self.close)
         else:
             self.cancelbutton = Button(self.buttons_frame,text=canceltext,command=cancelcommand)
-        
-        self.cancelbutton.pack(side='right',padx=(pad,0))
-        self.okbutton.pack(side='right')
-        
+
+        self.cancelbutton.pack(side='right',fill='y',padx=(pad,0))
+        self.okbutton.pack(side='right',fill='y')
         # Place the widgets
-        self.contents.pack(side='top',fill='both',expand=True,pady=(0,pad))
-        self.buttons_frame.pack(side='bottom',anchor='e',fill='both',expand=True)
+        self.buttons_frame.pack(side='bottom',anchor='e',fill='x')
+        self.contents.pack(side='bottom',fill='both',expand=True,pady=(0,pad))
 
         # Now show the window
         if show: self.deiconify()

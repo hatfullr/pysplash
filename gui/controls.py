@@ -60,6 +60,7 @@ class Controls(tk.Frame,object):
         self.previous_xaxis_limits = None
         self.previous_yaxis_limits = None
         self.previous_caxis_limits = None
+        self.previous_axis_scales = {key:None for key in self.axis_controllers.keys()}
         
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
 
@@ -259,7 +260,12 @@ class Controls(tk.Frame,object):
                 if (min(exlim) > min(xlim) or max(exlim) < max(xlim) or
                     min(eylim) > min(ylim) or max(eylim) < max(ylim)):
                     need_full_redraw = True
-                
+
+            # Check if the scale has changed
+            for key,axis_controller in self.axis_controllers.items():
+                if axis_controller.scale.get() != self.previous_axis_scales[key]:
+                    need_full_redraw = True
+                    break
             
         
         # Perform the queued zoom if there is one
@@ -279,6 +285,10 @@ class Controls(tk.Frame,object):
                 )
                 need_full_redraw = True
 
+        # Save the previous scales
+        for key,axis_controller in self.axis_controllers.items():
+            self.previous_axis_scales[key] = axis_controller.scale.get()
+                
         # Draw the new plot
         if need_full_redraw:
             self.gui.interactiveplot.update()

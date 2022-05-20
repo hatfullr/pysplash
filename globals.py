@@ -27,7 +27,13 @@ tooltip_wraplength = 50
 # the application feel more responsive.
 plot_update_delay = 0
 
-
+# When using math expressions in the axis controllers
+# such as "x * x", you can import installed Python
+# modules for use by adding the import statement to
+# this variable.
+exec_imports = [
+    "import numpy as np",
+]
 
 
 

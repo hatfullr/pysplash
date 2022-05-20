@@ -114,7 +114,7 @@ class InteractivePlot(tk.Frame,object):
         self.gui.plottoolbar.drag_pan(event)
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
-        self.wait_to_update()
+        self.update()
         
     def stop_pan(self, event):
         self.gui.plottoolbar.release_pan(event)
@@ -153,12 +153,11 @@ class InteractivePlot(tk.Frame,object):
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
-            
-        #self.gui.set_user_controlled(False)
-        #x = self.gui.controls.axis_controllers['XAxis'].value.get()
-        #y = self.gui.controls.axis_controllers['YAxis'].value.get()
-        x, x_physical_units, x_display_units = self.gui.controls.axis_controllers['XAxis'].combobox.get()
-        y, y_physical_units, y_display_units = self.gui.controls.axis_controllers['YAxis'].combobox.get()
+
+        xaxis = self.gui.controls.axis_controllers['XAxis']
+        yaxis = self.gui.controls.axis_controllers['YAxis']
+        x, x_physical_units, x_display_units = xaxis.get_data()
+        y, y_physical_units, y_display_units = yaxis.get_data()
 
         if (self.gui.controls.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
             self.gui.controls.axis_controllers['YAxis'].value.get() in ['x','y','z']):
@@ -173,9 +172,6 @@ class InteractivePlot(tk.Frame,object):
 
         
         kwargs = {}
-        kwargs['xscale'] = self.gui.controls.axis_controllers['XAxis'].scale.get()
-        kwargs['yscale'] = self.gui.controls.axis_controllers['YAxis'].scale.get()
-        
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
         # Scatter plot
@@ -194,8 +190,6 @@ class InteractivePlot(tk.Frame,object):
                     self.ax,
                     x,
                     y,
-                    #self.gui.get_display_data(x),
-                    #self.gui.get_display_data(y),
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
@@ -203,7 +197,7 @@ class InteractivePlot(tk.Frame,object):
                 self.colorbar.hide()
 
         elif colorbar_text.strip() or colorbar_text.strip() != "":
-            A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].entry.get_data()
+            A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].get_data()
             if A is None or Ap is None or Ad is None:
                 raise Exception("One of A, Ap, or Ad was None. This should never happen.")
             
@@ -219,8 +213,6 @@ class InteractivePlot(tk.Frame,object):
                 A[idx],
                 x[idx],
                 y[idx],
-                #self.gui.get_display_data(x)[idx],
-                #self.gui.get_display_data(y)[idx],
                 m[idx],
                 h[idx],
                 rho[idx],
@@ -228,8 +220,6 @@ class InteractivePlot(tk.Frame,object):
                     Ap,
                     x_physical_units,
                     y_physical_units,
-                    #self.gui.get_physical_units(x),
-                    #self.gui.get_physical_units(y),
                     self.gui.get_physical_units('m'),
                     self.gui.get_physical_units('h'),
                     self.gui.get_physical_units('rho'),
@@ -238,8 +228,6 @@ class InteractivePlot(tk.Frame,object):
                     Ad,
                     x_display_units,
                     y_display_units,
-                    #self.gui.get_display_units(x),
-                    #self.gui.get_display_units(y),
                     self.gui.get_display_units('m'),
                     self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
@@ -380,8 +368,8 @@ class InteractivePlot(tk.Frame,object):
         new_ylim = [None, None]
         
         if hasattr(self.gui, "data") and self.gui.data:
-            xdata = self.gui.controls.axis_controllers['XAxis'].combobox.get()[0]
-            ydata = self.gui.controls.axis_controllers['YAxis'].combobox.get()[0]
+            xdata = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
+            ydata = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
@@ -461,5 +449,4 @@ class InteractivePlot(tk.Frame,object):
 
         self.canvas.draw_idle()
         self.update()
-        #self.wait_to_update()
 

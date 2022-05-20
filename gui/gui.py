@@ -311,7 +311,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.get_physical_units")
         return self.data['physical_units'][key]
 
-    def get_display_data(self,key,raw=False,identifier=None):
+    def get_display_data(self,key,raw=False,identifier=None,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
         if raw: return self.display_data[key]
         else: # Apply the axis scale and units to the data
@@ -324,13 +324,14 @@ class GUI(tk.Frame,object):
             else:
                 raise RuntimeError("None of the AxisControllers have the value '"+xaxis+"' or '"+yaxis+"'")
             units = controller.units.value.get()
-            #previous_units = controller.previous_units
-            scale = controller.scale.get()
-            if scale == 'linear': return self.display_data[key]/units
-            elif scale == 'log10': return np.log10(self.display_data[key]/units)
-            elif scale == '^10': return 10**(self.display_data[key]/units)
-            else:
-                raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
+            if scaled:
+                scale = controller.scale.get()
+                if scale == 'linear': return self.display_data[key]/units
+                elif scale == 'log10': return np.log10(self.display_data[key]/units)
+                elif scale == '^10': return 10**(self.display_data[key]/units)
+                else:
+                    raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
+            else: return self.display_data[key]/units
     
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
