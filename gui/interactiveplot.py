@@ -255,11 +255,6 @@ class InteractivePlot(tk.Frame,object):
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
         
-        # Remove the previously drawn object
-        #if self.previously_drawn_object in self.ax.get_children():
-        #    self.previously_drawn_object.remove()
-        #self.previously_drawn_object = self.drawn_object
-
         # Put the filename in the axis title for now
         f = self.gui.filecontrols.current_file.get()
         if len(f) > 30:
@@ -271,7 +266,7 @@ class InteractivePlot(tk.Frame,object):
         for child in self.ax.get_children():
             if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
                 child.remove()
-
+        
         self.canvas.draw_idle()
         
         self.previous_xlim = self.ax.get_xlim()

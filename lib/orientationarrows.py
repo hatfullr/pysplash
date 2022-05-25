@@ -26,15 +26,15 @@ class OrientationArrows:
         for artist in self.artists:
             artist.remove()
         self.artists = []
-        self.ax.get_figure().canvas.draw_idle()
 
     def switch_on_off(self, *args, **kwargs):
         if self.cid is None: self.connect()
         else: self.disconnect()
         
     def connect(self,*args,**kwargs):
-        self.cid = self.ax.get_figure().canvas.mpl_connect("draw event", self.draw)
+        self.cid = self.ax.get_figure().canvas.mpl_connect("draw_event", self.draw)
         self.draw()
+        self.ax.get_figure().canvas.draw_idle()
     
     def disconnect(self,*args,**kwargs):
         if self.cid is not None:
@@ -46,7 +46,6 @@ class OrientationArrows:
         # This function gets called only when the Update button gets pressed
         
         # x and y are given in pixel coordinates
-
         # Recalculate the unit vectors in case the size has changed
         unit_vectors = np.array([
             [self.size,0.       ,0.       ],
