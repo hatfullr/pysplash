@@ -8,9 +8,12 @@ else:
 from widgets.labelledframe import LabelledFrame
 from widgets.integerentry import IntegerEntry
 from widgets.floatentry import FloatEntry
+from widgets.tooltip import ToolTip
+from lib.hotkeys import Hotkeys
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
+from functions.hotkeystostring import hotkeys_to_string
 import globals
 
 class PlotControls(LabelledFrame, object):
@@ -22,6 +25,8 @@ class PlotControls(LabelledFrame, object):
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
+
+        self.create_hotkeys()
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_variables")
@@ -50,6 +55,9 @@ class PlotControls(LabelledFrame, object):
         self.rotation_y_entry = FloatEntry(self.rotations_frame, variable=self.rotation_y)
         self.rotation_z_entry = FloatEntry(self.rotations_frame, variable=self.rotation_z)
 
+        for widget,hotkey1,hotkey2,axis in zip([self.rotation_x_entry,self.rotation_y_entry,self.rotation_z_entry],['rotate +x','rotate +y','rotate +z'],['rotate -x','rotate -y','rotate -z'],['x','y','z']):
+            ToolTip.createToolTip(widget, "Rotate the "+axis+"-axis by the provided Euler angles. Press "+hotkeys_to_string(hotkey1)+" or "+hotkeys_to_string(hotkey2)+" to increment/decrement the "+axis+" angle by "+str(globals.rotation_step)+" degrees (adjustable in globals.py).")
+
         # Show Orientation
         self.show_orientation_checkbutton = tk.Checkbutton(
             self,
@@ -76,6 +84,34 @@ class PlotControls(LabelledFrame, object):
         # Show Orientation
         self.show_orientation_checkbutton.pack(side='top',fill='x',expand=True)
 
+    def create_hotkeys(self, *args, **kwargs):
+        if globals.debug > 1: print("plotcontrols.create_hotkeys")
+        self.hotkeys = Hotkeys(self.winfo_toplevel())
+        self.hotkeys.bind('rotate +x', (
+            lambda *args,**kwargs: self.rotation_x.set(self.rotation_x.get()+globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        self.hotkeys.bind('rotate -x', (
+            lambda *args,**kwargs: self.rotation_x.set(self.rotation_x.get()-globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        self.hotkeys.bind('rotate +y', (
+            lambda *args,**kwargs: self.rotation_y.set(self.rotation_y.get()+globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        self.hotkeys.bind('rotate -y', (
+            lambda *args,**kwargs: self.rotation_y.set(self.rotation_y.get()-globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        self.hotkeys.bind('rotate +z', (
+            lambda *args,**kwargs: self.rotation_z.set(self.rotation_z.get()+globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        self.hotkeys.bind('rotate -z', (
+            lambda *args,**kwargs: self.rotation_z.set(self.rotation_z.get()-globals.rotation_step),
+            lambda *args, **kwargs: self.gui.controls.update_button.invoke(),
+        ))
+        
     def disable_rotations(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.disable_rotations")
         if 'disabled' not in self.rotation_x_entry.state():

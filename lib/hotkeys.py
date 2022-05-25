@@ -67,8 +67,7 @@ class Hotkeys(object):
         if name not in self.registry.keys(): self.registry[name] = []
         for child in get_all_children(self.root):
             if not isinstance(child, (tk.Entry, ttk.Entry, ttk.Combobox)):
-                self.registry[name].append([child, key, child.bind(key, command, add="+")])
-
+                self.registry[name].append([child, key, child.bind(key, command)])
 
     def on_keypress(self, event):
         if "Control" in event.keysym: key = "<Control>"

@@ -336,17 +336,17 @@ class GUI(tk.Frame,object):
                     raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
             else: return self.display_data[key]/units
 
-    def rotate(self):
+    def rotate(self,anglexdeg=None,angleydeg=None,anglezdeg=None):
         if globals.debug > 1: print("gui.rotate")
         if self.data.is_image:
             print("Cannot perform rotations on data that have been identified as an image with is_image = True")
             return
-        
-        # Perform the rotation specified in the plot controls
-        xangle = self.controls.plotcontrols.rotation_x.get()
-        yangle = self.controls.plotcontrols.rotation_y.get()
-        zangle = self.controls.plotcontrols.rotation_z.get()
 
+        # Perform the rotation specified in the plot controls
+        if anglexdeg is None: anglexdeg = self.controls.plotcontrols.rotation_x.get()
+        if angleydeg is None: angleydeg = self.controls.plotcontrols.rotation_y.get()
+        if anglezdeg is None: anglezdeg = self.controls.plotcontrols.rotation_z.get()
+        
         # We just need to rotate the display data
         if self.display_data is not None:
             keys = self.display_data.keys()
@@ -354,7 +354,7 @@ class GUI(tk.Frame,object):
                 x = self.data._original['data']['x']
                 y = self.data._original['data']['y']
                 z = self.data._original['data']['z']
-                self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,xangle,yangle,zangle)
+                self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
             else:
                 print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
             

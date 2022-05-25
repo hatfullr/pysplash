@@ -27,6 +27,10 @@ tooltip_wraplength = 50
 # the application feel more responsive.
 plot_update_delay = 10
 
+# When using hotkeys to rotate the plot, this is the
+# default increment/decrement amount in degrees.
+rotation_step = 15
+
 # When using math expressions in the axis controllers
 # such as "x * x", you can import installed Python
 # modules for use by adding the import statement to
