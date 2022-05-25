@@ -115,23 +115,35 @@ class Controls(tk.Frame,object):
         # Plot controls
         self.plotcontrols.pack(side='top',fill='x')
         
-    def on_state_change(self,variable,index,mode):
+    def on_state_change(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_state_change")
+
+        # By default, indicate a change in state
+        indicate_state_change = True
         
-        # This needs to happen always
-        var = self.string_to_state_variable(variable)
-        if var is not None:
-            self.current_state[variable] = var.get()
+        # If the state is changing because a variable has been modified
+        if len(args) >= 1:
+            variable = args[0]
+        
+            # This needs to happen always
+            var = self.string_to_state_variable(variable)
+            if var is not None:
+                self.current_state[variable] = var.get()
+            # Do not indicate a state change if the current state is the same as the saved state
+            if len(self.compare_states(self.current_state,self.saved_state)) <= 0:
+                indicate_state_change = False
+
+        # We can indicate a change in state even if a variable has not been modified
         
         # Don't mess with the update button any time that we're pressing hotkeys
         if globals.hotkey_pressed: return
         # Compare the current state to the previous state
         if self.saved_state is None: return
-        
-        if len(self.compare_states(self.current_state,self.saved_state)) > 0:
-            self.update_button.configure(state='!disabled')#,relief='raised')
+
+        if indicate_state_change:
+            self.update_button.configure(state='!disabled')
         else:
-            self.update_button.configure(state='disabled')#,relief='sunken')
+            self.update_button.configure(state='disabled')
 
     def string_to_state_variable(self, string):
         if globals.debug > 1: print("controls.string_to_state_variable")
