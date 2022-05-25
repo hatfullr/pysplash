@@ -108,12 +108,20 @@ class FloatEntry(FlashingEntry,object):
 
     def clamp_variable(self, *args, **kwargs):
         value = self.variable.get()
+
         if self.clamp[0] is not None and self.clamp[1] is not None:
             if self.periodic:
+                # Figure out how many times the value winds around the clamp range
                 diff = max(self.clamp) - min(self.clamp)
-                if value > max(self.clamp): value -= diff*int(value/diff)
-                elif value < min(self.clamp): value += diff*int(value/diff)
-                self.variable.set(value)
+                nwinds = 0
+                if value >= max(self.clamp):
+                    nwinds = (value - max(self.clamp))/diff
+                    nfrac = nwinds % 1
+                    self.variable.set(min(self.clamp) + diff*nfrac)
+                elif value < min(self.clamp):
+                    nwinds = (min(self.clamp)-value)/diff
+                    nfrac = nwinds % 1
+                    self.variable.set(max(self.clamp) - diff*nfrac)
             else:
                 if value < min(self.clamp): self.variable.set(min(self.clamp))
                 elif value > max(self.clamp): self.variable.set(max(self.clamp))
