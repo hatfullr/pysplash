@@ -25,7 +25,6 @@ class PlotControls(LabelledFrame, object):
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
-
         self.create_hotkeys()
 
     def create_variables(self, *args, **kwargs):
@@ -51,9 +50,9 @@ class PlotControls(LabelledFrame, object):
         # Rotations
         self.rotations_frame = tk.Frame(self)
         self.rotation_label = tk.Label(self.rotations_frame, text="Rotation (x,y,z deg)")
-        self.rotation_x_entry = FloatEntry(self.rotations_frame, variable=self.rotation_x)
-        self.rotation_y_entry = FloatEntry(self.rotations_frame, variable=self.rotation_y)
-        self.rotation_z_entry = FloatEntry(self.rotations_frame, variable=self.rotation_z)
+        self.rotation_x_entry = FloatEntry(self.rotations_frame, variable=self.rotation_x, clamp=(0,360),periodic=True)
+        self.rotation_y_entry = FloatEntry(self.rotations_frame, variable=self.rotation_y, clamp=(0,360),periodic=True)
+        self.rotation_z_entry = FloatEntry(self.rotations_frame, variable=self.rotation_z, clamp=(0,360),periodic=True)
 
         for widget,hotkey1,hotkey2,axis in zip([self.rotation_x_entry,self.rotation_y_entry,self.rotation_z_entry],['rotate +x','rotate +y','rotate +z'],['rotate -x','rotate -y','rotate -z'],['x','y','z']):
             ToolTip.createToolTip(widget, "Rotate the "+axis+"-axis by the provided Euler angles. Press "+hotkeys_to_string(hotkey1)+" or "+hotkeys_to_string(hotkey2)+" to increment/decrement the "+axis+" angle by "+str(globals.rotation_step)+" degrees (adjustable in globals.py).")

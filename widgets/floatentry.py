@@ -14,10 +14,12 @@ import numpy as np
 # The only difference is we don't allow the user to type
 # anything that isn't a float
 class FloatEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',allowblank=True,extra_validatecommands=[],variable=None,disallowed_values=[],**kwargs):
+    def __init__(self,master,validate='focusout',allowblank=True,extra_validatecommands=[],variable=None,disallowed_values=[],clamp=(None,None),periodic=False,**kwargs):
         self.disallowed_values = disallowed_values
         self.extra_validatecommands = extra_validatecommands
         self.allowblank = allowblank
+        self.clamp = clamp
+        self.periodic = periodic
         self._textvariable = tk.StringVar()
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         if 'textvariable' in kwargs.keys():
@@ -39,6 +41,8 @@ class FloatEntry(FlashingEntry,object):
         else: self.variable = tk.DoubleVar()
 
         self.variable.trace("w", self.format_text)
+        self.do_clamp = self.clamp[0] is not None or self.clamp[1] is not None
+        if self.do_clamp: self.variable.trace("w", self.clamp_variable)
 
         self.format_text()
 
@@ -82,6 +86,8 @@ class FloatEntry(FlashingEntry,object):
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None
+        if self.do_clamp: self.clamp_variable()
+        
     
     # Try to fit the text within the widget, but only to a minimum size of "0.0"
     def format_text(self, *args, **kwargs):
@@ -100,3 +106,20 @@ class FloatEntry(FlashingEntry,object):
             newtext = ("%-*.*G" % (width,precision,number)).strip()
         self._textvariable.set(newtext)
 
+    def clamp_variable(self, *args, **kwargs):
+        value = self.variable.get()
+        if self.clamp[0] is not None and self.clamp[1] is not None:
+            if self.periodic:
+                diff = max(self.clamp) - min(self.clamp)
+                if value > max(self.clamp): value -= diff*int(value/diff)
+                elif value < min(self.clamp): value += diff*int(value/diff)
+                self.variable.set(value)
+            else:
+                if value < min(self.clamp): self.variable.set(min(self.clamp))
+                elif value > max(self.clamp): self.variable.set(max(self.clamp))
+        elif (self.clamp[0] is not None and self.clamp[1] is None) and value < min(self.clamp):
+            self.variable.set(min(self.clamp))
+        elif (self.clamp[0] is None and self.clamp[1] is not None) and value > max(self.clamp):
+            self.variable.set(max(self.clamp))
+
+        self.format_text()
