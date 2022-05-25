@@ -62,19 +62,19 @@ hotkeyslist = {
         "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
         "display" : "MouseWheel",
         "modifiers" : [],
-        "type" : "local",
+        "type" : "global",
     },
     "zoom x" : {
         "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
         "display" : "Ctrl+MouseWheel",
         "modifiers" : ["<Control>"],
-        "type" : "local",
+        "type" : "global",
     },
     "zoom y" : {
         "keylist" : ["<MouseWheel>", "<Button-4>", "<Button-5>"],
         "display" : "Shift+MouseWheel",
         "modifiers" : ["<Shift>"],
-        "type" : "local",
+        "type" : "global",
     },
     "rotate +x" : {
         "keylist" : [","],
