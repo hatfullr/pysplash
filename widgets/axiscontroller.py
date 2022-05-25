@@ -44,11 +44,6 @@ class AxisController(LabelledFrame,object):
 
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
-        self._previous_data = None
-        self._previous_physical_units = None
-        self._previous_display_units = None
-        self._previous_value = None
-        self._previous_data_file = None
         
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
@@ -259,24 +254,14 @@ class AxisController(LabelledFrame,object):
     
     def get_data(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.get_data")
-        if self.value.get() == self._previous_value and self.gui.filecontrols.current_file.get() == self._previous_data_file:
-            data = self._previous_data
-            physical_units = self._previous_physical_units
-            display_units = self._previous_display_units
-        else:
-            if self.usecombobox: widget = self.combobox
-            else: widget = self.entry
-            data, physical_units, display_units = widget.get()
+        
+        if self.usecombobox: widget = self.combobox
+        else: widget = self.entry
+        data, physical_units, display_units = widget.get()
         
         # Apply the scaling to the resulting data
         scale = self.scale.get()
         if scale == 'log10': data = np.log10(data)
         elif scale == '^10': data = 10.**data
 
-        self._previous_value = self.value.get()
-        self._previous_data = data
-        self._previous_physical_units = physical_units
-        self._previous_display_units = display_units
-        self._previous_data_file = self.gui.filecontrols.current_file.get()
-        
         return data, physical_units, display_units

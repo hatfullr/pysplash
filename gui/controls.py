@@ -277,13 +277,8 @@ class Controls(tk.Frame,object):
         if (self.plotcontrols.rotation_x in changed_variables or
             self.plotcontrols.rotation_y in changed_variables or
             self.plotcontrols.rotation_z in changed_variables):
-            if self.gui.data is not None:
-                self.gui.data.rotate(
-                    self.plotcontrols.rotation_x.get(),
-                    self.plotcontrols.rotation_y.get(),
-                    self.plotcontrols.rotation_z.get(),
-                )
-                need_full_redraw = True
+            self.gui.rotate()
+            need_full_redraw = True
 
         # Save the previous scales
         for key,axis_controller in self.axis_controllers.items():

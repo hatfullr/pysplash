@@ -2,7 +2,6 @@ import collections
 import copy
 import numpy as np
 import globals
-from functions.rotate import rotate
 
 class Data(collections.OrderedDict,object):
     def __init__(self,data,rotations=None,*args,**kwargs):
@@ -40,12 +39,4 @@ class Data(collections.OrderedDict,object):
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
         if not self.is_image: self.__init__(self._original)
-
-    def rotate(self,anglexdeg,angleydeg,anglezdeg):
-        if globals.debug > 1: print("data.rotate")
-        if not self.is_image:
-            x = self._original['data']['x']
-            y = self._original['data']['y']
-            z = self._original['data']['z']
-            self['data']['x'], self['data']['y'], self['data']['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
 

@@ -24,6 +24,7 @@ from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
 from functions.importdata import importdata
+from functions.rotate import rotate
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 
@@ -257,6 +258,10 @@ class GUI(tk.Frame,object):
         self.physical_data = {
             key : self.get_data(key)*self.get_physical_units(key) for key in self.data['data'].keys()
         }
+
+        # Perform whatever rotation is needed from us for the display data
+        self.rotate()
+        
         # Enable the colorbar
         self.controls.axis_controllers['Colorbar'].enable()
         if self.data.is_image:
@@ -293,11 +298,9 @@ class GUI(tk.Frame,object):
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
-        if self.data is None:
-            return None
+        if self.data is None: return None
+        elif self.data.is_image: return self.data
         else:
-            if self.data.is_image:
-                return self.data
             #data = copy.copy(self.data['data'][key])
             data = self.data['data'][key]
             if key == 'h': return data*globals.compact_support
@@ -332,7 +335,30 @@ class GUI(tk.Frame,object):
                 else:
                     raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
             else: return self.display_data[key]/units
-    
+
+    def rotate(self):
+        if globals.debug > 1: print("gui.rotate")
+        if self.data.is_image:
+            print("Cannot perform rotations on data that have been identified as an image with is_image = True")
+            return
+        
+        # Perform the rotation specified in the plot controls
+        xangle = self.controls.plotcontrols.rotation_x.get()
+        yangle = self.controls.plotcontrols.rotation_y.get()
+        zangle = self.controls.plotcontrols.rotation_z.get()
+
+        # We just need to rotate the display data
+        if self.display_data is not None:
+            keys = self.display_data.keys()
+            if 'x' in keys and 'y' in keys and 'z' in keys:
+                x = self.data._original['data']['x']
+                y = self.data._original['data']['y']
+                z = self.data._original['data']['z']
+                self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,xangle,yangle,zangle)
+            else:
+                print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
+            
+            
     def next_file(self,*args,**kwargs):
         if globals.debug > 1: print("gui.next_file")
         skip_amount = int(self.filecontrols.skip_amount.get())
