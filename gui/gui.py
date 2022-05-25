@@ -86,6 +86,7 @@ class GUI(tk.Frame,object):
         self.create_hotkeys()
 
         self.filenames = []
+        self.message_after_id = None
         
         self.xy_controls_initialized = False
         self.initialize(first=True)
@@ -182,7 +183,7 @@ class GUI(tk.Frame,object):
         )
         self.controls = Controls(
             self,
-            width=2.25*self.dpi, # pixels = inches * dpi
+            width=self.interactiveplot.winfo_reqwidth()*0.5,#2.25*self.dpi, # pixels = inches * dpi
             bd=1,
             relief='sunken',
             padx=5,
@@ -224,14 +225,28 @@ class GUI(tk.Frame,object):
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
         self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
         self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
+
+    def destroy(self, *args, **kwargs):
+        if self.message_after_id is not None:
+            self.after_cancel(self.message_after_id)
+        self.message_after_id = None
+        super(GUI,self).destroy(*args, **kwargs)
         
-    def message(self,text,*args,**kwargs):
+    def message(self,text,duration=None):
         if globals.debug > 1: print("gui.message")
         # Display a message on the bottom-right hand corner of the window
+        # If duration is None then the message will persist forever
         self.message_text.set(text)
+        if duration is not None:
+            if self.message_after_id is not None:
+                self.after_cancel(self.message_after_id)
+            self.message_after_id = self.after(duration, self.clear_message)
     def clear_message(self,*args,**kwargs):
         if globals.debug > 1: print("gui.clear_message")
         self.message_text.set("")
+        if self.message_after_id is not None:
+            self.after_cancel(self.message_after_id)
+        self.message_after_id = None
 
     def set_user_controlled(self,value):
         if globals.debug > 1: print("gui.set_user_controlled")

@@ -15,7 +15,7 @@ class PopupWindow(tk.Toplevel, object):
         if globals.debug > 1: print("popupwindow.__init__")
         
         # Setup the window
-        super(PopupWindow, self).__init__(master,*args,**kwargs)
+        super(PopupWindow, self).__init__(master,**kwargs)
         self.withdraw()
 
         # When the user clicks on widgets etc, those widgets should acquire

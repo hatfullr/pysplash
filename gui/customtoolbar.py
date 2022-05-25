@@ -43,6 +43,8 @@ class CustomToolbar(NavigationToolbar2Tk):
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
+        self.gui.interactiveplot.clear_tracking()
+        self.gui.interactiveplot.origin = np.zeros(2)
         self.gui.interactiveplot.reset_xylim()
         self.gui.interactiveplot.reset_clim()
 

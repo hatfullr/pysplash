@@ -9,6 +9,7 @@ else:
     from tkinter import ttk
     import tkinter.font as tkFont
     from widgets.flashingentry import FlashingEntry
+from functions.stringtofloat import string_to_float
 import numpy as np
 
 # The only difference is we don't allow the user to type
@@ -57,18 +58,18 @@ class FloatEntry(FlashingEntry,object):
         newtext = newtext.replace(",",".") # Weird Europeans!
         
         try:
-            float(newtext)
+            string_to_float(newtext)
         except Exception as e:
             self.on_validate_fail()
             print(e)
             return False
 
-        if float(newtext) in self.disallowed_values:
+        if string_to_float(newtext) in self.disallowed_values:
             self.on_validate_fail()
             return False
         
         if all([command(newtext) for command in self.extra_validatecommands]):
-            self.variable.set(float(newtext))
+            self.variable.set(string_to_float(newtext))
             self._textvariable.set(newtext)
             self.on_validate_success()
             return True

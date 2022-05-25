@@ -55,6 +55,8 @@ class AxisController(LabelledFrame,object):
         
         if self.usecombobox:
             self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
+
+        #self.limits.adaptive.trace('w', self.gui.interactiveplot.clear_tracking)
             
         self.previous_value = None
         

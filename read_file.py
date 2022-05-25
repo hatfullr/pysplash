@@ -270,11 +270,11 @@ def fluxcal_teff(filename):
     data = OrderedDict()
     with open(filename,'r') as f:
         header = f.readline().split()
-    xmin = float(header[0])
-    dx = float(header[1])
+    xmin = string_to_float(header[0])
+    dx = string_to_float(header[1])
     Nx = int(header[2])
-    ymin = float(header[3])
-    dy = float(header[4])
+    ymin = string_to_float(header[3])
+    dy = string_to_float(header[4])
     Ny = int(header[5])
 
     data['image'] = np.loadtxt(filename,skiprows=1)

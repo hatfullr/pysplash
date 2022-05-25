@@ -22,6 +22,9 @@ from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 
+from functions.findnearest2d import find_nearest_2d
+from functions.stringtofloat import string_to_float
+
 from functions.getallchildren import get_all_children
 
 class InteractivePlot(tk.Frame,object):
@@ -56,6 +59,10 @@ class InteractivePlot(tk.Frame,object):
         self.previous_xlim = None
         self.previous_ylim = None
 
+        self.origin = np.zeros(2)
+        self.origin_cid = None
+        self.track_id = None
+
         self.ctrl_pressed = False
 
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
@@ -87,6 +94,8 @@ class InteractivePlot(tk.Frame,object):
         self.hotkeys.bind("zoom", self.zoom)
         self.hotkeys.bind("zoom x", lambda event: self.zoom(event, which='x'))
         self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
+        self.hotkeys.bind("track particle", lambda event: self.track_particle(event))
+        self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
 
     def destroy(self, *args, **kwargs):
         if self._after_id_update is not None: self.after_cancel(self._after_id_update)
@@ -158,8 +167,13 @@ class InteractivePlot(tk.Frame,object):
         x, x_physical_units, x_display_units = xaxis.get_data()
         y, y_physical_units, y_display_units = yaxis.get_data()
 
-        if (self.gui.controls.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
-            self.gui.controls.axis_controllers['YAxis'].value.get() in ['x','y','z']):
+        self.origin = np.zeros(2)
+        if self.track_id is not None and self.track_id in np.arange(len(x)):
+            print(self.track_id)
+            self.origin = np.array([x[self.track_id],y[self.track_id]])
+
+        if (xaxis.value.get() in ['x','y','z'] and
+            yaxis.value.get() in ['x','y','z']):
             aspect = 'equal'
         else:
             aspect = None
@@ -247,7 +261,7 @@ class InteractivePlot(tk.Frame,object):
         if self.drawn_object is None: kwargs['initialize'] = True
 
         self.drawn_object = method(*args,**kwargs)
-        
+
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
                 raise RuntimeError("Failed to spawn thread to draw the plot")
@@ -314,20 +328,32 @@ class InteractivePlot(tk.Frame,object):
     def set_time_text(self,event):
         if globals.debug > 1: print("interactiveplot.set_time_text")
         text = "t = %f" % self.time.get()
+
+        # Check if the mouse is inside the plot region
+        widget = self.canvas.get_tk_widget()
+        width = widget.winfo_width()
+        height = widget.winfo_height()
+        
+        xpos = event.x_root - widget.winfo_rootx()
+        ypos = height - (event.y_root - widget.winfo_rooty())
+        if not ((0 <= xpos and xpos <= width) and
+                (0 <= ypos and ypos <= height)):
+            return
+        
         
         if self.time_text is None:
             self.time_text = self.ax.annotate(
                 text,
-                (event.x,event.y),
+                (xpos,ypos),
                 xycoords='figure pixels',
             )
         else:
             pos = self.time_text.get_position()
-            if event.x == pos[0] and event.y == pos[1] and self.time_text.get_visible():
+            if xpos == pos[0] and ypos == pos[1] and self.time_text.get_visible():
                 self.time_text.set_visible(False)
             else:
                 self.time_text.set_text(text)
-                self.time_text.set_position((event.x,event.y))
+                self.time_text.set_position((xpos,ypos))
                 self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
@@ -357,7 +383,7 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
             
         if draw: self.canvas.draw_idle()
-        
+    
     def calculate_xylim(self, which='both'):
         if globals.debug > 1: print("interactiveplot.calculate_xylim")
 
@@ -366,10 +392,11 @@ class InteractivePlot(tk.Frame,object):
 
         new_xlim = [None, None]
         new_ylim = [None, None]
-        
         if hasattr(self.gui, "data") and self.gui.data:
             xdata = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
             ydata = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
+            xdata = xdata + self.origin[0]
+            ydata = ydata + self.origin[1]
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
@@ -450,3 +477,51 @@ class InteractivePlot(tk.Frame,object):
         self.canvas.draw_idle()
         self.update()
 
+    # This method sets the origin to be at the particle closest to the mouse
+    # position
+    def track_particle(self, event):
+        if globals.debug > 1: print("interactiveplot.track_particle")
+        # Only do this if we are in a scatter plot
+        if isinstance(self.drawn_object, ScatterPlot):
+
+            data = np.column_stack((self.drawn_object.x, self.drawn_object.y))
+
+            xpos = None
+            ypos = None
+            # Parse the mouse position string
+            string = self.xycoords.get().strip()
+            if '\n' in string: string = string[:string.index('\n')]
+            if "x=" in string and "y=" in string:
+                xidx = string.index("x=")+len("x=")
+                yidx1 = string.index("y=")
+                yidx2 = yidx1 + len("y=")
+                xpos = string_to_float(string[xidx:yidx1])
+                ypos = string_to_float(string[yidx2:])
+
+            # If the mouse isn't over the data, then clear the tracking
+            if None in [xpos,ypos]:
+                self.clear_tracking()
+            else:
+                # Find the particle closest to the mouse position
+                self.track_id = find_nearest_2d(data,np.array([xpos,ypos]))
+
+                # Update the origin
+                self.origin = data[self.track_id]
+                
+                # Turn on adaptive limits to activate tracking
+                xaxis = self.gui.controls.axis_controllers['XAxis']
+                yaxis = self.gui.controls.axis_controllers['YAxis']
+                xaxis.limits.adaptive_on()
+                yaxis.limits.adaptive_on()
+
+                self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
+
+            self.reset_xylim()
+
+    def clear_tracking(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.clear_tracking")
+        if self.track_id is not None:
+            self.gui.message("Stopped tracking particle "+str(self.track_id),duration=5000)
+        self.track_id = None
+        
+        
