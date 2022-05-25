@@ -15,7 +15,7 @@ from functions.getallchildren import get_all_children
 class Hotkeys(object):
     def __init__(self, root):
         if globals.debug > 1: print("hotkeys.__init__")
-        self.root = root
+        self.root = root.winfo_toplevel()
         self.registry = {}
 
         # Bind all the modifiers so that we know when they are pressed/released
@@ -40,6 +40,13 @@ class Hotkeys(object):
             raise KeyError("The hotkey action '"+name+"' is already bound")
         
         for key in hotkeyslist[name]["keylist"]:
+
+            if "<Shift>" in hotkeyslist[name]["modifiers"] or "Shift" in hotkeyslist[name]["modifiers"]:
+                if len(key) == 3:
+                    if key[0] == "<" and key[2] == ">":
+                        key = "<"+key[1].upper()+">"
+                elif len(key) == 1: key = key.upper()
+            
             if hotkeyslist[name]["type"] == "global":
                 self.bind_global(name, key, lambda event: self.command(name,commands,event))
             elif hotkeyslist[name]["type"] == "local":
@@ -65,6 +72,7 @@ class Hotkeys(object):
         if globals.debug > 1: print("hotkeys.bind_local")
         # This hotkey needs to work only when the root widget has focus... (?)
         if name not in self.registry.keys(): self.registry[name] = []
+
         for child in get_all_children(self.root):
             if not isinstance(child, (tk.Entry, ttk.Entry, ttk.Combobox)):
                 self.registry[name].append([child, key, child.bind(key, command)])
