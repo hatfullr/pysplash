@@ -19,7 +19,14 @@ from lib.window import Window
 from gui.gui import GUI
 import globals
 
+try:
+    from numba import cuda
+    has_jit = True
+except ImportError:
+    has_jit = False
+
 if __name__ == '__main__':
+   if has_jit: cuda.select_device(0)
    globals.init()
    
    win = Window()

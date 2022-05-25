@@ -13,8 +13,7 @@ import math
 import multiprocessing
 
 try:
-    from numba import cuda,float64
-    import math
+    from numba import cuda
     has_jit = True
 except ImportError:
     has_jit = False

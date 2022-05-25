@@ -292,6 +292,7 @@ class Controls(tk.Frame,object):
         # Draw the new plot
         if need_full_redraw:
             self.gui.interactiveplot.update()
+            self.gui.interactiveplot.canvas.draw()
             # Everything after this is done in interactiveplot.after_calculate
             # because we need to wait for the plot to finish calculating
         elif need_quick_redraw:

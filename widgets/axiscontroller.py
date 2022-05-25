@@ -48,6 +48,7 @@ class AxisController(LabelledFrame,object):
         self._previous_physical_units = None
         self._previous_display_units = None
         self._previous_value = None
+        self._previous_data_file = None
         
         self.scale.trace('w',self.on_scale_changed)
         self.limits.low.trace('w',self.update_scale_buttons)
@@ -258,7 +259,7 @@ class AxisController(LabelledFrame,object):
     
     def get_data(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.get_data")
-        if self.value.get() == self._previous_value:
+        if self.value.get() == self._previous_value and self.gui.filecontrols.current_file.get() == self._previous_data_file:
             data = self._previous_data
             physical_units = self._previous_physical_units
             display_units = self._previous_display_units
@@ -276,5 +277,6 @@ class AxisController(LabelledFrame,object):
         self._previous_data = data
         self._previous_physical_units = physical_units
         self._previous_display_units = display_units
+        self._previous_data_file = self.gui.filecontrols.current_file.get()
         
         return data, physical_units, display_units
