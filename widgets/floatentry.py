@@ -126,9 +126,9 @@ class FloatEntry(FlashingEntry,object):
             else:
                 if value < min(self.clamp): self.variable.set(min(self.clamp))
                 elif value > max(self.clamp): self.variable.set(max(self.clamp))
-        elif (self.clamp[0] is not None and self.clamp[1] is None) and value < min(self.clamp):
-            self.variable.set(min(self.clamp))
-        elif (self.clamp[0] is None and self.clamp[1] is not None) and value > max(self.clamp):
-            self.variable.set(max(self.clamp))
+        elif (self.clamp[0] is not None and self.clamp[1] is None) and value < self.clamp[0]:
+            self.variable.set(self.clamp[0])
+        elif (self.clamp[0] is None and self.clamp[1] is not None) and value > self.clamp[1]:
+            self.variable.set(self.clamp[1])
 
         self.format_text()

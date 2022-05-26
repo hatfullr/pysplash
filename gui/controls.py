@@ -241,7 +241,10 @@ class Controls(tk.Frame,object):
             if axis_controller.label in changed_variables:
                 need_quick_redraw = True
                 break
-        
+
+        # If the point size changed, we need a full redraw
+        if self.gui.controls.plotcontrols.point_size in changed_variables:
+            need_full_redraw=True
 
         # Check if the user changed any of the x or y axis limits (changing units also changes limits)
         if self.is_limits_changed(('XAxis','YAxis','Colorbar')):

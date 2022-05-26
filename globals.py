@@ -27,6 +27,9 @@ tooltip_wraplength = 50
 # the application feel more responsive.
 plot_update_delay = 10
 
+# The minimum allowed point size
+point_size_minimum = 0.5
+
 # When using hotkeys to rotate the plot, this is the
 # default increment/decrement amount in degrees.
 rotation_step = 15

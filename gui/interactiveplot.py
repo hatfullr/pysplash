@@ -74,7 +74,6 @@ class InteractivePlot(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
-        self.point_size = tk.IntVar(value=1)
         self.time = tk.DoubleVar()
         
         self.time.trace('w',lambda event=None: self.set_time_text(event))
@@ -173,6 +172,7 @@ class InteractivePlot(tk.Frame,object):
                     self.ax,
                     self.gui.data,
                 )
+                kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['aspect'] = aspect
                 self.colorbar.show()
             else:
@@ -402,7 +402,7 @@ class InteractivePlot(tk.Frame,object):
     # https://stackoverflow.com/a/12793033/4954083
     def zoom(self, event, which="both"):
         if globals.debug > 1: print("interactiveplot.zoom")
-
+        #print(event_in_axis(self.ax, event))
         if not event_in_axis(self.ax, event): return
         
         # Convert the given event into a Matplotlib MouseEvent

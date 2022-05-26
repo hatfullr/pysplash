@@ -29,9 +29,6 @@ class ScatterPlot(CustomAxesImage,object):
         self.y = y
         self.s = s
 
-        #self.initializing = True
-        #self.set_size(s)
-
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
         
@@ -41,31 +38,7 @@ class ScatterPlot(CustomAxesImage,object):
             np.full((1,1),False,dtype='bool'),
             **kwargs
         )
-        
-        #self.initializing = False
-        
-    """
-    def set_size(self,size):
-        if globals.debug > 1: print("scatterplot.set_size")
-        if isinstance(size,tk.IntVar):
-            try:
-                size = int(size.get())
-            except Exception as e:
-                # If the variable is empty, do nothing
-                if (str(e) == 'expected floating-point number but got ""' or
-                    str(e) == 'expected integer but got ""' or
-                    "invalid literal for int() with base 10: " in str(e)):
-                    return
-                else: raise
-        if size <= 0:
-            return # Do nothing if invalid pixel size
-        if size != self.s:
-            self.s = size
-            if not self.initializing:
-                self.calculate_xypixels()
-                self._calculate()
-    """
-    
+
     def calculate_xypixels(self,*args,**kwargs):
         if globals.debug > 1: print("scatterplot.calculate_xypixels")
         fig = self.ax.get_figure()

@@ -29,7 +29,7 @@ class PlotControls(LabelledFrame, object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_variables")
-        self.point_size = tk.IntVar(value = 1)
+        self.point_size = tk.DoubleVar(value = 1)
         self.rotation_x = tk.DoubleVar(value = 0.)
         self.rotation_y = tk.DoubleVar(value = 0.)
         self.rotation_z = tk.DoubleVar(value = 0.)
@@ -45,7 +45,8 @@ class PlotControls(LabelledFrame, object):
         # Point size
         self.point_size_frame = tk.Frame(self)
         self.point_size_label = tk.Label(self.point_size_frame, text="Point size (px)")
-        self.point_size_entry = IntegerEntry(self.point_size_frame,variable=self.point_size,disallowed_values=[0])
+        self.point_size_entry = FloatEntry(self.point_size_frame,variable=self.point_size,clamp=(globals.point_size_minimum, None))
+        ToolTip.createToolTip(self.point_size_entry, "Point size controls the resolution of the plot. Point sizes < 1 give sub-pixel accuracy but a point size =/= 1 results in data loss. Higher point sizes draw faster. The minimum allowed point size can be modified in globals.py")
         
         # Rotations
         self.rotations_frame = tk.Frame(self)
