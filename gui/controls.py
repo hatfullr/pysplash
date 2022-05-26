@@ -316,6 +316,9 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.canvas.draw_idle()
         self.save_state()
 
+        # Set the focus to the canvas
+        self.gui.interactiveplot.canvas.get_tk_widget().focus_set()
+
     def connect(self):
         if globals.debug > 1: print("controls.connect")
         # Connect the controls to the interactiveplot

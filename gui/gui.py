@@ -261,6 +261,13 @@ class GUI(tk.Frame,object):
 
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
+        previous_data_length = 0
+        if self.data is not None:
+            if sys.version_info.major >= 3:
+                previous_data_length = len(next(iter(self.data['data'])))
+            else:
+                previous_data_length = len(iter(self.data['data']).next())
+                
         self.data = Data(
             read_file(self.filecontrols.current_file.get()),
             #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
@@ -272,6 +279,13 @@ class GUI(tk.Frame,object):
             key : self.get_data(key)*self.get_physical_units(key) for key in self.data['data'].keys()
         }
 
+        if sys.version_info.major >= 3:
+            new_data_length = len(next(iter(self.data['data'])))
+        else:
+            new_data_length = len(iter(self.data['data']).next())
+        if new_data_length != previous_data_length:
+            self.interactiveplot.reset_colors()
+        
         # Perform whatever rotation is needed from us for the display data
         self.rotate()
         

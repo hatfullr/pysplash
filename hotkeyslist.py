@@ -124,6 +124,67 @@ hotkeyslist = {
         "modifiers" : ["<Shift>"],
         "type" : "global",
     },
+    "particle color 0" : {
+        "keylist" : ["0"],
+        "display": "0",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 1" : {
+        "keylist" : ["1"],
+        "display": "1",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 2" : {
+        "keylist" : ["2"],
+        "display": "2",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 3" : {
+        "keylist" : ["3"],
+        "display": "3",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 4" : {
+        "keylist" : ["4"],
+        "display": "4",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 5" : {
+        "keylist" : ["5"],
+        "display": "5",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 6" : {
+        "keylist" : ["6"],
+        "display": "6",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 7" : {
+        "keylist" : ["7"],
+        "display": "7",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 8" : {
+        "keylist" : ["8"],
+        "display": "8",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    "particle color 9" : {
+        "keylist" : ["9"],
+        "display": "9",
+        "modifiers" : [],
+        "type" : "global",
+    },
+    
 }
 
 

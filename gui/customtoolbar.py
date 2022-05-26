@@ -97,6 +97,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.update_GUI_axis_limits()
 
     def cancel_queued_zoom(self, *args, **kwargs):
+        self.remove_rubberband()
         # Cancel a queued zoom
         if self.queued_zoom:
             # Remove the zoom information
@@ -133,8 +134,10 @@ class CustomToolbar(NavigationToolbar2Tk):
             #self.gui.controls.save_state()
             self.gui.controls.on_state_change()
 
-
-
+    def press_pan(self,*args,**kwargs):
+        self.cancel_queued_zoom()
+        super(CustomToolbar,self).press_pan(*args,**kwargs)
+            
     def release_pan(self, *args, **kwargs):
         super(CustomToolbar, self).release_pan(*args, **kwargs)
 
@@ -143,3 +146,7 @@ class CustomToolbar(NavigationToolbar2Tk):
 
         self.gui.controls.update_button.invoke()
         
+    def remove_rubberband(self,event=None):
+        # We have to override this function because for some reason it does
+        # not work properly in matplotlib
+        self.draw_rubberband(event,0,0,0,0)

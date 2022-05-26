@@ -6,7 +6,6 @@ else:
 import globals
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.backend_bases import MouseEvent
 from matplotlib.figure import Figure
 from matplotlib.collections import PathCollection, PolyCollection
 import matplotlib.backend_bases
@@ -14,6 +13,7 @@ import matplotlib.colorbar
 import matplotlib.colors
 import numpy as np
 from copy import copy
+import collections
 
 from lib.hotkeys import Hotkeys
 from lib.scatterplot import ScatterPlot
@@ -25,6 +25,7 @@ from lib.customcolorbar import CustomColorbar
 from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
 from functions.eventinaxis import event_in_axis
+from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseevent
 
 from functions.getallchildren import get_all_children
 
@@ -63,9 +64,19 @@ class InteractivePlot(tk.Frame,object):
         self.origin = np.zeros(2)
         self.origin_cid = None
         self.track_id = None
+        self.colors = None
 
-        self.ctrl_pressed = False
+        self._select_info = None
 
+        self.selection = None
+
+        # If the user clicks anywhere on the plot, focus the plot.
+        for child in self.winfo_children():
+            child.bind("<Button-1>", lambda *args, **kwargs: self.canvas.get_tk_widget().focus_set(), add="+")
+
+        self._id_select_press = self.canvas.mpl_connect('button_press_event', self.press_select)
+        self._id_select_release = self.canvas.mpl_connect('button_release_event', self.release_select)
+            
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
 
@@ -96,6 +107,8 @@ class InteractivePlot(tk.Frame,object):
         self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
         self.hotkeys.bind("track particle", lambda event: self.track_particle(event))
         self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
+        for i in range(10):
+            self.hotkeys.bind("particle color "+str(i), self.color_particles)
 
     def destroy(self, *args, **kwargs):
         if self._after_id_update is not None: self.after_cancel(self._after_id_update)
@@ -121,7 +134,12 @@ class InteractivePlot(tk.Frame,object):
         if self.drawn_object is not None:
             self.drawn_object.remove()
             self.drawn_object = None
+        self.colors = None
 
+    def reset_colors(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.reset_colors")
+        self.colors = None
+        
     def update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update")
         # If we are waiting to update, then make sure the controls' update button is disabled
@@ -146,8 +164,9 @@ class InteractivePlot(tk.Frame,object):
 
         self.origin = np.zeros(2)
         if self.track_id is not None and self.track_id in np.arange(len(x)):
-            print(self.track_id)
             self.origin = np.array([x[self.track_id],y[self.track_id]])
+
+        if self.colors is None: self.colors = np.ones(len(x))
 
         if (xaxis.value.get() in ['x','y','z'] and
             yaxis.value.get() in ['x','y','z']):
@@ -183,6 +202,7 @@ class InteractivePlot(tk.Frame,object):
                     y,
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
+                kwargs['c'] = self.colors
                 kwargs['aspect'] = aspect
                 kwargs['aftercalculate'] = self.after_scatter_calculate
                 self.colorbar.hide()
@@ -405,13 +425,7 @@ class InteractivePlot(tk.Frame,object):
         #print(event_in_axis(self.ax, event))
         if not event_in_axis(self.ax, event): return
         
-        # Convert the given event into a Matplotlib MouseEvent
-        if event.num == 5 or event.delta < 0: button = "down"
-        else: button = "up"
-        
-        # Kinda silly that we have to do this, but at least it works.
-        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
-        event = MouseEvent("zoom", self.canvas, event.x, event.y, button=button)
+        event = tkevent_to_matplotlibmouseevent(self.ax, event)
         
         # Cancel any queued zoom
         self.gui.plottoolbar.cancel_queued_zoom()
@@ -429,21 +443,21 @@ class InteractivePlot(tk.Frame,object):
         curr_xlim = self.gui.controls.axis_controllers['XAxis'].limits.get()
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
 
-        #event.ydata =  curr_ylim[1] - event.ydata
+        x,y = self.parse_plot_xycoords()
 
         new_width = (curr_xlim[1]-curr_xlim[0])*factor
         new_height= (curr_ylim[1]-curr_ylim[0])*factor
 
-        relx = (curr_xlim[1]-event.xdata)/(curr_xlim[1]-curr_xlim[0])
-        rely = (curr_ylim[1]-event.ydata)/(curr_ylim[1]-curr_ylim[0])
+        relx = (curr_xlim[1]-x)/(curr_xlim[1]-curr_xlim[0])
+        rely = (curr_ylim[1]-y)/(curr_ylim[1]-curr_ylim[0])
 
         xlim = (
-            event.xdata-new_width*(1-relx),
-            event.xdata+new_width*(relx),
+            x-new_width*(1-relx),
+            x+new_width*(relx),
         )
         ylim = (
-            event.ydata-new_height*(1-rely),
-            event.ydata+new_height*(rely),
+            y-new_height*(1-rely),
+            y+new_height*(rely),
         )
 
         if which in ['both','x']:
@@ -457,17 +471,20 @@ class InteractivePlot(tk.Frame,object):
         self.update()
 
     def start_pan(self, event):
+        if globals.debug > 1: print("interactiveplot.start_pan")
         if not event_in_axis(self.ax, event): return
+        
         # Disconnect the scroll wheel zoom binding while panning
         if self.hotkeys.is_bound("zoom"): self.hotkeys.unbind("zoom")
         
         # Trick Matplotlib into thinking we pressed the left mouse button
-        event.button = 1#matplotlib.backend_bases.MouseButton.LEFT
+        event.button = 1
         # Strange that the y position gets mucked up, but this works
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
         self.gui.plottoolbar.press_pan(event)
 
     def drag_pan(self, event):
+        if globals.debug > 1: print("interactiveplot.drag_pan")
         if not event_in_axis(self.ax, event): return
         event.key = 1
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
@@ -478,49 +495,66 @@ class InteractivePlot(tk.Frame,object):
         self.update()
         
     def stop_pan(self, event):
+        if globals.debug > 1: print("interactiveplot.stop_pan")
         self.gui.plottoolbar.release_pan(event)
         # Reconnect the scroll wheel zoom binding
         if not self.hotkeys.is_bound("zoom"): self.hotkeys.bind("zoom", self.zoom)
+
+    def color_particles(self, event):
+        if globals.debug > 1: print("interactiveplot.color_particles")
+        if not event_in_axis(self.ax, event): return
+
+        # Only do this if we are in a scatter plot
+        if isinstance(self.drawn_object, ScatterPlot):
+            # We need to have a selection set before continuing
+            if self.selection is None:
+                self.gui.message("Click and drag on the plot to select particles, then try again",duration=5000)
+                return
+
+            x = self.drawn_object.x
+            y = self.drawn_object.y
+
+            xlim = self.selection[:2]
+            ylim = self.selection[2:]
+
+            IDs = np.logical_and(
+                np.logical_and(xlim[0] <= x, x <= xlim[1]),
+                np.logical_and(ylim[0] <= y, y <= ylim[1]),
+            )
+            
+            self.colors[IDs] = int(event.keysym)
+            self._update()
 
     # This method sets the origin to be at the particle closest to the mouse
     # position
     def track_particle(self, event):
         if globals.debug > 1: print("interactiveplot.track_particle")
+
+        if not event_in_axis(self.ax, event):
+            self.clear_tracking()
+            return
+        
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
-
             data = np.column_stack((self.drawn_object.x, self.drawn_object.y))
 
-            xpos = None
-            ypos = None
-            # Parse the mouse position string
-            string = self.xycoords.get().strip()
-            if '\n' in string: string = string[:string.index('\n')]
-            if "x=" in string and "y=" in string:
-                xidx = string.index("x=")+len("x=")
-                yidx1 = string.index("y=")
-                yidx2 = yidx1 + len("y=")
-                xpos = string_to_float(string[xidx:yidx1])
-                ypos = string_to_float(string[yidx2:])
+            xpos, ypos = self.parse_plot_xycoords()
 
             # If the mouse isn't over the data, then clear the tracking
-            if None in [xpos,ypos]:
-                self.clear_tracking()
-            else:
-                # Find the particle closest to the mouse position
-                self.track_id = find_nearest_2d(data,np.array([xpos,ypos]))
+            # Find the particle closest to the mouse position
+            self.track_id = self.get_closest_particle(data, xpos, ypos)
 
-                # Update the origin
-                self.origin = data[self.track_id]
-                
-                # Turn on adaptive limits to activate tracking
-                xaxis = self.gui.controls.axis_controllers['XAxis']
-                yaxis = self.gui.controls.axis_controllers['YAxis']
-                xaxis.limits.adaptive_on()
-                yaxis.limits.adaptive_on()
-
-                self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
-
+            # Update the origin
+            self.origin = data[self.track_id]
+            
+            # Turn on adaptive limits to activate tracking
+            xaxis = self.gui.controls.axis_controllers['XAxis']
+            yaxis = self.gui.controls.axis_controllers['YAxis']
+            xaxis.limits.adaptive_on()
+            yaxis.limits.adaptive_on()
+            
+            self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
+            
             self.reset_xylim()
 
     def clear_tracking(self, *args, **kwargs):
@@ -528,5 +562,57 @@ class InteractivePlot(tk.Frame,object):
         if self.track_id is not None:
             self.gui.message("Stopped tracking particle "+str(self.track_id),duration=5000)
         self.track_id = None
+
+    def get_closest_particle(self, data, x, y):
+        if globals.debug > 1: print("interactiveplot.get_closest_particle")
+        return find_nearest_2d(data,np.array([x,y]))
+
+    def parse_plot_xycoords(self):
+        if globals.debug > 1: print("interactiveplot.parse_plot_xycoords")
         
+        # Parse the mouse position string
+        string = self.xycoords.get().strip()
+        if '\n' in string: string = string[:string.index('\n')]
+        xpos = None
+        ypos = None
+        if 'x=' in string and 'y=' in string:
+            xidx = string.index("x=")+len("x=")
+            yidx1 = string.index("y=")
+            yidx2 = yidx1 + len("y=")
+            xpos = string_to_float(string[xidx:yidx1])
+            ypos = string_to_float(string[yidx2:])
+        return xpos, ypos
+
+
+    # event needs to be a Matplotlib event from mpl_connect
+    def press_select(self, event):
+        # Callback for mouse button press to select particles
+        if self.gui.plottoolbar.mode != "": return
+        if event.button == 1 and None not in [event.x,event.y]:
+            self.gui.plottoolbar.cancel_queued_zoom()
+            self.selection = None
+            id_select = self.canvas.mpl_connect("motion_notify_event", self.drag_select)
+            self._select_info = collections.namedtuple("_SelectInfo", "start_xy start_xy_data cid")(
+                start_xy=(event.x, event.y), start_xy_data=(event.xdata,event.ydata), cid=id_select)
+
+    def drag_select(self, event):
+        start_xy = self._select_info.start_xy
+        (x1, y1), (x2, y2) = np.clip(
+            [start_xy, [event.x, event.y]], self.ax.bbox.min, self.ax.bbox.max)
+        if abs(x2-x1) >= 5 and abs(y2-y1) >= 5:
+            self.gui.plottoolbar.draw_rubberband(event, x1, y1, x2, y2)
+
+    def release_select(self, event):
+        if self._select_info is None: return
+        #print("Got here")
+        # We don't check the event button here, so that zooms can be cancelled
+        # by (pressing and) releasing another mouse button.
+        self.canvas.mpl_disconnect(self._select_info.cid)
+
+        x0 = min(event.xdata, self._select_info.start_xy_data[0])
+        x1 = max(event.xdata, self._select_info.start_xy_data[0])
+        y0 = min(event.ydata, self._select_info.start_xy_data[1])
+        y1 = max(event.ydata, self._select_info.start_xy_data[1])
         
+        self.selection = np.array([x0,x1,y0,y1])
+        self._select_info = None
