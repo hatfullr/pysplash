@@ -20,7 +20,7 @@ import globals
 import numpy as np
 
 class AxisController(LabelledFrame,object):
-    def __init__(self,master,gui,text,relief='sunken',bd=1,allowadaptive=True,usecombobox=True,**kwargs):
+    def __init__(self,master,gui,text,relief='sunken',bd=1,allowadaptive=True,**kwargs):
         if globals.debug > 1: print("axiscontroller.__init__")
         super(AxisController,self).__init__(
             master,
@@ -30,7 +30,6 @@ class AxisController(LabelledFrame,object):
             **kwargs
         )
 
-        self.usecombobox = usecombobox
         
         self.gui = gui
 
@@ -53,8 +52,7 @@ class AxisController(LabelledFrame,object):
 
         self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
         
-        if self.usecombobox:
-            self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
+        self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
 
         #self.limits.adaptive.trace('w', self.gui.interactiveplot.clear_tracking)
             
@@ -70,21 +68,13 @@ class AxisController(LabelledFrame,object):
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_widgets")
-        if self.usecombobox:
-            self.combobox = MathCombobox(
-                self,
-                self.gui,
-                width=0,
-                values=[self.value.get()],
-                textvariable=self.value,
-            )
-        else:
-            self.value.set("")
-            self.entry = MathEntry(
-                self,
-                self.gui,
-                textvariable=self.value,
-            )
+        self.combobox = MathCombobox(
+            self,
+            self.gui,
+            width=0,
+            values=[self.value.get()],
+            textvariable=self.value,
+        )
 
         self.label_frame = tk.LabelFrame(self,text="Label")
         self.label_entry = Entry(
@@ -99,8 +89,7 @@ class AxisController(LabelledFrame,object):
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")
-        if self.usecombobox: self.combobox.pack(side='top',fill='both')
-        else: self.entry.pack(side='top',fill='both')
+        self.combobox.pack(side='top',fill='both')
 
         self.label_entry.pack(fill='both',expand=True,padx=2,pady=(0,2))
         self.label_frame.pack(side='top',fill='both',expand=True)
@@ -117,19 +106,18 @@ class AxisController(LabelledFrame,object):
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
         if self.gui.data is not None:
-            if self.usecombobox:
-                if value in self.gui.data['data'].keys():
-                    if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
-                        if self.scale.get() == "log10":
-                            self.scale.linear_button.invoke()
-                            self.on_scale_changed()
-                    # Disable rotation controls if we're not in the spatial domain
-                    if value in ['x','y','z']:
-                        self.gui.controls.plotcontrols.enable_rotations()
-                    else:
-                        self.gui.controls.plotcontrols.disable_rotations()
+            if value in self.gui.data['data'].keys():
+                if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
+                    if self.scale.get() == "log10":
+                        self.scale.linear_button.invoke()
+                        self.on_scale_changed()
+                # Disable rotation controls if we're not in the spatial domain
+                if value in ['x','y','z']:
+                    self.gui.controls.plotcontrols.enable_rotations()
                 else:
                     self.gui.controls.plotcontrols.disable_rotations()
+            else:
+                self.gui.controls.plotcontrols.disable_rotations()
 
             self.set_adaptive_limits()
             self.label.set(value)
@@ -257,8 +245,7 @@ class AxisController(LabelledFrame,object):
     def get_data(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.get_data")
         
-        if self.usecombobox: widget = self.combobox
-        else: widget = self.entry
+        widget = self.combobox
         data, physical_units, display_units = widget.get()
         
         # Apply the scaling to the resulting data

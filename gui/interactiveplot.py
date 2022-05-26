@@ -239,6 +239,7 @@ class InteractivePlot(tk.Frame,object):
             idx = self.gui.get_data('u') != 0
 
             method = IntegratedValuePlot
+            print(A)
             args = (
                 self.ax,
                 A[idx],

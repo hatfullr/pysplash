@@ -101,7 +101,7 @@ class Controls(tk.Frame,object):
         self.axis_controllers = {
             'XAxis' : AxisController(self.controls_frame.interior,self.gui,'XAxis',padx=3,pady=3,relief='sunken'),
             'YAxis' : AxisController(self.controls_frame.interior,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
-            'Colorbar' : AxisController(self.controls_frame.interior,self.gui,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False),
+            'Colorbar' : AxisController(self.controls_frame.interior,self.gui,'Colorbar',padx=3,pady=3,relief='sunken'),
         }
         
         # Plot controls

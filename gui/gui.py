@@ -348,20 +348,25 @@ class GUI(tk.Frame,object):
             # Check to see if the key matches
             xaxis = self.controls.axis_controllers['XAxis'].value.get()
             yaxis = self.controls.axis_controllers['YAxis'].value.get()
+            caxis = self.controls.axis_controllers['Colorbar'].value.get()
+            controller = None
             if identifier is None: identifier = key
-            if identifier == xaxis: controller = self.controls.axis_controllers['XAxis']
+            elif identifier == xaxis: controller = self.controls.axis_controllers['XAxis']
             elif identifier == yaxis: controller = self.controls.axis_controllers['YAxis']
+            elif identifier == caxis: controller = self.controls.axis_controllers['Colorbar']
             else:
-                raise RuntimeError("None of the AxisControllers have the value '"+xaxis+"' or '"+yaxis+"'")
-            units = controller.units.value.get()
-            if scaled:
-                scale = controller.scale.get()
-                if scale == 'linear': return self.display_data[key]/units
-                elif scale == 'log10': return np.log10(self.display_data[key]/units)
-                elif scale == '^10': return 10**(self.display_data[key]/units)
-                else:
-                    raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
-            else: return self.display_data[key]/units
+                raise RuntimeError("Key '"+key+"' does not match any of the keys in the provided data set")
+            if controller is not None:
+                units = controller.units.value.get()
+                if scaled:
+                    scale = controller.scale.get()
+                    if scale == 'linear': return self.display_data[key]/units
+                    elif scale == 'log10': return np.log10(self.display_data[key]/units)
+                    elif scale == '^10': return 10**(self.display_data[key]/units)
+                    else:
+                        raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
+                else: return self.display_data[key]/units
+            return self.display_data[key]
 
     def rotate(self,anglexdeg=None,angleydeg=None,anglezdeg=None):
         if globals.debug > 1: print("gui.rotate")

@@ -11,6 +11,7 @@ else:
     from widgets.flashingentry import FlashingEntry
 from functions.stringtofloat import string_to_float
 import numpy as np
+import traceback
 
 # The only difference is we don't allow the user to type
 # anything that isn't a float
@@ -59,9 +60,9 @@ class FloatEntry(FlashingEntry,object):
         
         try:
             string_to_float(newtext)
-        except Exception as e:
+        except Exception:
             self.on_validate_fail()
-            print(e)
+            print(traceback.format_exc())
             return False
 
         if string_to_float(newtext) in self.disallowed_values:
