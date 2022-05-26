@@ -24,6 +24,7 @@ from lib.customcolorbar import CustomColorbar
 
 from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
+from functions.eventinaxis import event_in_axis
 
 from functions.getallchildren import get_all_children
 
@@ -107,29 +108,6 @@ class InteractivePlot(tk.Frame,object):
         if (self.previously_drawn_object is not None and
             self.previously_drawn_object in self.ax.get_children()):
             self.previously_drawn_object.remove()
-        
-    def start_pan(self, event):
-        # Disconnect the scroll wheel zoom binding while panning
-        self.hotkeys.unbind("zoom")
-        
-        # Trick Matplotlib into thinking we pressed the left mouse button
-        event.button = 1#matplotlib.backend_bases.MouseButton.LEFT
-        # Strange that the y position gets mucked up, but this works
-        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
-        self.gui.plottoolbar.press_pan(event)
-
-    def drag_pan(self, event):
-        event.key = 1#matplotlib.backend_bases.MouseButton.LEFT
-        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
-        self.gui.plottoolbar.drag_pan(event)
-        self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
-        self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
-        self.update()
-        
-    def stop_pan(self, event):
-        self.gui.plottoolbar.release_pan(event)
-        # Reconnect the scroll wheel zoom binding
-        self.hotkeys.bind("zoom", self.zoom)
         
     def place_widgets(self):
         if globals.debug > 1: print("interactiveplot.place_widgets")
@@ -420,12 +398,13 @@ class InteractivePlot(tk.Frame,object):
         elif which == 'ylim': return [None, None], new_ylim
         else: return new_xlim, new_ylim
         
-
     # Intended to be used with canvas.mpl_connect('scroll_event', zoom)
     # https://stackoverflow.com/a/12793033/4954083
     def zoom(self, event, which="both"):
         if globals.debug > 1: print("interactiveplot.zoom")
 
+        if not event_in_axis(self.ax, event): return
+        
         # Convert the given event into a Matplotlib MouseEvent
         if event.num == 5 or event.delta < 0: button = "down"
         else: button = "up"
@@ -476,6 +455,32 @@ class InteractivePlot(tk.Frame,object):
 
         self.canvas.draw_idle()
         self.update()
+
+    def start_pan(self, event):
+        if not event_in_axis(self.ax, event): return
+        # Disconnect the scroll wheel zoom binding while panning
+        if self.hotkeys.is_bound("zoom"): self.hotkeys.unbind("zoom")
+        
+        # Trick Matplotlib into thinking we pressed the left mouse button
+        event.button = 1#matplotlib.backend_bases.MouseButton.LEFT
+        # Strange that the y position gets mucked up, but this works
+        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
+        self.gui.plottoolbar.press_pan(event)
+
+    def drag_pan(self, event):
+        if not event_in_axis(self.ax, event): return
+        event.key = 1
+        event.y = self.canvas.get_tk_widget().winfo_height() - event.y
+        # Check to make sure the mouse is inside an axis
+        self.gui.plottoolbar.drag_pan(event)
+        self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
+        self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
+        self.update()
+        
+    def stop_pan(self, event):
+        self.gui.plottoolbar.release_pan(event)
+        # Reconnect the scroll wheel zoom binding
+        if not self.hotkeys.is_bound("zoom"): self.hotkeys.bind("zoom", self.zoom)
 
     # This method sets the origin to be at the particle closest to the mouse
     # position

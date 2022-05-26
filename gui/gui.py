@@ -186,8 +186,6 @@ class GUI(tk.Frame,object):
             width=self.interactiveplot.winfo_reqwidth()*0.5,#2.25*self.dpi, # pixels = inches * dpi
             bd=1,
             relief='sunken',
-            padx=5,
-            pady=5,
         )
         
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')

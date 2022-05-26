@@ -36,7 +36,7 @@ class Hotkeys(object):
         if not isinstance(commands, (list, tuple, np.ndarray)):
             commands = [commands]
 
-        if name in self.registry:
+        if self.is_bound(name):
             raise KeyError("The hotkey action '"+name+"' is already bound")
         
         for key in hotkeyslist[name]["keylist"]:
@@ -118,3 +118,6 @@ class Hotkeys(object):
                     break
             globals.hotkey_pressed = False
 
+    # Check if a particular method has any set bindings
+    def is_bound(self, name):
+        return name in self.registry

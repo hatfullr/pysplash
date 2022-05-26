@@ -8,15 +8,19 @@ else:
     import tkinter.ttk as ttk
     from gui.plotcontrols import PlotControls
 from collections import OrderedDict
-from widgets.labelledframe import LabelledFrame
-from widgets.axiscontroller import AxisController
+
 from lib.integratedvalueplot import IntegratedValuePlot
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
 from functions.hotkeystostring import hotkeys_to_string
+
 from widgets.tooltip import ToolTip
 from widgets.button import Button
+from widgets.labelledframe import LabelledFrame
+from widgets.axiscontroller import AxisController
+from widgets.verticalscrolledframe import VerticalScrolledFrame
+
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 from copy import deepcopy
@@ -93,20 +97,20 @@ class Controls(tk.Frame,object):
         ToolTip.createToolTip(self.update_button, "Redraw the plot using the controls below.")
         
         # Axis controls
-        self.axes_frame = LabelledFrame(self,"Axes",relief='sunken',bd=1)
+        self.controls_frame = VerticalScrolledFrame(self,relief='sunken',bd=1)
         self.axis_controllers = {
-            'XAxis' : AxisController(self,self.gui,'XAxis',padx=3,pady=3,relief='sunken'),
-            'YAxis' : AxisController(self,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
-            'Colorbar' : AxisController(self,self.gui,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False),
+            'XAxis' : AxisController(self.controls_frame.interior,self.gui,'XAxis',padx=3,pady=3,relief='sunken'),
+            'YAxis' : AxisController(self.controls_frame.interior,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
+            'Colorbar' : AxisController(self.controls_frame.interior,self.gui,'Colorbar',padx=3,pady=3,relief='sunken',usecombobox=False),
         }
         
         # Plot controls
-        self.plotcontrols = PlotControls(self,self.gui,padx=3,pady=3,relief='sunken')
+        self.plotcontrols = PlotControls(self.controls_frame.interior,self.gui,padx=3,pady=3,relief='sunken')
     
     def place_widgets(self):
         if globals.debug > 1: print("controls.place_widgets")
         # Update button
-        self.update_button.pack(side='top',fill='x')
+        self.update_button.pack(side='top',fill='x',padx=5,pady=5)
         
         # Axis controls
         for axis_name,axis_controller in self.axis_controllers.items():
@@ -114,6 +118,9 @@ class Controls(tk.Frame,object):
 
         # Plot controls
         self.plotcontrols.pack(side='top',fill='x')
+
+        self.controls_frame.pack(side='top',fill='both',expand=True)
+        self.controls_frame.interior.configure(padx=5,pady=5)
         
     def on_state_change(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_state_change")
