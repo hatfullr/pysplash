@@ -70,6 +70,10 @@ class InteractivePlot(tk.Frame,object):
 
         self.selection = None
 
+        self.particle_annotation_cid = None
+        self.particle_annotation = self.ax.text(0,0,"")
+        self.track_and_annotate = False
+
         # If the user clicks anywhere on the plot, focus the plot.
         for child in self.winfo_children():
             child.bind("<Button-1>", lambda *args, **kwargs: self.canvas.get_tk_widget().focus_set(), add="+")
@@ -106,6 +110,10 @@ class InteractivePlot(tk.Frame,object):
         self.hotkeys.bind("zoom x", lambda event: self.zoom(event, which='x'))
         self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
         self.hotkeys.bind("track particle", lambda event: self.track_particle(event))
+        self.hotkeys.bind("track and annotate particle", (
+            lambda event: self.track_particle(event),
+            lambda event: self.annotate_particle(event),
+        ))
         self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
         for i in range(10):
             self.hotkeys.bind("particle color "+str(i), self.color_particles)
@@ -205,6 +213,18 @@ class InteractivePlot(tk.Frame,object):
                 kwargs['c'] = self.colors
                 kwargs['aspect'] = aspect
                 kwargs['aftercalculate'] = self.after_scatter_calculate
+
+                if self.track_id is not None:
+                    xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
+                    dx = 0.5*(xlim[1]-xlim[0])
+                    dy = 0.5*(ylim[1]-ylim[0])
+                    xlim = (self.origin[0]-dx,self.origin[0]+dx)
+                    ylim = (self.origin[1]-dy,self.origin[1]+dy)
+                    self.ax.set_xlim(xlim)
+                    self.ax.set_ylim(ylim)
+                    xaxis.limits.set_limits(xlim)
+                    yaxis.limits.set_limits(ylim)
+                
                 self.colorbar.hide()
 
         elif colorbar_text.strip() or colorbar_text.strip() != "":
@@ -278,6 +298,8 @@ class InteractivePlot(tk.Frame,object):
         for child in self.ax.get_children():
             if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
                 child.remove()
+          
+        if self.track_and_annotate: self.annotate_particle()
         
         self.canvas.draw_idle()
         
@@ -393,8 +415,8 @@ class InteractivePlot(tk.Frame,object):
         if hasattr(self.gui, "data") and self.gui.data:
             xdata = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
             ydata = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
-            xdata = xdata + self.origin[0]
-            ydata = ydata + self.origin[1]
+            xdata = xdata - self.origin[0]
+            ydata = ydata - self.origin[1]
             xdata = xdata[np.isfinite(xdata)]
             ydata = ydata[np.isfinite(ydata)]
             new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
@@ -443,7 +465,11 @@ class InteractivePlot(tk.Frame,object):
         curr_xlim = self.gui.controls.axis_controllers['XAxis'].limits.get()
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
 
-        x,y = self.parse_plot_xycoords()
+        if self.track_id is None:
+            x,y = self.parse_plot_xycoords()
+            if None in [x,y]: return
+        else:
+            x, y = self.drawn_object.x[self.track_id], self.drawn_object.y[self.track_id]
 
         new_width = (curr_xlim[1]-curr_xlim[0])*factor
         new_height= (curr_ylim[1]-curr_ylim[0])*factor
@@ -547,21 +573,33 @@ class InteractivePlot(tk.Frame,object):
             # Update the origin
             self.origin = data[self.track_id]
             
-            # Turn on adaptive limits to activate tracking
-            xaxis = self.gui.controls.axis_controllers['XAxis']
-            yaxis = self.gui.controls.axis_controllers['YAxis']
-            xaxis.limits.adaptive_on()
-            yaxis.limits.adaptive_on()
-            
             self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
             
-            self.reset_xylim()
+            self.canvas.draw_idle()
+            self.update()
 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
         if self.track_id is not None:
             self.gui.message("Stopped tracking particle "+str(self.track_id),duration=5000)
         self.track_id = None
+        self.clear_particle_annotation()
+        self.track_and_annotate = False
+
+    def annotate_particle(self, event=None):
+        if globals.debug > 1: print("interactiveplot.annotate_particle")
+        if self.track_id is None: return
+        if isinstance(self.drawn_object, ScatterPlot):
+            if event is not None: self.track_and_annotate = True
+            x = self.drawn_object.x[self.track_id]
+            y = self.drawn_object.y[self.track_id]
+            self.particle_annotation.set_text(str(self.track_id))
+            self.particle_annotation.set_position((x,y))
+
+    def clear_particle_annotation(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.clear_particle_annotation")
+        self.particle_annotation.set_text("")
+        self.canvas.draw_idle()
 
     def get_closest_particle(self, data, x, y):
         if globals.debug > 1: print("interactiveplot.get_closest_particle")
@@ -579,8 +617,10 @@ class InteractivePlot(tk.Frame,object):
             xidx = string.index("x=")+len("x=")
             yidx1 = string.index("y=")
             yidx2 = yidx1 + len("y=")
+            end = len(string)
+            if "[" in string: end = string.index("[")
             xpos = string_to_float(string[xidx:yidx1])
-            ypos = string_to_float(string[yidx2:])
+            ypos = string_to_float(string[yidx2:end])
         return xpos, ypos
 
 

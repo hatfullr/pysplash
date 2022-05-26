@@ -118,6 +118,12 @@ hotkeyslist = {
         "modifiers" : [],
         "type" : "global",
     },
+    "track and annotate particle" : {
+        "keylist" : ["t"],
+        "display" : "Shift+t",
+        "modifiers" : ["<Shift>"],
+        "type" : "global",
+    },
     "annotate time" : {
         "keylist" : ["g"],
         "display" : "Shift+g",

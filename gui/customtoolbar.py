@@ -72,8 +72,10 @@ class CustomToolbar(NavigationToolbar2Tk):
         return None, None, None, None
         
     def set_xy_message(self, *args, **kwargs):
+        if sys.version_info.major < 3: types = (str,unicode)
+        else: types = str
         for arg in args:
-            if isinstance(arg, str):
+            if isinstance(arg, types):
                 self.gui.interactiveplot.xycoords.set(arg)
                 break
         else:
