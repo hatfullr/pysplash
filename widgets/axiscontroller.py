@@ -158,25 +158,14 @@ class AxisController(LabelledFrame,object):
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
         
-        # Never allow log10 when <= 0 data is present
-        #if self.gui.data is not None:
-        #    if self.value.get() not in self.gui.data['data'].keys(): return
-        #
-        #    data = self.gui.get_display_data(self.value.get(), raw=True)
-        #    if np.any(data <= 0):
-        #        self.scale.log_button.configure(state='disabled')
-        #        return
-        
-        # Only do this if we are not using adaptive limits
-        #if not self.limits.adaptive.get():
         limits = [self.limits.low.get(), self.limits.high.get()]
         
         # Allow negative values if we are in the log10 scale, but if we are in
         # any other scale then disable the log10 button
-        if self.scale.get() != 'log10' and any([l <= 0. for l in limits]):
-            self.scale.log_button.state(['disabled'])
-        else:
-            self.scale.log_button.state(['!disabled'])
+        #if self.scale.get() != 'log10':# and any([l <= 0. for l in limits]):
+        #    self.scale.log_button.state(['disabled'])
+        #else:
+        #    self.scale.log_button.state(['!disabled'])
             
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
@@ -193,6 +182,8 @@ class AxisController(LabelledFrame,object):
             else:
                 low = self.limits.low.get()
                 high = self.limits.high.get()
+
+                if current_scale == 'log10': low = max(low, 1.e-6)
 
                 if self.previous_scale == 'linear':
                     if current_scale == 'log10':

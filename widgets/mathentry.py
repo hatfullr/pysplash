@@ -79,10 +79,10 @@ class MathEntry(FlashingEntry, object):
         # Get the keys to the data dictionary in GUI
         if self.gui.data is None: return None, None, None
         data = self.gui.data['data']
-        print(self.get())
+        
         variables = {key:self.gui.get_display_data(key,identifier=self.get(),scaled=False) for key in data.keys()}
-        physical_units = {key:np.full(len(data),self.gui.get_physical_units(key)) for key in data.keys()}
-        display_units = {key:np.full(len(data),self.gui.get_display_units(key)) for key in data.keys()}
+        physical_units = {key:self.gui.get_physical_units(key) for key in data.keys()}
+        display_units = {key:self.gui.get_display_units(key) for key in data.keys()}
 
         return variables, physical_units, display_units
     

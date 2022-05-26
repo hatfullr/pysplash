@@ -25,6 +25,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
         # m is mass, A is a given quantity, rho is density, and W is
         # the kernel function. We must have the same units on the
         # x and y axes or else this calculation makes no sense.
+        #print(physical_units)
         if physical_units[1] != physical_units[2]:
             raise ValueError("Cannot calculate an integrated value plot that has different units on the x and y axes")
 

@@ -26,7 +26,6 @@ class AxisScale(tk.LabelFrame, object):
         else: # if self._variable is None
             self._variable = tk.StringVar()
         self._variable.set("linear")
-        #globals.state_variables.append(self._variable)
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_widgets")
@@ -64,4 +63,6 @@ class AxisScale(tk.LabelFrame, object):
 
     def connect(self, axis, *args, **kwargs):
         if globals.debug > 1: print("axisscale.connect")
+        # data is what we have control of
         self.axis = axis
+

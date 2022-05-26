@@ -351,11 +351,9 @@ class GUI(tk.Frame,object):
             caxis = self.controls.axis_controllers['Colorbar'].value.get()
             controller = None
             if identifier is None: identifier = key
-            elif identifier == xaxis: controller = self.controls.axis_controllers['XAxis']
+            if identifier == xaxis: controller = self.controls.axis_controllers['XAxis']
             elif identifier == yaxis: controller = self.controls.axis_controllers['YAxis']
             elif identifier == caxis: controller = self.controls.axis_controllers['Colorbar']
-            else:
-                raise RuntimeError("Key '"+key+"' does not match any of the keys in the provided data set")
             if controller is not None:
                 units = controller.units.value.get()
                 if scaled:

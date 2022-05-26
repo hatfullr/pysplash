@@ -239,7 +239,6 @@ class InteractivePlot(tk.Frame,object):
             idx = self.gui.get_data('u') != 0
 
             method = IntegratedValuePlot
-            print(A)
             args = (
                 self.ax,
                 A[idx],
@@ -405,7 +404,7 @@ class InteractivePlot(tk.Frame,object):
             
         if draw: self.canvas.draw_idle()
     
-    def calculate_xylim(self, which='both'):
+    def calculate_xylim(self, which='both', using=(None,None)):
         if globals.debug > 1: print("interactiveplot.calculate_xylim")
 
         if which not in ['xlim', 'ylim', 'both']:
@@ -413,20 +412,30 @@ class InteractivePlot(tk.Frame,object):
 
         new_xlim = [None, None]
         new_ylim = [None, None]
-        if hasattr(self.gui, "data") and self.gui.data:
+
+        xdata = None
+        ydata = None
+        if using[0] is not None: xdata = using[0]
+        elif hasattr(self.gui, "data") and self.gui.data:
             xdata = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
+        if using[1] is not None: ydata = using[1]
+        elif hasattr(self.gui, "data") and self.gui.data:
             ydata = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
-            xdata = xdata - self.origin[0]
-            ydata = ydata - self.origin[1]
-            xdata = xdata[np.isfinite(xdata)]
-            ydata = ydata[np.isfinite(ydata)]
-            new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
-            new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
-        else:
+
+        if xdata is None and ydata is None:
             # Get the home view and use its limits as the new limits
             xmin, xmax, ymin, ymax = self.gui.plottoolbar.get_home_xylimits()
             new_xlim = np.array([xmin, xmax])
             new_ylim = np.array([ymin, ymax])
+        else:
+            if xdata is not None:
+                xdata = xdata - self.origin[0]
+                xdata = xdata[np.isfinite(xdata)]
+                new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
+            if ydata is not None:
+                ydata = ydata - self.origin[1]
+                ydata = ydata[np.isfinite(ydata)]
+                new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
         
         xmargin, ymargin = self.ax.margins()
         dx = new_xlim[1]-new_xlim[0]

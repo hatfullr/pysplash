@@ -62,7 +62,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 return [None, None]
             vmin = np.nanmin(data[np.isfinite(data)])
             vmax = np.nanmax(data[np.isfinite(data)])
-            print(vmin,vmax)
             return [vmin, vmax]
         else: return [None, None]
         
