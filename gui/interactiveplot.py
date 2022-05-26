@@ -644,15 +644,14 @@ class InteractivePlot(tk.Frame,object):
 
     def release_select(self, event):
         if self._select_info is None: return
-        #print("Got here")
-        # We don't check the event button here, so that zooms can be cancelled
-        # by (pressing and) releasing another mouse button.
         self.canvas.mpl_disconnect(self._select_info.cid)
 
-        x0 = min(event.xdata, self._select_info.start_xy_data[0])
-        x1 = max(event.xdata, self._select_info.start_xy_data[0])
-        y0 = min(event.ydata, self._select_info.start_xy_data[1])
-        y1 = max(event.ydata, self._select_info.start_xy_data[1])
+        if self._select_info is not None:
         
-        self.selection = np.array([x0,x1,y0,y1])
+            x0 = min(event.xdata, self._select_info.start_xy_data[0])
+            x1 = max(event.xdata, self._select_info.start_xy_data[0])
+            y0 = min(event.ydata, self._select_info.start_xy_data[1])
+            y1 = max(event.ydata, self._select_info.start_xy_data[1])
+        
+            self.selection = np.array([x0,x1,y0,y1])
         self._select_info = None

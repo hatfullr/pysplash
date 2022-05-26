@@ -9,6 +9,7 @@ import os
 import globals
 from widgets.popupwindow import PopupWindow
 from widgets.pathentry import PathEntry
+import traceback
 
 def importdata(gui):
     ImportData(gui)
@@ -95,7 +96,7 @@ class ImportData(PopupWindow,object):
         except ValueError as e:
             error = True
             if "does not match any of the accepted patterns in read_file" in str(e):
-                print(e)
+                print(traceback.format_exc())
                 fname = str(e).split("'")[1]
                 # Also highlight the problem text
                 idx = self.pathentry._entry.get().index(fname)

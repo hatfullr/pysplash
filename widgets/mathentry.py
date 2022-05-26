@@ -12,6 +12,7 @@ from widgets.popupwindow import PopupWindow
 from widgets.codetext import CodeText
 import globals
 import numpy as np
+import traceback
 
 # This widget expects as input some math operation using the data in the gui
 # widget. For example "rho * opacity" would multiply together the "rho" and
@@ -125,9 +126,10 @@ class MathEntry(FlashingEntry, object):
 
         try:
             self.get_data(text=newtext)
-        except Exception as e:
+        except Exception:
             self.on_validate_fail()
-            print(e)
+            print(traceback.format_exc())
+            #print(e)
             #raise
             return False
         

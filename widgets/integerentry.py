@@ -7,6 +7,7 @@ else:
     import tkinter as tk
     from tkinter import ttk
     from widgets.flashingentry import FlashingEntry
+import traceback
 
 # The only difference is we don't allow the user to type
 # anything that isn't an integer
@@ -48,9 +49,9 @@ class IntegerEntry(FlashingEntry,object):
         # Disallow anything else that would cause any problem
         try:
             int(newtext)
-        except Exception as e:
+        except Exception:
             self.on_validate_fail()
-            print(e)
+            print(traceback.format_exc())
             return False
 
         if int(newtext) in self.disallowed_values:

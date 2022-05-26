@@ -15,6 +15,7 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 import matplotlib.cm
 from itertools import cycle
+import traceback
 
 try:
     from numba import cuda
@@ -131,9 +132,9 @@ class ScatterPlot(CustomAxesImage,object):
                 device_delta_xy = cuda.to_device(delta_xy)
                 device_data = cuda.to_device(self._data)
                 #device_colors = cuda.to_device(self.c)
-            except Exception as e:
+            except Exception:
                 print("Unexpected error encountered while copying data from the host to the gpu")
-                print(e)
+                print(traceback.format_exc())
                 cuda.get_current_device().reset()
                 return
 
@@ -147,9 +148,9 @@ class ScatterPlot(CustomAxesImage,object):
             )
             try:
                 cuda.synchronize()
-            except Exception as e:
+            except Exception:
                 print("Unexpected error encountered while copying data from the gpu to the host")
-                print(e)
+                print(traceback.format_exc())
                 cuda.get_current_device().reset()
                 return
             self._data = device_data.copy_to_host()
