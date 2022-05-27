@@ -116,7 +116,7 @@ class GUI(tk.Frame,object):
             
             self.read()
 
-            self.controls.initialize()
+            if not self.controls.initialized: self.controls.initialize()
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
             xadaptive = xlimits.adaptive.get()

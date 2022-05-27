@@ -149,6 +149,7 @@ def starsmasher(filename):
         1., # opacity (already in cgs)
         1., # uraddot (already in cgs)
         1., # temperature
+        1., # avgtau
     ]
 
     physical_units = [
@@ -175,6 +176,7 @@ def starsmasher(filename):
         1., # opacity
         1., # uraddot
         1., # temperature
+        1., # avgtau
     ]
 
     data, header = read_starsmasher(filename, return_headers=True)

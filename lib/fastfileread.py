@@ -712,8 +712,8 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
             data_formats[i] = data_format + ',f8,f8'
             data_column_names[i] = data_names
         elif headers[k]['ncooling'] == 2:
-            data_formats[i] = data_format + ',f8,f8,f8,f8,f8'
-            data_column_names[i] = data_names + ['opacity','uraddot','temperature']
+            data_formats[i] = data_format + ',f8,f8,f8,f8,f8,f8'
+            data_column_names[i] = data_names + ['opacity','uraddot','temperature','avgtau']
             
     data = FastFileRead(
         filenames,

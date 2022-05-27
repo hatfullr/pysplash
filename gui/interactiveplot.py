@@ -671,7 +671,7 @@ class InteractivePlot(tk.Frame,object):
         if self._select_info is None: return
         self.canvas.mpl_disconnect(self._select_info.cid)
 
-        if self._select_info is not None:
+        if None not in self._select_info.start_xy_data and None not in [event.xdata,event.ydata]:
             x0 = min(event.xdata, self._select_info.start_xy_data[0])
             x1 = max(event.xdata, self._select_info.start_xy_data[0])
             y0 = min(event.ydata, self._select_info.start_xy_data[1])

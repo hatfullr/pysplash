@@ -50,7 +50,7 @@ class PlotControls(LabelledFrame, object):
         
         # Rotations
         self.rotations_frame = tk.Frame(self)
-        self.rotation_label = tk.Label(self.rotations_frame, text="Rotation (x,y,z deg)")
+        self.rotation_label = tk.Label(self.rotations_frame, text="Rotation")
         self.rotation_x_entry = FloatEntry(self.rotations_frame, variable=self.rotation_x, clamp=(0,360),periodic=True)
         self.rotation_y_entry = FloatEntry(self.rotations_frame, variable=self.rotation_y, clamp=(0,360),periodic=True)
         self.rotation_z_entry = FloatEntry(self.rotations_frame, variable=self.rotation_z, clamp=(0,360),periodic=True)
