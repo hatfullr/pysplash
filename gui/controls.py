@@ -72,6 +72,52 @@ class Controls(tk.Frame,object):
         self.saved_state = None
         
         self.bid = self.winfo_toplevel().bind("<Visibility>", self.on_visible, add="+")
+        
+        self.initialized = False
+
+    def initialize(self, *args, **kwargs):
+        if globals.debug > 1: print("controls.initialize")
+
+        if self.initialized: raise RuntimeError("Controls have already been initialized!")
+        
+        data = self.gui.data['data']
+        
+        # Initialize the axis controllers using user's preferences, if there are any
+        uninitialized_controllers = []
+        for name, axis_controller in self.axis_controllers.items():
+            pref = self.gui.get_preference(name)
+            if pref is not None:
+                if data is not None:
+                    # If the data set does not have the column asked for from the preferences,
+                    # then let this be an uninitialized axis controller. Colorbars need to be
+                    # re-entered every time because we have no way to check if the specified
+                    # colorbar value is correct.
+                    if pref['value'] in data.keys():
+                        axis_controller.value.set(pref['value'])
+                        axis_controller.label.set(pref['label'])
+                    elif name != 'Colorbar':
+                        uninitialized_controllers.append(axis_controller)
+                        continue
+                axis_controller.units.value.set(pref['units'])
+                axis_controller.scale.set(pref['scale'])
+                if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()
+                else: axis_controller.limits.set_limits(pref['limits'])
+            elif name != 'Colorbar':
+                uninitialized_controllers.append(axis_controller)
+
+        # For controllers which did not have their preferences set (except for
+        # the Colorbar controller), use the first, second, etc. columns in the data
+        if len(uninitialized_controllers) > 0:
+            if data is not None:
+                cidx = 0
+                for i, val in enumerate(data.keys()):
+                    if val not in [c.value.get() for c in self.axis_controllers.values()]:
+                        uninitialized_controllers[cidx].value.set(val)
+                        uninitialized_controllers[cidx].label.set(val)
+                        cidx += 1
+                        if cidx >= len(uninitialized_controllers): break
+        
+        self.initialized = True
 
     # This callback function runs a single time, after the application has been loaded
     def on_visible(self, *args, **kwargs):
@@ -332,6 +378,17 @@ class Controls(tk.Frame,object):
 
     def on_plot_update(self, *args, **kwargs):
         if globals.debug > 1: print("controls.on_plot_update")
+
+        # Update the user's axis preferences
+        for name, axis_controller in self.axis_controllers.items():
+            pref = {
+                'value':axis_controller.value.get(),
+                'label':axis_controller.label.get(),
+                'units':axis_controller.units.value.get(),
+                'limits':axis_controller.limits.get() if not axis_controller.limits.adaptive.get() else 'adaptive',
+                'scale':axis_controller.scale.get(),
+            }
+            self.gui.set_preference(name,pref)
         
         # Store the axis limits
         self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()

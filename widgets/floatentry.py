@@ -46,7 +46,8 @@ class FloatEntry(FlashingEntry,object):
         self.do_clamp = self.clamp[0] is not None or self.clamp[1] is not None
         if self.do_clamp: self.variable.trace("w", self.clamp_variable)
 
-        self.format_text()
+        # The widget doesn't have the right width until it's mapped
+        self.bind("<Map>", lambda *args,**kwargs: self.format_text())
 
     def validatecommand(self, newtext):
         # Allow empty text

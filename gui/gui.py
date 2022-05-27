@@ -88,7 +88,7 @@ class GUI(tk.Frame,object):
         self.filenames = []
         self.message_after_id = None
         
-        self.xy_controls_initialized = False
+        #self.xy_controls_initialized = False
         self.initialize(first=True)
         self.controls.connect()
 
@@ -114,9 +114,25 @@ class GUI(tk.Frame,object):
                 self.filecontrols.current_file.set(self.filenames[0])
             
             self.read()
+
+            self.controls.initialize()
+            xlimits = self.controls.axis_controllers['XAxis'].limits
+            ylimits = self.controls.axis_controllers['YAxis'].limits
+            xadaptive = xlimits.adaptive.get()
+            yadaptive = ylimits.adaptive.get()
+            if xadaptive and yadaptive:
+                self.interactiveplot.reset_xylim(which='both')
+            elif xadaptive and not yadaptive:
+                self.interactiveplot.reset_xylim(which='xlim')
+            elif not xadaptive and yadaptive:
+                self.interactiveplot.reset_xylim(which='ylim')
+            else:
+                self.interactiveplot.ax.set_xlim(xlimits.get())
+                self.interactiveplot.ax.set_ylim(ylimits.get())
+            #print(self.controls.axis_controllers['XAxis'].limits.get())
             
             # Set the x and y limits
-            self.interactiveplot.reset_xylim()
+            #self.interactiveplot.reset_xylim()
             if self.interactiveplot.drawn_object is None:
                 self.interactiveplot.update()
             else:
@@ -124,9 +140,11 @@ class GUI(tk.Frame,object):
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
-        
+
+    """
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
+     
         N = len(self.get_data('x'))
         found_first = False
         for key,val in self.data['data'].items():
@@ -141,8 +159,8 @@ class GUI(tk.Frame,object):
                         self.controls.axis_controllers['YAxis'].label.set(key)
                         break
         self.controls.update()
-        self.xy_controls_initialized = True
-
+        #self.xy_controls_initialized = True
+    """
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
@@ -321,7 +339,8 @@ class GUI(tk.Frame,object):
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
 
-        if not self.xy_controls_initialized: self.initialize_xy_controls()
+        #if not self.controls.initialized: self.controls.initialize()
+        #if not self.xy_controls_initialized: self.initialize_xy_controls()
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
