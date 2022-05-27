@@ -679,4 +679,5 @@ class InteractivePlot(tk.Frame,object):
         
             self.selection = np.array([x0,x1,y0,y1])
         self._select_info = None
+        self.gui.message("Press 0-9 to change selected particles' colors",duration=5000)
 
