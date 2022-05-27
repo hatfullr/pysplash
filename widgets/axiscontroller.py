@@ -62,7 +62,7 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.create_variables")
         self.value = tk.StringVar(value='')
         self.scale = tk.StringVar(value='linear')
-        self.label = tk.StringVar()
+        self.label = tk.StringVar(value='')
         globals.state_variables.append(self.value)
         globals.state_variables.append(self.label)
         

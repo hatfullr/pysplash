@@ -48,11 +48,13 @@ class FloatEntry(FlashingEntry,object):
 
         # The widget doesn't have the right width until it's mapped
         self.bind("<Map>", lambda *args,**kwargs: self.format_text())
+        self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
+        self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
 
     def validatecommand(self, newtext):
         # Allow empty text
         if not newtext and self.allowblank:
-            self.on_validate_success()
+            self.event_generate("<<ValidateSuccess>>")
             return True
         
         # Reformat the text so it is in a regular format for us to check
@@ -62,35 +64,35 @@ class FloatEntry(FlashingEntry,object):
         try:
             string_to_float(newtext)
         except Exception:
-            self.on_validate_fail()
             print(traceback.format_exc())
+            self.event_generate("<<ValidateFail>>")
             return False
 
         if string_to_float(newtext) in self.disallowed_values:
-            self.on_validate_fail()
+            self.event_generate("<<ValidateFail>>")
             return False
         
         if all([command(newtext) for command in self.extra_validatecommands]):
             self.variable.set(string_to_float(newtext))
             self._textvariable.set(newtext)
-            self.on_validate_success()
+            self.event_generate("<<ValidateSuccess>>")
             return True
         else:
-            self.on_validate_fail()
+            self.event_generate("<<ValidateFail>>")
             return False
 
         # We passed all tests, so return True
-        self.on_validate_success()
+        self.event_generate("<<ValidateSuccess>>")
         return True
 
     def on_validate_fail(self, *args, **kwargs):
         self.flash()
         self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus(),add="+")
+        
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None
         if self.do_clamp: self.clamp_variable()
-        
     
     # Try to fit the text within the widget, but only to a minimum size of "0.0"
     def format_text(self, *args, **kwargs):

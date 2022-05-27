@@ -37,47 +37,50 @@ class IntegerEntry(FlashingEntry,object):
         else: self.variable = tk.IntVar()
 
         self.variable.trace("w", self.format_text)
+
+        self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
+        self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
         
         self.format_text()
             
     def validatecommand(self,newtext):
         # Allow empty text
         if not newtext and self.allowblank:
-            self.on_validate_success()
+            self.event_generate("<<ValidateSuccess>>")
             return True
 
         # Disallow anything else that would cause any problem
         try:
             int(newtext)
         except Exception:
-            self.on_validate_fail()
             print(traceback.format_exc())
+            self.event_generate("<<ValidateFail>>")
             return False
 
         if int(newtext) in self.disallowed_values:
-            self.on_validate_fail()
+            self.event_generate("<<ValidateFail>>")
             return False
 
         if all([command(newtext) for command in self.extra_validatecommands]):
             self.variable.set(int(newtext))
             self._textvariable.set(newtext)
-            self.on_validate_success()
             return True
         else:
-            self.on_validate_fail()
+            self.event_generate("<<ValidateFail>>")
             return False
 
         # We passed all tests, so return True
-        self.on_validate_success()
+        self.event_generate("<<ValidateSuccess>>")
         return True
 
     def on_validate_fail(self, *args, **kwargs):
         self.flash()
         self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus())
-
+        
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None
-
+        self.variable.set(int(self.get()))
+    
     def format_text(self, *args, **kwargs):
         self._textvariable.set(str(self.variable.get()))

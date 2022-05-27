@@ -87,17 +87,17 @@ class Controls(tk.Frame,object):
         for name, axis_controller in self.axis_controllers.items():
             pref = self.gui.get_preference(name)
             if pref is not None:
-                if data is not None:
+                #if data is not None:
                     # If the data set does not have the column asked for from the preferences,
                     # then let this be an uninitialized axis controller. Colorbars need to be
                     # re-entered every time because we have no way to check if the specified
                     # colorbar value is correct.
-                    if pref['value'] in data.keys():
-                        axis_controller.value.set(pref['value'])
-                        axis_controller.label.set(pref['label'])
-                    elif name != 'Colorbar':
-                        uninitialized_controllers.append(axis_controller)
-                        continue
+                    #if pref['value'] in data.keys():
+                axis_controller.value.set(pref['value'])
+                axis_controller.label.set(pref['label'])
+                    #elif name != 'Colorbar':
+                    #    uninitialized_controllers.append(axis_controller)
+                    #    continue
                 axis_controller.units.value.set(pref['units'])
                 axis_controller.scale.set(pref['scale'])
                 if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()

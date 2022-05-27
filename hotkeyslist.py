@@ -6,6 +6,10 @@
 # only work when the focus is not set on any particular widget.
 
 hotkeyslist = {
+
+
+
+    
     # Controls hotkeys
     "next file" : {
         "keylist" : ["<Right>"],
@@ -31,6 +35,12 @@ hotkeyslist = {
         "modifiers" : ["<Control>"],
         "type" : "global",
     },
+    "find particle" : {
+        "keylist" : ["f"],
+        "display" : "Ctrl+f",
+        "modifiers": ["<Control>"],
+        "type" : "global",
+    },
     "save" : {
         "keylist" : ["<s>"],
         "display" : "Ctrl+s",
@@ -38,6 +48,16 @@ hotkeyslist = {
         "type" : "global",
     },
 
+
+
+
+
+
+
+
+
+
+    
     # Plot hotkeys
     "start pan" : {
         "keylist" : ["<ButtonPress-2>"],
@@ -190,7 +210,6 @@ hotkeyslist = {
         "modifiers" : [],
         "type" : "global",
     },
-    
 }
 
 

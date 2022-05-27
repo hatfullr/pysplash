@@ -43,6 +43,9 @@ class MathEntry(FlashingEntry, object):
         self.grid = frame.grid
         self.place = frame.place
 
+        self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
+        self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
+
     def show_rich_edit(self, *args, **kwargs):
         self.using_rich_edit = True
         
@@ -117,28 +120,27 @@ class MathEntry(FlashingEntry, object):
         # Allow empty text
         if not newtext.strip() or newtext.strip() == "":
             if self.allowempty:
-                self.on_validate_success()
+                self.event_generate("<<ValidateSuccess>>")
                 return True
             else:
-                self.on_validate_fail()
                 print("Empty text is not allowed")
+                self.event_generate("<<ValidateFail>>")
                 return False
 
         try:
             self.get_data(text=newtext)
         except Exception:
-            self.on_validate_fail()
             print(traceback.format_exc())
-            #print(e)
-            #raise
+            self.event_generate("<<ValidateFail>>")
             return False
         
-        self.on_validate_success()
+        self.event_generate("<<ValidateSuccess>>")
         return True
         
     def on_validate_fail(self, *args, **kwargs):
         self.flash()
         self.bid = self.bind("<FocusOut>", lambda *args, **kwargs: self.focus(),add="+")
+        
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None

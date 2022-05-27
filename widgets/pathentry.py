@@ -39,6 +39,9 @@ class PathEntry(tk.Frame, object):
         self._entry.pack(side='left',fill='both',expand=True,padx=(0,pad))
         Button(self,text='Browse',command=self._browse).pack(side='left',anchor='e',fill='y')
 
+        self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
+        self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
+
     def get(self, *args, **kwargs):
         paths = self.textvariable.get()
         if isinstance(paths, str):
@@ -83,7 +86,7 @@ class PathEntry(tk.Frame, object):
 
     def validatecommand(self, newtext):
         if newtext == "":
-            self.on_validate_success()
+            self.event_generate("<<ValidateSuccess>>")
             return True
 
         paths = self.get()
@@ -94,9 +97,10 @@ class PathEntry(tk.Frame, object):
                 idx = newtext.index(path)
                 self._entry.selection_range(idx,idx+len(path))
                 print("File name '"+path+"' not found")
+                self.event_generate("<<ValidateFail>>")
                 return False
 
-        self.on_validate_success()
+        self.event_generate("<<ValidateSuccess>>")
         return True
     
     def on_validate_fail(self, time=None, *args, **kwargs):
@@ -105,9 +109,11 @@ class PathEntry(tk.Frame, object):
         def command(*args, **kwargs):
             self._entry.focus()
         self.bid = self._entry.bind("<FocusOut>", command)
+        
     
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self._entry.unbind("<FocusOut>", self.bid)
         self.bid = None
         # Make sure the widget stops flashing
         if self._entry.flashing: self._entry._stop_flash()
+        

@@ -24,6 +24,7 @@ from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
 from functions.importdata import importdata
+from functions.findparticle import findparticle
 from functions.rotate import rotate
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
@@ -241,6 +242,7 @@ class GUI(tk.Frame,object):
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
         self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
         self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
+        self.hotkeys.bind("find particle", lambda *args,**kwargs: findparticle(self))
 
     def destroy(self, *args, **kwargs):
         if self.message_after_id is not None:

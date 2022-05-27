@@ -80,6 +80,10 @@ class InteractivePlot(tk.Frame,object):
 
         self._id_select_press = self.canvas.mpl_connect('button_press_event', self.press_select)
         self._id_select_release = self.canvas.mpl_connect('button_release_event', self.release_select)
+
+        self.mouse = np.array([None,None])
+        self.canvas.mpl_connect("axes_leave_event", self.clear_mouse)
+        self.canvas.mpl_connect("motion_notify_event", self.update_mouse)
             
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
@@ -112,12 +116,12 @@ class InteractivePlot(tk.Frame,object):
         self.hotkeys.bind("track particle", lambda event: self.track_particle(event))
         self.hotkeys.bind("track and annotate particle", (
             lambda event: self.track_particle(event),
-            lambda event: self.annotate_particle(event),
+            lambda event: self.annotate_tracked_particle(event),
         ))
         self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
         for i in range(10):
             self.hotkeys.bind("particle color "+str(i), self.color_particles)
-
+            
     def destroy(self, *args, **kwargs):
         if self._after_id_update is not None: self.after_cancel(self._after_id_update)
         # The artists we drew onto the plot need to be removed so that
@@ -136,6 +140,11 @@ class InteractivePlot(tk.Frame,object):
 
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
+
+    def update_mouse(self, event):
+        self.mouse = np.array([event.xdata,event.ydata])
+    def clear_mouse(self, event):
+        self.mouse = np.array([None,None])
 
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.reset")
@@ -286,6 +295,8 @@ class InteractivePlot(tk.Frame,object):
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
+
+        if self.track_and_annotate: self.annotate_tracked_particle()
         
         # Put the filename in the axis title for now
         f = self.gui.filecontrols.current_file.get()
@@ -299,8 +310,6 @@ class InteractivePlot(tk.Frame,object):
             if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
                 child.remove()
           
-        if self.track_and_annotate: self.annotate_particle()
-        
         self.canvas.draw_idle()
         
         self.previous_xlim = self.ax.get_xlim()
@@ -476,10 +485,11 @@ class InteractivePlot(tk.Frame,object):
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
 
         if self.track_id is None:
-            x,y = self.parse_plot_xycoords()
+            x,y = self.mouse
             if None in [x,y]: return
         else:
-            x, y = self.drawn_object.x[self.track_id], self.drawn_object.y[self.track_id]
+            x = self.gui.controls.axis_controllers['XAxis'].get_data()[0][self.track_id]
+            y = self.gui.controls.axis_controllers['YAxis'].get_data()[0][self.track_id]
 
         new_width = (curr_xlim[1]-curr_xlim[0])*factor
         new_height= (curr_ylim[1]-curr_ylim[0])*factor
@@ -547,8 +557,8 @@ class InteractivePlot(tk.Frame,object):
                 self.gui.message("Click and drag on the plot to select particles, then try again",duration=5000)
                 return
 
-            x = self.drawn_object.x
-            y = self.drawn_object.y
+            x = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
+            y = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
 
             xlim = self.selection[:2]
             ylim = self.selection[2:]
@@ -563,30 +573,47 @@ class InteractivePlot(tk.Frame,object):
 
     # This method sets the origin to be at the particle closest to the mouse
     # position
-    def track_particle(self, event):
+    def track_particle(self, event=None, index=None):
         if globals.debug > 1: print("interactiveplot.track_particle")
 
-        if not event_in_axis(self.ax, event):
-            self.clear_tracking()
-            return
+        # We should always clear the old tracking no matter what
+        self.clear_tracking()
         
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
-            data = np.column_stack((self.drawn_object.x, self.drawn_object.y))
-
-            xpos, ypos = self.parse_plot_xycoords()
-
-            # If the mouse isn't over the data, then clear the tracking
+            data = np.column_stack((self.drawn_object.x,self.drawn_object.y))
+            
+            # Only get the mouse coordinates if this method was called by pressing the hotkey
             # Find the particle closest to the mouse position
-            self.track_id = self.get_closest_particle(data, xpos, ypos)
+            if None in self.mouse: return
+            if event is not None:
+                # If we don't do this transformation then if one axis has much larger numbers than
+                # the other, the result is incorrect.
+                screen_mouse = self.ax.transData.transform(self.mouse)
+                screen_data = self.ax.transData.transform(data)
+                self.track_id = self.get_closest_particle(screen_data, screen_mouse[0], screen_mouse[1])
+            else:
+                if index is None:
+                    raise ValueError("Method track_particle must be called with keyword 'index' != None when keyword 'event' is not specified or is None")
+                self.track_id = index
 
-            # Update the origin
-            self.origin = data[self.track_id]
+            if self.track_id is not None:
+                # We are not allowed to have adaptive limits while tracking
+                xlimits = self.gui.controls.axis_controllers['XAxis'].limits
+                ylimits = self.gui.controls.axis_controllers['YAxis'].limits
+                xlimits.adaptive_off()
+                ylimits.adaptive_off()
+                xlimits.adaptive_button.state(['disabled'])
+                ylimits.adaptive_button.state(['disabled'])
+                
+                
+                # Update the origin
+                self.origin = data[self.track_id]
             
-            self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
+                self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
             
-            self.canvas.draw_idle()
-            self.update()
+                self.canvas.draw_idle()
+                self.update()
 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
@@ -596,14 +623,21 @@ class InteractivePlot(tk.Frame,object):
         self.clear_particle_annotation()
         self.track_and_annotate = False
 
-    def annotate_particle(self, event=None):
-        if globals.debug > 1: print("interactiveplot.annotate_particle")
+        # Re-allow adaptive limits
+        xlimits = self.gui.controls.axis_controllers['XAxis'].limits
+        ylimits = self.gui.controls.axis_controllers['YAxis'].limits
+        xlimits.adaptive_button.state(['!disabled'])
+        ylimits.adaptive_button.state(['!disabled'])
+
+    def annotate_tracked_particle(self, event=None):
+        if globals.debug > 1: print("interactiveplot.annotate_tracked_particle")
         if self.track_id is None: return
         if isinstance(self.drawn_object, ScatterPlot):
             if event is not None: self.track_and_annotate = True
             x = self.drawn_object.x[self.track_id]
             y = self.drawn_object.y[self.track_id]
             self.particle_annotation.set_text(str(self.track_id))
+            #self.particle_annotation.set_transform(self.ax.transData)
             self.particle_annotation.set_position((x,y))
 
     def clear_particle_annotation(self, *args, **kwargs):
@@ -614,25 +648,6 @@ class InteractivePlot(tk.Frame,object):
     def get_closest_particle(self, data, x, y):
         if globals.debug > 1: print("interactiveplot.get_closest_particle")
         return find_nearest_2d(data,np.array([x,y]))
-
-    def parse_plot_xycoords(self):
-        if globals.debug > 1: print("interactiveplot.parse_plot_xycoords")
-        
-        # Parse the mouse position string
-        string = self.xycoords.get().strip()
-        if '\n' in string: string = string[:string.index('\n')]
-        xpos = None
-        ypos = None
-        if 'x=' in string and 'y=' in string:
-            xidx = string.index("x=")+len("x=")
-            yidx1 = string.index("y=")
-            yidx2 = yidx1 + len("y=")
-            end = len(string)
-            if "[" in string: end = string.index("[")
-            xpos = string_to_float(string[xidx:yidx1])
-            ypos = string_to_float(string[yidx2:end])
-        return xpos, ypos
-
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):
@@ -657,7 +672,6 @@ class InteractivePlot(tk.Frame,object):
         self.canvas.mpl_disconnect(self._select_info.cid)
 
         if self._select_info is not None:
-        
             x0 = min(event.xdata, self._select_info.start_xy_data[0])
             x1 = max(event.xdata, self._select_info.start_xy_data[0])
             y0 = min(event.ydata, self._select_info.start_xy_data[1])
@@ -665,3 +679,4 @@ class InteractivePlot(tk.Frame,object):
         
             self.selection = np.array([x0,x1,y0,y1])
         self._select_info = None
+
