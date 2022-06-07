@@ -1,0 +1,29 @@
+{
+    "XAxis": {
+        "value": "(x*x+y*y+z*z)**0.5",
+        "label": "(x*x+y*y+z*z)**0.5",
+        "units": 1.0,
+        "limits": "adaptive",
+        "scale": "linear"
+    },
+    "YAxis": {
+        "value": "u",
+        "label": "u",
+        "units": 1.0,
+        "limits": "adaptive",
+        "scale": "linear"
+    },
+    "Colorbar": {
+        "value": "",
+        "label": "",
+        "units": 1.0,
+        "limits": [
+            0.0,
+            1.0
+        ],
+        "scale": "linear"
+    },
+    "importdata": {
+        "path": "('/media/hatfull/ExtraDrive1/data_analysis/SimulatingAStellarContactBinaryMergerII/starsmasher_energy_injection/restartrad.sph',)"
+    }
+}
