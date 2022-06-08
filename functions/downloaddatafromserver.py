@@ -56,6 +56,8 @@ class DownloadDataFromServer(PopupWindow,object):
         self.filenames = []
         self.server = ""
 
+        self.previous_command_choice = self.command_choice.get()
+        
         if self.command_choice.get() == 'scp':
             self.previous_scp_options = self.command_options.get()
             self.previous_rsync_options = DownloadDataFromServer.default_rsync_options
@@ -195,12 +197,8 @@ class DownloadDataFromServer(PopupWindow,object):
         
     def cancel(self, event=None, message="Download canceled"):
         if globals.debug > 1: print("downloaddatafromserver.cancel")
-        self.canceled = True
 
-        self.okbutton.configure(relief='raised',text='Download',command=self.download_pressed)
-        self.progressbar.set_text(message)
-        self.progressbar.configure(value=0)
-        self.enable_widgets()
+        self.canceled = True
         
         if self.thread is not None: self.thread.stop()
         if self.subprocess is not None:
@@ -209,17 +207,25 @@ class DownloadDataFromServer(PopupWindow,object):
             except OSError:
                 pass
 
+        self.okbutton.configure(relief='raised',text='Download',command=self.download_pressed)
+        self.progressbar.set_text(message)
+        self.progressbar.configure(value=0)
+        self.enable_widgets()
+        self.canceled = True
+
     def on_scp_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.on_scp_button_pressed")
-        if self.command_choice.get() != 'scp':
+        if self.previous_command_choice == 'rsync':
             self.previous_rsync_options = self.command_options.get()
-            self.command_options.set(self.previous_scp_options)
+        self.command_options.set(self.previous_scp_options)
+        self.previous_command_choice = 'scp'
         
     def on_rsync_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.on_rsync_button_pressed")
-        if self.command_choice.get() != 'scp':
+        if self.previous_command_choice == 'scp':
             self.previous_scp_options = self.command_options.get()
-            self.command_options.set(self.previous_rsync_options)
+        self.command_options.set(self.previous_rsync_options)
+        self.previous_command_choice = 'rsync'
 
     def set_widget_states(self,state):
         if globals.debug > 1: print("downloaddatafromserver.set_widget_states")
