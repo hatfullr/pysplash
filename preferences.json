@@ -1,16 +1,22 @@
 {
     "XAxis": {
-        "value": "(x*x+y*y+z*z)**0.5",
-        "label": "(x*x+y*y+z*z)**0.5",
+        "value": "import numpy as np\n\nxyz = np.column_stack((x,y,z))\nr2 = np.sum(xyz**2,axis=-1)\nidx = np.argsort(r2)\n\nresult = np.cumsum(m[idx])[np.argsort(idx)]\n",
+        "label": "$m(r)\\ [M_\\odot]$",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            0.12676611193020182,
+            1.5864245262095351
+        ],
         "scale": "linear"
     },
     "YAxis": {
         "value": "u",
-        "label": "u",
+        "label": "$u_i\\ [\\mathrm{erg}]$",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            -115672844058096.0,
+            2429129725220012.0
+        ],
         "scale": "linear"
     },
     "Colorbar": {

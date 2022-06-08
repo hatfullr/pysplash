@@ -67,6 +67,12 @@ class FastFileRead(object):
                                  number of bits to skip at the end
                                  of the file if the footer lines are
                                  detected to be binary.
+
+         max_rows          int   The maximum number of rows to read
+                          None   from each data file after skipping
+                                 'header' number of rows. If set to
+                                 'None' (default) all rows will be
+                                 read.
     
     binary_format         None   The format to use when reading
                      list-like   binary files in 'filenames'. If
@@ -125,6 +131,7 @@ class FastFileRead(object):
             filename,
             header=0,
             footer=0,
+            max_rows=None,
             binary_format=None,
             binary_EOL="f8",
             offset=0,
@@ -147,6 +154,8 @@ class FastFileRead(object):
             header = [header]*len(filename)
         if not self._islistlike(footer):
             footer = [footer]*len(filename)
+        if not self._islistlike(max_rows):
+            max_rows = [max_rows]*len(filename)
         if not self._islistlike(binary_format):
             binary_format = [binary_format]*len(filename)
         if not self._islistlike(binary_EOL):
@@ -183,6 +192,7 @@ class FastFileRead(object):
                 'path' : filename[i],
                 'header' : header[i],
                 'footer' : footer[i],
+                'max_rows' : max_rows[i],
                 'binary_format' : binary_format[i],
                 'binary_EOL' : binary_EOL[i],
                 'offset' : offset[i],
@@ -505,6 +515,7 @@ class FastFileRead(object):
         fileobj['buffer'].seek(-fileobj['footer'],2)
         bottom = fileobj['buffer'].tell()
         nlines = int((bottom-top)/strides)
+        if fileobj['max_rows'] is not None: nlines = min(nlines,fileobj['max_rows'])
         fileobj['buffer'].seek(top)
         
         if self.parallel:
@@ -518,7 +529,7 @@ class FastFileRead(object):
                 procs[i] = self.pool.apply_async(
                     _frombuffer,
                     args=(
-                        fileobj['buffer'].read(stop-start),#[start:stop],#.read(stop-start), # buffer
+                        fileobj['buffer'].read(stop-start), # buffer
                         chunk, # chunk
                         (chunk[-1] - chunk[0])+1, # shape
                         fileobj['dtype'], # dtype
@@ -554,6 +565,9 @@ class FastFileRead(object):
         ncols = len(fileobj['dtype'])
         filesize = fileobj['footer']-fileobj['header']
         nlines = int(filesize/line_length)
+        if fileobj['max_rows'] is not None:
+            nlines = min(nlines,fileobj['max_rows'])
+            filesize = nlines*line_length
         
         if self.parallel:
             d = [None]*self.nprocs
@@ -574,45 +588,9 @@ class FastFileRead(object):
 
             d = np.concatenate(d).reshape((nlines,ncols))
         else:
-            """
-            # Get the data types from the first line
-            if fileobj['delimeter'] is None: fl = first_line.split()
-            else: fl = first_line.split(fileobj['delimeter'])
-            types = [self._stringtype(value) for value in fl]
-            dtype = np.dtype([(h,t) for h,t in zip(fileobj['dtype'],types)])
-            
-            d = np.empty((nlines,ncols),dtype=dtype)
-            
-            if fileobj['delimeter'] is None: delim = ' '
-            else: delim = fileobj['delimeter']
-
-            delim_positions = [0]
-            start = 0
-            while True:
-                start = first_line.find(delim,start)
-                if start == -1: break
-                if start-delim_positions[-1] > len(delim) and first_line[start-len(delim)]!=delim: delim_positions += [start]
-                start += len(delim)
-            delim_positions += [line_length]
-
-            sizes = np.diff(delim_positions)
-            fronts = np.array(delim_positions[:-1])
-            backs = fronts + sizes
-            
-            fileobj['buffer'] = fileobj['buffer'].replace('\n','')
-
-            ll = line_length - 1
-            z = zip(types,fronts,backs)
-            for i in range(nlines):
-                i0 = i*ll
-                i1 = (i+1)*ll
-                line = fileobj['buffer'][i0:i1]
-                d[i] = [t(line[f:b]) for t,f,b in z]
-            """
             if fileobj['delimeter'] is None: d = _fromstring(fileobj['buffer'].read(filesize))
             else: d = _fromstring(fileobj['buffer'].read(filesize),sep=fileobj['delimeter'])
             d = d.reshape((nlines,ncols))
-
 
         if fileobj['return_type'] is np.ndarray: return d
         elif fileobj['return_type'] is dict: return {name:d[name] for name in d.dtype.names}
@@ -712,8 +690,8 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
             data_formats[i] = data_format + ',f8,f8'
             data_column_names[i] = data_names
         elif headers[k]['ncooling'] == 2:
-            data_formats[i] = data_format + ',f8,f8,f8,f8,f8,f8'
-            data_column_names[i] = data_names + ['opacity','uraddot','temperature','avgtau']
+            data_formats[i] = data_format + ',f8,f8,f8,f8,f8'
+            data_column_names[i] = data_names + ['opacity','uraddot','temperature']
             
     data = FastFileRead(
         filenames,
