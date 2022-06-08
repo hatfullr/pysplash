@@ -1,22 +1,16 @@
 {
     "XAxis": {
-        "value": "import numpy as np\n\nxyz = np.column_stack((x,y,z))\nr2 = np.sum(xyz**2,axis=-1)\nidx = np.argsort(r2)\n\nresult = np.cumsum(m[idx])[np.argsort(idx)]\n",
+        "value": "mass",
         "label": "$m(r)\\ [M_\\odot]$",
         "units": 1.0,
-        "limits": [
-            0.12676611193020182,
-            1.5864245262095351
-        ],
+        "limits": "adaptive",
         "scale": "linear"
     },
     "YAxis": {
-        "value": "u",
-        "label": "$u_i\\ [\\mathrm{erg}]$",
+        "value": "logR",
+        "label": "logR",
         "units": 1.0,
-        "limits": [
-            -115672844058096.0,
-            2429129725220012.0
-        ],
+        "limits": "adaptive",
         "scale": "linear"
     },
     "Colorbar": {

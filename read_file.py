@@ -100,6 +100,10 @@ def read_file(filename):
             ["fluxcal*.track*",fluxcal_track],
             ["teffs*.dat*",fluxcal_teff],
         ],
+        "mesa" : [
+            ["*.mesa*", mesa],
+            ["*profile*.data*", mesa],
+        ],
     }
     
     basename = os.path.basename(filename)
@@ -283,3 +287,32 @@ def fluxcal_teff(filename):
     data['extent'] = [xmin,xmin+dx*Nx,ymin,ymin+dy*Ny]
 
     return data
+
+def mesa(filename):
+    to_return = {
+        'data'           : OrderedDict(),
+        'display_units'  : OrderedDict(),
+        'physical_units' : OrderedDict(),
+    }
+
+    with open(filename,'r') as f:
+        f.readline()
+        h = f.readline().split()
+        line = f.readline().split()
+        num_zones = int(line[h.index("num_zones")])
+
+        f.readline()
+        f.readline()
+
+        header = f.readline().split()
+
+        data = np.empty((num_zones,len(header)),dtype=float)
+        for i,line in enumerate(f):
+            data[i] = line.split()
+
+    for i, key in enumerate(header):
+        to_return['data'][key] = data[:,i]
+        to_return['display_units'][key] = 1.
+        to_return['physical_units'][key] = 1.
+
+    return to_return
