@@ -73,14 +73,14 @@ class DownloadDataFromServer(PopupWindow,object):
         # Gather the preferences
         preference = self.gui.get_preference("downloaddatafromserver")
         if preference is None:
-            preference = {'username':'','address':'','path':'','command':'','command options':''}
+            preference = {'username':'','address':'','path':'','command':'scp','command options':'-Cp'}
             
         # Create variables
         self.username = tk.StringVar(value=preference['username'])
         self.address = tk.StringVar(value=preference['address'])
         self.path = tk.StringVar(value=preference['path'])
 
-        command = preference.get('command', 'scp')
+        command = preference['command']
         self.command_choice = tk.StringVar(value=command)
 
         if command == 'scp':

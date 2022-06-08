@@ -26,7 +26,10 @@ class PopupWindow(tk.Toplevel, object):
         
         # If width keyword is not given, try giving it an appropriate width
         if width is None:
-            self.width = int(self.root.winfo_screenwidth() / 6.)
+            self.width = max(
+                int(self.root.winfo_screenwidth() / 6.),
+                600,
+            )
         else: self.width = width
         
         # If height keyword is not given, then try to give an appropriate height
