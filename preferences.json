@@ -3,14 +3,20 @@
         "value": "mass",
         "label": "$m(r)\\ [M_\\odot]$",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            0.12246535538480074,
+            0.43212238794001534
+        ],
         "scale": "linear"
     },
     "YAxis": {
-        "value": "logR",
-        "label": "logR",
+        "value": "energy",
+        "label": "energy",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            1829511854623248.8,
+            3346512043807938.0
+        ],
         "scale": "linear"
     },
     "Colorbar": {

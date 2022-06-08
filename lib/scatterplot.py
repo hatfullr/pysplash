@@ -74,7 +74,8 @@ class ScatterPlot(CustomAxesImage,object):
             np.full((1,1),np.nan,dtype=int),
             cmap=ScatterPlot.cmap,
             norm=matplotlib.colors.Normalize(vmin=0,vmax=10),
-            interpolation='nearest', # No anti-aliasing
+            #interpolation='nearest', # No anti-aliasing
+            interpolation='none', # No interpolation
             **kwargs
         )
 
