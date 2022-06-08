@@ -31,5 +31,12 @@
     },
     "importdata": {
         "path": "('/media/hatfull/ExtraDrive1/data_analysis/SimulatingAStellarContactBinaryMergerII/starsmasher_energy_injection/restartrad.sph',)"
+    },
+    "downloaddatafromserver": {
+        "username": "hatfull",
+        "address": "cedar.computecanada.ca",
+        "path": "home/hatfull/data/cedar/relax/r224*/out*.sph",
+        "command": "scp",
+        "command options": "-Cp"
     }
 }

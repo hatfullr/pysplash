@@ -193,12 +193,12 @@ class DownloadDataFromServer(PopupWindow,object):
         self.cancel()
         self.close()
         
-    def cancel(self,*args,**kwargs):
+    def cancel(self, event=None, message="Download canceled"):
         if globals.debug > 1: print("downloaddatafromserver.cancel")
         self.canceled = True
 
         self.okbutton.configure(relief='raised',text='Download',command=self.download_pressed)
-        self.progressbar.set_text("Download canceled")
+        self.progressbar.set_text(message)
         self.progressbar.configure(value=0)
         self.enable_widgets()
         
@@ -325,14 +325,20 @@ class DownloadDataFromServer(PopupWindow,object):
             self.server,
             "stat -c '%s %n'",
             self.path.get(),
-        ],stdout=subprocess.PIPE,stderr=DEVNULL,preexec_fn=os.setsid)
+        ],stdout=subprocess.PIPE,stderr=subprocess.PIPE,preexec_fn=os.setsid)
 
         stdout, stderr = self.subprocess.communicate()
         if not self.canceled:
-            stdout = stdout.decode('ascii').strip().split("\n")
-            self.filelist = [o.split(" ") for o in stdout]
-            self.filenames = [f[1] for f in self.filelist]
-            self.total_size = sum([int(f[0].strip("'")) for f in self.filelist])
+            if stderr is not None and len(stderr) != 0:
+                cmd = self.command_choice.get()+" "+self.command_options.get()+" "+self.server+":"+self.path.get()+" "+self.tmp_path
+                print("Tried command:",cmd)
+                print(stderr.decode('ascii').strip())
+                self.cancel(message="Error. See terminal.")
+            else:
+                stdout = stdout.decode('ascii').strip().split("\n")
+                self.filelist = [o.split(" ") for o in stdout]
+                self.filenames = [f[1] for f in self.filelist]
+                self.total_size = sum([int(f[0].strip("'")) for f in self.filelist])
 
     def download_update(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.download_update")
