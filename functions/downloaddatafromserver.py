@@ -313,14 +313,31 @@ class DownloadDataFromServer(PopupWindow,object):
 
     def download_files(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.download_files")
-        cmd = self.command_choice.get()+" "+self.command_options.get()+" "+self.server+":"+self.path.get()+" "+self.tmp_path
+        #print(self.filenames)
+        #cmd = self.command_choice.get()+" "
+        cmd = self.command_choice.get()+" "+self.command_options.get()+" "+self.server
+        if self.command_choice.get() == "scp":
+            if " " in self.path.get():
+                print("When using the scp command, you cannot specify multiple files by separating them with a space. You must use wildcard patterns instead. Consider using rsync instead.")
+                self.cancel(message="Error. See terminal.")
+                return
+            else:
+                cmd += ":"+self.path.get()
+        elif self.command_choice.get() == "rsync":
+            cmd += " ".join([":"+name for name in self.path.get().split(" ")])
+
+        cmd += " "+self.tmp_path
+            
         self.subprocess = subprocess.Popen(
             cmd.split(" "),
             stdout=DEVNULL,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             preexec_fn=os.setsid,
         )
-        self.subprocess.communicate()
+        stdout, stderr = self.subprocess.communicate()
+        if stderr is not None and len(stderr) != 0:
+            print(stderr.decode('ascii').strip())
+            self.cancel(message="Error. See terminal.")
                 
     def get_file_list(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.get_file_list")
@@ -332,7 +349,6 @@ class DownloadDataFromServer(PopupWindow,object):
             "stat -c '%s %n'",
             self.path.get(),
         ],stdout=subprocess.PIPE,stderr=subprocess.PIPE,preexec_fn=os.setsid)
-
         stdout, stderr = self.subprocess.communicate()
         if not self.canceled:
             if stderr is not None and len(stderr) != 0:

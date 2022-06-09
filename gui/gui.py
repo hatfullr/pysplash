@@ -340,6 +340,16 @@ class GUI(tk.Frame,object):
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
+                if axis_controller.value.get() == "":
+                    exclude = []
+                    for ac in self.controls.axis_controllers.values():
+                        if ac is not axis_controller and ac.value.get() != "":
+                            exclude.append(ac.value.get())
+                    for value in axis_controller.combobox.cget('values'):
+                        if value not in exclude:
+                            axis_controller.value.set(value)
+                            break
+
 
         #if not self.controls.initialized: self.controls.initialize()
         #if not self.xy_controls_initialized: self.initialize_xy_controls()

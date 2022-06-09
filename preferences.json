@@ -1,21 +1,21 @@
 {
     "XAxis": {
-        "value": "mass",
-        "label": "$m(r)\\ [M_\\odot]$",
+        "value": "x",
+        "label": "",
         "units": 1.0,
         "limits": [
-            0.07822531012914935,
-            0.38788234268436395
+            0.0,
+            1.0
         ],
         "scale": "linear"
     },
     "YAxis": {
-        "value": "energy",
-        "label": "energy",
+        "value": "y",
+        "label": "",
         "units": 1.0,
         "limits": [
-            1751441430453056.0,
-            3268441619637746.0
+            0.0,
+            1.0
         ],
         "scale": "linear"
     },
@@ -35,8 +35,8 @@
     "downloaddatafromserver": {
         "username": "hatfull",
         "address": "cedar.computecanada.ca",
-        "path": "/home/hatfull/data/cedar/relax/r224*/out*.sph",
+        "path": "/home/hatfull/data/cedar/relax/r224*/out0999.sph /home/hatfull/data/cedar/relax/r224*/out1000.sph",
         "command": "scp",
-        "command options": "-a"
+        "command options": "-Cp"
     }
 }

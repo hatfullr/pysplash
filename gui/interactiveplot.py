@@ -179,6 +179,9 @@ class InteractivePlot(tk.Frame,object):
         x, x_physical_units, x_display_units = xaxis.get_data()
         y, y_physical_units, y_display_units = yaxis.get_data()
 
+        # Don't try to plot anything if there's no data to plot
+        if x is None or y is None: return
+
         self.origin = np.zeros(2)
         if self.track_id is not None and self.track_id in np.arange(len(x)):
             self.origin = np.array([x[self.track_id],y[self.track_id]])
@@ -310,7 +313,7 @@ class InteractivePlot(tk.Frame,object):
             if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
                 child.remove()
           
-        self.canvas.draw_idle()
+        self.canvas.draw()
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
