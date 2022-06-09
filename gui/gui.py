@@ -478,7 +478,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.update_filenames")
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
 
-        for filename in os.listdir(tmp_path):
+        for filename in sorted(os.listdir(tmp_path)):
             if filename not in self.filenames:
                 self.filenames.append(os.path.join(tmp_path,filename))
 

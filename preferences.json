@@ -4,8 +4,8 @@
         "label": "",
         "units": 1.0,
         "limits": [
-            0.0,
-            1.0
+            -5.5615525854387995,
+            5.3363227391121395
         ],
         "scale": "linear"
     },
@@ -14,8 +14,8 @@
         "label": "",
         "units": 1.0,
         "limits": [
-            0.0,
-            1.0
+            -5.883071959630468,
+            5.7706903833200816
         ],
         "scale": "linear"
     },
@@ -35,8 +35,8 @@
     "downloaddatafromserver": {
         "username": "hatfull",
         "address": "cedar.computecanada.ca",
-        "path": "/home/hatfull/data/cedar/relax/r224*/out0999.sph /home/hatfull/data/cedar/relax/r224*/out1000.sph",
-        "command": "scp",
-        "command options": "-Cp"
+        "path": "/home/hatfull/data/cedar/relax/r224*/out0999.sph /home/hatfull/data/cedar/relax/r224*/out1000.sph /home/hatfull/data/cedar/relax/r224*/out1010.sph /home/hatfull/data/cedar/relax/r224*/out1020.sph",
+        "command": "rsync",
+        "command options": "-a"
     }
 }
