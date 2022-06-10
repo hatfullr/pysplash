@@ -9,11 +9,14 @@ if support_threading:
     import globals
 
     class ThreadedTask(threading.Thread,object):
-        def __init__(self, master, target=None, start=True, args=[], kwargs={},
+        def __init__(self, master=None, target=None, start=True, args=[], kwargs={},
                      callback=None,callback_args=[],callback_kwargs={},
                      update=None,update_args=[],update_kwargs={}):
             if globals.debug > 1: print("threadedtask.__init__")
-            self.root = master.winfo_toplevel()
+            if master is not None:
+                self.root = master.winfo_toplevel()
+            else: self.root = None
+            
             self.target = target
             self.args = args
             self.kwargs = kwargs
@@ -32,8 +35,9 @@ if support_threading:
 
         def stop(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.stop")
-            if self._after_id is not None:
-                self.root.after_cancel(self._after_id)
+            if self.root is not None:
+                if self._after_id is not None:
+                    self.root.after_cancel(self._after_id)
             self.isStop = True
 
         def start(self,*args,**kwargs):
@@ -53,12 +57,14 @@ if support_threading:
             if self.queue.empty() and not self.isStop: # Not finished yet
                 if self.update is not None:
                     self.update(*self.update_args,**self.update_kwargs)
-                if self._after_id is not None:
-                    self.root.after_cancel(self._after_id)
-                self._after_id = self.root.after(10, self.process_queue)
+                if self.root is not None:
+                    if self._after_id is not None:
+                        self.root.after_cancel(self._after_id)
+                    self._after_id = self.root.after(10, self.process_queue)
             else: # Finished
-                if self._after_id is not None:
-                    self.root.after_cancel(self._after_id)
+                if self.root is not None:
+                    if self._after_id is not None:
+                        self.root.after_cancel(self._after_id)
                 if self.isStop: return
                 self.queue.get(0)
                 if globals.debug > 1: print("threadedtask finished")

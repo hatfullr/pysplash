@@ -11,6 +11,7 @@ from widgets.button import Button
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 from functions.hotkeystostring import hotkeys_to_string
+import matplotlib
 import numpy as np
 import sys
 
@@ -151,4 +152,6 @@ class CustomToolbar(NavigationToolbar2Tk):
     def remove_rubberband(self,event=None):
         # We have to override this function because for some reason it does
         # not work properly in matplotlib
-        self.draw_rubberband(event,0,0,0,0)
+        version = matplotlib.__version__.split(".")
+        if int(version[0]) >= 3 and int(version[1]) <= 3:
+            self.draw_rubberband(event,0,0,0,0)

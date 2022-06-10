@@ -105,13 +105,12 @@ def read_file(filename):
             ["*profile*.data*", mesa],
         ],
     }
-    
+
     basename = os.path.basename(filename)
     for key, val in codes.items():
         for pattern,method in val:
             if fnmatch.fnmatch(basename,pattern):
                 return method(filename)
-                break
         else: continue # Only if the inner loop didn't break
         break # Only if the inner loop did break
     else: # Only if the inner loop didn't break

@@ -26,6 +26,7 @@ from functions.getallchildren import get_all_children
 from functions.importdata import importdata
 from functions.findparticle import findparticle
 from functions.rotate import rotate
+from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 
@@ -287,11 +288,18 @@ class GUI(tk.Frame,object):
                 previous_data_length = len(next(iter(self.data['data'])))
             else:
                 previous_data_length = len(iter(self.data['data']).next())
-                
-        self.data = Data(
-            read_file(self.filecontrols.current_file.get()),
-            #rotations=(self.controls.rotation_x.get(),self.controls.rotation_y.get(),self.controls.rotation_z.get()),
-        )
+
+        current_file = self.filecontrols.current_file.get()
+        def get_data(*args,**kwargs):
+            self.data = Data(read_file(current_file))
+        
+        self.message("Reading data")
+        thread = ThreadedTask(target=get_data)
+        root = self.winfo_toplevel()
+        while thread.isAlive():
+            root.update()
+        self.clear_message()
+        
         self.display_data = {
             key : self.get_data(key)*self.get_display_units(key) for key in self.data['data'].keys()
         }
