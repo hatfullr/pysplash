@@ -7,6 +7,7 @@ else:
 from functions.closewindow import close_window
 import globals
 import os
+import shutil
 
 class Window(tk.Tk):
     def __init__(self):
@@ -43,9 +44,7 @@ class Window(tk.Tk):
         
         # Remove all files from the "tmp" directory
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
-        if not os.path.isdir(tmp_path): os.mkdir(tmp_path)
-        else:
-            for filename in os.listdir(tmp_path):
-                os.remove(os.path.join(tmp_path,filename))
+        shutil.rmtree(tmp_path)
+        os.mkdir(tmp_path)
         
         close_window(self)

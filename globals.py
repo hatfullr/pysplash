@@ -39,6 +39,7 @@ rotation_step = 15
 # modules for use by adding the import statement to
 # this variable.
 exec_imports = [
+    "import matplotlib",
     "import numpy as np",
 ]
 
