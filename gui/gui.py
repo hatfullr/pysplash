@@ -8,6 +8,7 @@ if sys.version_info.major < 3:
     from filecontrols import FileControls
     from menubar.functionsmenubar import FunctionsMenuBar
     from menubar.datamenubar import DataMenuBar
+    from menubar.plotmenubar import PlotMenuBar
 else:
     import tkinter as tk
     import tkinter.font as tkFont
@@ -17,6 +18,7 @@ else:
     from gui.filecontrols import FileControls
     from gui.menubar.functionsmenubar import FunctionsMenuBar
     from gui.menubar.datamenubar import DataMenuBar
+    from gui.menubar.plotmenubar import PlotMenuBar
 
 from lib.data import Data
 from widgets.menubar import MenuBar
@@ -177,6 +179,10 @@ class GUI(tk.Frame,object):
         self.menubar.add_cascade(
             label="Data",
             menu=DataMenuBar(self.menubar,self),
+        )
+        self.menubar.add_cascade(
+            label="Plot",
+            menu=PlotMenuBar(self.menubar,self),
         )
         
         self.left_frame = tk.Frame(self)
