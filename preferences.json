@@ -1,16 +1,22 @@
 {
     "XAxis": {
         "value": "x",
-        "label": "",
+        "label": "x",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            -3.674408764593035,
+            3.5903544085682793
+        ],
         "scale": "linear"
     },
     "YAxis": {
         "value": "y",
-        "label": "",
+        "label": "y",
         "units": 1.0,
-        "limits": "adaptive",
+        "limits": [
+            -3.6222874382678274,
+            3.6149587668871987
+        ],
         "scale": "linear"
     },
     "Colorbar": {

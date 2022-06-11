@@ -231,15 +231,6 @@ class GUI(tk.Frame,object):
     def create_hotkeys(self, *args, **kwargs):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
-        self.hotkeys.bind("next file", (
-            lambda *args, **kwargs: self.filecontrols.next_button.invoke(),
-            #lambda *args, **kwargs: self.update_idletasks(),
-            lambda *args,**kwargs: self.controls.update_button.invoke(),
-        ))
-        self.hotkeys.bind("previous file", (
-            lambda *args, **kwargs: self.filecontrols.back_button.invoke(),
-            lambda *args,**kwargs: self.controls.update_button.invoke(),
-        ))
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
         self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
         self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
@@ -424,25 +415,7 @@ class GUI(tk.Frame,object):
                 print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
             
             
-    def next_file(self,*args,**kwargs):
-        if globals.debug > 1: print("gui.next_file")
-        skip_amount = int(self.filecontrols.skip_amount.get())
-        if len(self.filenames) <= 0: return "break"
-        idx = self.filenames.index(self.filecontrols.current_file.get())
-        nextidx = min(idx+skip_amount,len(self.filenames)-1)
-        if nextidx == len(self.filenames)-1: self.filecontrols.skip_amount.set(1)
-        if self.filenames[nextidx] != self.filecontrols.current_file.get():
-            self.filecontrols.current_file.set(self.filenames[nextidx])
-
-    def previous_file(self,*args,**kwargs):
-        if globals.debug > 1: print("gui.previous_file")
-        skip_amount = int(self.filecontrols.skip_amount.get())
-        if len(self.filenames) <= 0: return "break"
-        idx = self.filenames.index(self.filecontrols.current_file.get())
-        nextidx = max(idx-skip_amount,0)
-        if nextidx == 0: self.filecontrols.skip_amount.set(1)
-        if self.filenames[nextidx] != self.filecontrols.current_file.get():
-            self.filecontrols.current_file.set(self.filenames[nextidx])
+    
 
     def make_movie(self, *args, **kwargs):
         if globals.debug > 1: print("gui.make_movie")

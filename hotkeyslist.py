@@ -23,6 +23,18 @@ hotkeyslist = {
         "modifiers" : [],
         "type" : "global",
     },
+    "last file" : {
+        "keylist" : ["<Right>"],
+        "display" : "Ctrl+RightArrow",
+        "modifiers" : ["<Control>"],
+        "type" : "global",
+    },
+    "first file" : {
+        "keylist" : ["<Left>"],
+        "display" : "Ctrl+LeftArrow",
+        "modifiers" : ["<Control>"],
+        "type" : "global",
+    },
     "update plot" : {
         "keylist" : ["<space>"],
         "display" : "Spacebar",
