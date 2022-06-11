@@ -95,6 +95,7 @@ def read_file(filename):
         "starsmasher" : [
             ["out*.sph*",starsmasher],
             ["restartrad*.sph*",starsmasher],
+            ["energy*.sph*", starsmasher_energy],
         ],
         "fluxcal" : [
             ["fluxcal*.track*",fluxcal_track],
@@ -210,6 +211,39 @@ def starsmasher(filename):
 
 
 
+def starsmasher_energy(filename):
+    munit = 1.9891e33
+    runit = 6.9599e10
+    gravconst = 6.67390e-8
+    tunit = np.sqrt(runit**3/(munit*gravconst))
+    eunit = gravconst*munit**2/runit
+    
+    to_return = {
+        'data'           : OrderedDict(),
+        'display_units'  : OrderedDict(),
+        'physical_units' : OrderedDict(),
+    }
+
+    d = np.loadtxt(filename)
+    
+    to_return['data']['t'] = d[:,0]
+    to_return['data']['Epot'] = d[:,1]
+    to_return['data']['Ekin'] = d[:,2]
+    to_return['data']['Eint'] = d[:,3]
+    to_return['data']['Etot'] = d[:,4]
+
+    to_return['display_units']['t'] = tunit / 3600. / 24. # Days
+    to_return['display_units']['Epot'] = eunit # erg
+    to_return['display_units']['Ekin'] = eunit
+    to_return['display_units']['Eint'] = eunit
+    to_return['display_units']['Etot'] = eunit
+    
+    to_return['physical_units']['t'] = tunit # Seconds
+    to_return['physical_units']['Epot'] = eunit # erg
+    to_return['physical_units']['Ekin'] = eunit
+    to_return['physical_units']['Eint'] = eunit
+    to_return['physical_units']['Etot'] = eunit
+    return to_return
 
 
 # For fluxcal*.track files from FluxCal

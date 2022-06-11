@@ -3,20 +3,14 @@
         "value": "x",
         "label": "",
         "units": 1.0,
-        "limits": [
-            -29.77555359200221,
-            29.035868917665418
-        ],
+        "limits": "adaptive",
         "scale": "linear"
     },
     "YAxis": {
         "value": "y",
         "label": "",
         "units": 1.0,
-        "limits": [
-            -32.22788804913664,
-            30.6627507742397
-        ],
+        "limits": "adaptive",
         "scale": "linear"
     },
     "Colorbar": {

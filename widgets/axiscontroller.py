@@ -235,7 +235,6 @@ class AxisController(LabelledFrame,object):
     
     def get_data(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.get_data")
-        
         widget = self.combobox
         data, physical_units, display_units = widget.get()
         

@@ -285,9 +285,9 @@ class GUI(tk.Frame,object):
         previous_data_length = 0
         if self.data is not None:
             if sys.version_info.major >= 3:
-                previous_data_length = len(next(iter(self.data['data'])))
+                previous_data_length = len(self.data['data'][next(iter(self.data['data']))])
             else:
-                previous_data_length = len(iter(self.data['data']).next())
+                previous_data_length = len(self.data['data'][iter(self.data['data']).next()])
 
         current_file = self.filecontrols.current_file.get()
         def get_data(*args,**kwargs):
@@ -308,14 +308,11 @@ class GUI(tk.Frame,object):
         }
 
         if sys.version_info.major >= 3:
-            new_data_length = len(next(iter(self.data['data'])))
+            new_data_length = len(self.data['data'][next(iter(self.data['data']))])
         else:
-            new_data_length = len(iter(self.data['data']).next())
+            new_data_length = len(self.data['data'][iter(self.data['data']).next()])
         if new_data_length != previous_data_length:
             self.interactiveplot.reset_colors()
-        
-        # Perform whatever rotation is needed from us for the display data
-        self.rotate()
         
         # Enable the colorbar
         self.controls.axis_controllers['Colorbar'].enable()
@@ -327,13 +324,16 @@ class GUI(tk.Frame,object):
         data_keys = self.data['data'].keys()
         for data_key in ['x','y','z']:
             if data_key not in data_keys:
-                raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
-
+                break
+                #raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
+        else: # If we have all the 'x', 'y', and 'z' keys
+            # Perform whatever rotation is needed from us for the display data
+            self.rotate()
+            
         keys = []
-        N = len(self.data['data']['x'])
         for key,val in self.data['data'].items():
             if hasattr(val,"__len__"):
-                if len(val) == N: keys.append(key)
+                if len(val) == new_data_length: keys.append(key)
         
         # Check for requisite keys for colorbar plots
         values = ['']
@@ -357,10 +357,6 @@ class GUI(tk.Frame,object):
                         if value not in exclude:
                             axis_controller.value.set(value)
                             break
-
-
-        #if not self.controls.initialized: self.controls.initialize()
-        #if not self.xy_controls_initialized: self.initialize_xy_controls()
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")

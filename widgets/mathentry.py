@@ -104,7 +104,6 @@ class MathEntry(FlashingEntry, object):
             text = imp+text
 
         # We feed in the unscaled variables only
-            
         loc = {}
         exec(text, variables, loc)
         result1 = loc['result']
