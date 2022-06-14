@@ -95,7 +95,7 @@ class InteractivePlot(tk.Frame,object):
         self.xycoords = tk.StringVar()
         self.time = tk.DoubleVar()
         
-        self.time.trace('w',lambda event=None: self.set_time_text(event))
+        self.time.trace('w',lambda *args, **kwargs: self.set_time_text())
 
         self.time_text = None
     
@@ -357,36 +357,38 @@ class InteractivePlot(tk.Frame,object):
             self.reset_clim(draw=False)
         self.after_calculate(self, *args, **kwargs)
         
-    def set_time_text(self,event):
+    def set_time_text(self,event=None):
         if globals.debug > 1: print("interactiveplot.set_time_text")
         text = "t = %f" % self.time.get()
 
-        # Check if the mouse is inside the plot region
-        widget = self.canvas.get_tk_widget()
-        width = widget.winfo_width()
-        height = widget.winfo_height()
+        if self.time_text is not None:
+            self.time_text.set_text(text)
+
+        if event is not None:
+            # Check if the mouse is inside the plot region
+            widget = self.canvas.get_tk_widget()
+            width = widget.winfo_width()
+            height = widget.winfo_height()
         
-        xpos = event.x_root - widget.winfo_rootx()
-        ypos = height - (event.y_root - widget.winfo_rooty())
-        if not ((0 <= xpos and xpos <= width) and
-                (0 <= ypos and ypos <= height)):
-            return
-        
-        
-        if self.time_text is None:
-            self.time_text = self.ax.annotate(
-                text,
-                (xpos,ypos),
-                xycoords='figure pixels',
-            )
-        else:
-            pos = self.time_text.get_position()
-            if xpos == pos[0] and ypos == pos[1] and self.time_text.get_visible():
-                self.time_text.set_visible(False)
+            xpos = event.x_root - widget.winfo_rootx()
+            ypos = height - (event.y_root - widget.winfo_rooty())
+            if not ((0 <= xpos and xpos <= width) and
+                    (0 <= ypos and ypos <= height)):
+                return
+            
+            if self.time_text is None:
+                self.time_text = self.ax.annotate(
+                    text,
+                    (xpos,ypos),
+                    xycoords='figure pixels',
+                )
             else:
-                self.time_text.set_text(text)
-                self.time_text.set_position((xpos,ypos))
-                self.time_text.set_visible(True)
+                pos = self.time_text.get_position()
+                if xpos == pos[0] and ypos == pos[1] and self.time_text.get_visible():
+                    self.time_text.set_visible(False)
+                else:
+                    self.time_text.set_position((xpos,ypos))
+                    self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
     def reset_clim(self, draw=True):

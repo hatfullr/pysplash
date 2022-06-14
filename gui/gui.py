@@ -355,6 +355,12 @@ class GUI(tk.Frame,object):
                             axis_controller.value.set(value)
                             break
 
+        # Update the time text in the plot, if time data is available
+        for name in ['t','time']:
+            if name in ckeys:
+                self.interactiveplot.time.set(self.data['data'][name])
+                break
+
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
         if self.data is None: return None
