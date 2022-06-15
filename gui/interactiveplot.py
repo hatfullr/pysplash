@@ -96,7 +96,7 @@ class InteractivePlot(tk.Frame,object):
 
         # Apply the style given in the user's preferences
         style = self.gui.get_preference("style")
-        self.set_style(style)
+        if style is not None: self.set_style(style)
         
 
     def create_variables(self):
