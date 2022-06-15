@@ -243,7 +243,7 @@ class GUI(tk.Frame,object):
         self.hotkeys.bind("find particle", lambda *args,**kwargs: findparticle(self))
 
     def destroy(self, *args, **kwargs):
-        if self.message_after_id is not None:
+        if hasattr(self, "message_after_id") and self.message_after_id is not None:
             self.after_cancel(self.message_after_id)
         self.message_after_id = None
         super(GUI,self).destroy(*args, **kwargs)
