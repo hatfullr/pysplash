@@ -827,19 +827,6 @@ class InteractivePlot(tk.Frame,object):
                     try:
                         ax.tick_params(axis=axis,which='both',**{key:val})
                     except ValueError: pass
-                    
-                #while True:
-                #    try:
-                #        ax.tick_params(axis=axis,which='both',**stuff)
-                #        break
-                #    except ValueError:
-                #        stuff.pop(
-                        #if "is not recognized" in str(e):
-                        #    key = str(e).split(" is not recognized")[0].replace("keyword ","")
-                        #    stuff.pop(key)
-                        #else:
-                        #    print(traceback.format_exc())
-                        #    return
 
             # Update fonts and objects that have text
             spines = [val for key,val in ax.spines.items()]

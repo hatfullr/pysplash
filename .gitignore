@@ -6,3 +6,5 @@
 **/out*.sph
 **/fluxcal*.track
 test
+artists
+preferences.json

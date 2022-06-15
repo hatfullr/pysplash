@@ -36,9 +36,10 @@ class SetStyle(PopupWindow,object):
 
         self.current_style = self.gui.get_preference("style")
 
-        if self.current_style is not None:
-            for style in self.current_style:
-                self.available_styles.remove(style)
+        if self.current_style is None: self.current_style = ['default']
+        
+        for style in self.current_style:
+            self.available_styles.remove(style)
         
         self.create_variables()
         self.create_widgets()
