@@ -32,6 +32,7 @@ from functions.getallchildren import get_all_children
 
 import warnings
 import inspect
+import traceback
 
 class InteractivePlot(tk.Frame,object):
     def __init__(self,master,gui,*args,**kwargs):
@@ -797,21 +798,48 @@ class InteractivePlot(tk.Frame,object):
                     else:
                         ax.tick_params(axis=axis,which='minor',left=minorvisible,right=minorvisible)
 
+                major_stuff = {}
+                minor_stuff = {}
+                for key, val in tickkw.items():
+                    if 'major' in key:
+                        real_key = key.split(".")[-1]
+                        major_stuff[real_key] = val
+                    elif 'minor' in key:
+                        real_key = key.split(".")[-1]
+                        minor_stuff[real_key] = val
+                for key,val in major_stuff.items():
+                    try:
+                        ax.tick_params(axis=axis,which='major',**{key:val})
+                    except ValueError: pass
+
+                for key,val in minor_stuff.items():
+                    try:
+                        ax.tick_params(axis=axis,which='minor',**{key:val})
+                    except ValueError: pass
+                        
                 stuff = {}
                 for key, val in tickkw.items():
                     if 'major' not in key and 'minor' not in key:
                         real_key = key.split(".")[-1]
                         stuff[real_key] = val
-                while True:
+
+                for key,val in stuff.items():
                     try:
-                        ax.tick_params(axis=axis,which='both',**stuff)
-                        break
-                    except ValueError as e:
-                        if "is not recognized" in str(e):
-                            key = str(e).split(" is not recognized")[0].replace("keyword ","")
-                            stuff.pop(key)
-                        else:
-                            print(traceback.format_exc())
+                        ax.tick_params(axis=axis,which='both',**{key:val})
+                    except ValueError: pass
+                    
+                #while True:
+                #    try:
+                #        ax.tick_params(axis=axis,which='both',**stuff)
+                #        break
+                #    except ValueError:
+                #        stuff.pop(
+                        #if "is not recognized" in str(e):
+                        #    key = str(e).split(" is not recognized")[0].replace("keyword ","")
+                        #    stuff.pop(key)
+                        #else:
+                        #    print(traceback.format_exc())
+                        #    return
 
             # Update fonts and objects that have text
             spines = [val for key,val in ax.spines.items()]
