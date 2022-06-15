@@ -44,7 +44,7 @@ class Window(tk.Tk):
         
         # Remove all files from the "tmp" directory
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
-        shutil.rmtree(tmp_path)
+        if os.isdir(tmp_path): shutil.rmtree(tmp_path)
         os.mkdir(tmp_path)
         
         close_window(self)
