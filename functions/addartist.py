@@ -91,6 +91,8 @@ class AddArtist(PopupWindow,object):
     def get_saved_artists(self, *args, **kwargs):
         if globals.debug > 1: print("addartist.get_saved_artists")
 
+        if not os.path.isdir(AddArtist.artist_directory):
+            os.mkdir(AddArtist.artist_directory)
         filenames = os.listdir(AddArtist.artist_directory)
         names = []
         methods = []
