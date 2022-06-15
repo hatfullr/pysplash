@@ -5,12 +5,16 @@ if version_info.major >= 3:
 else:
     import Tkinter as tk
     import ttk
+from widgets.dragdroplistbox import DragDropListbox
 
 class ListboxScrollbar(tk.Listbox, object):
     def __init__(self, master, xscrollbar=True, yscrollbar=True, **kwargs):
 
         self.container = tk.Frame(master)
-        super(ListboxScrollbar,self).__init__(self.container,**kwargs)
+        if kwargs.get('selectmode', None) is not None and kwargs['selectmode'] == 'dragdrop':
+            DragDropListbox.__init__(self, self.container,**kwargs)
+        else:
+            super(ListboxScrollbar,self).__init__(self.container,**kwargs)
 
         self.container.columnconfigure(0, weight=1)
         self.container.rowconfigure(0, weight=1)

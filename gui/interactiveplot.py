@@ -5,6 +5,7 @@ else:
     import tkinter as tk
 import globals
 
+import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.collections import PathCollection, PolyCollection
@@ -28,6 +29,9 @@ from functions.eventinaxis import event_in_axis
 from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseevent
 
 from functions.getallchildren import get_all_children
+
+import warnings
+import inspect
 
 class InteractivePlot(tk.Frame,object):
     def __init__(self,master,gui,*args,**kwargs):
@@ -89,6 +93,11 @@ class InteractivePlot(tk.Frame,object):
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
 
         self._after_id_update = None
+
+        # Apply the style given in the user's preferences
+        style = self.gui.get_preference("style")
+        self.set_style(style)
+        
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -686,3 +695,160 @@ class InteractivePlot(tk.Frame,object):
         self._select_info = None
         self.gui.message("Press 0-9 to change selected particles' colors",duration=5000)
 
+
+    # style is a list or tuple
+    def set_style(self,style):
+        if globals.debug > 1: print("interactiveplot.set_style")
+
+        if not isinstance(style, (list,tuple)):
+            raise TypeError("'style' must be either a list or a tuple, not '"+type(style).__name__+".")
+        
+        rcParams = {}
+        for s in style:
+            # Construct rcParams from the default file
+            if s == 'default': d = matplotlib.rc_params()
+            # Get rcParams from the style library
+            else: d = matplotlib.style.library[s]
+            for key in d:
+                if key not in rcParams.keys():
+                    rcParams[key] = d[key]
+
+        self.update_rcParams(rcParams)
+        
+    # Matplotlib refuses to change its style after it has already drawn stuff.
+    # So here we instead force changes to the artists to simulate as if everything
+    # was redrawn
+    def update_rcParams(self,new_rcParams):
+        if globals.debug > 1: print("interactiveplot.update_rcParams")
+        # Completely update the figure by clearing everything and redrawing.
+        # Most things in rcParams are supported, but some are not
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+        
+            for key,val in new_rcParams.items():
+                matplotlib.pyplot.rcParams[key] = val
+
+            ax = self.ax
+            figure = ax.get_figure()
+
+            # Store keywords
+            figkw = {key:val for key,val in new_rcParams.items() if 'figure.' in key}
+            fontkw = {key:val for key,val in new_rcParams.items() if 'font.' in key}
+            lineskw = {key:val for key,val in new_rcParams.items() if 'lines.' in key}
+            axeskw = {key:val for key,val in new_rcParams.items() if 'axes.' in key}
+            textkw = {key:val for key,val in new_rcParams.items() if 'text.' in key}
+            xtickkw = {key:val for key,val in new_rcParams.items() if 'xtick.' in key}
+            ytickkw = {key:val for key,val in new_rcParams.items() if 'ytick.' in key}
+
+            # Update the figure parameters
+            keys = figkw.keys()
+            if 'figure.subplot' in keys:
+                word = 'figure.subplot'
+                kws = ['bottom','hspace','left','right','top','wspace']
+                words = [word+'.'+w for w in kws]
+                kw = {}
+                for key in words:
+                    kw[key] = figkw.get(key,None)
+                figure.subplots_adjust(**kw)
+            # Do our best to capture keywords by the 'set' commands in an effort
+            # to make our code future compatible as best as we can
+            figdir = dir(figure)
+            for key,val in figkw.items():
+                keycheck = key.replace('figure.','')
+                for d in [f for f in figdir if 'set_' in f and keycheck in f]:
+                    if "dpi" not in d:
+                        getattr(figure,d)(val)
+
+            # Tick parameters
+            xtick_minor_visible = new_rcParams.get('xtick.minor.visible',False)
+            ytick_minor_visible = new_rcParams.get('ytick.minor.visible',False)
+
+            # Font properties
+            keys = inspect.getargspec(matplotlib.font_manager.FontProperties.__init__).args
+            kwargs = {}
+            for key in keys:
+                for k,v in fontkw.items():
+                    if key in k:
+                        kwargs[key] = v
+            font = matplotlib.font_manager.FontProperties(**kwargs)
+
+            # Update the axis
+            if xtick_minor_visible and ytick_minor_visible:
+                ax.minorticks_on()
+            else:
+                ax.minorticks_on()
+                xlocator = ax.xaxis.get_minor_locator()
+                ylocator = ax.yaxis.get_minor_locator()
+                ax.minorticks_off()
+
+                if xtick_minor_visible:
+                    ax.xaxis.set_minor_locator(xlocator)
+                if ytick_minor_visible:
+                    ax.yaxis.set_minor_locator(ylocator)
+
+
+            # Update the ticks
+            for axis,tickkw in zip(['x','y'],[xtickkw,ytickkw]):
+                minorvisible = tickkw.pop(axis+"tick.minor.visible", None)
+                if minorvisible is not None:
+                    if axis == 'x':
+                        ax.tick_params(axis=axis,which='minor',bottom=minorvisible,top=minorvisible)
+                    else:
+                        ax.tick_params(axis=axis,which='minor',left=minorvisible,right=minorvisible)
+
+                stuff = {}
+                for key, val in tickkw.items():
+                    if 'major' not in key and 'minor' not in key:
+                        real_key = key.split(".")[-1]
+                        stuff[real_key] = val
+                while True:
+                    try:
+                        ax.tick_params(axis=axis,which='both',**stuff)
+                        break
+                    except ValueError as e:
+                        if "is not recognized" in str(e):
+                            key = str(e).split(" is not recognized")[0].replace("keyword ","")
+                            stuff.pop(key)
+                        else:
+                            print(traceback.format_exc())
+
+            # Update fonts and objects that have text
+            spines = [val for key,val in ax.spines.items()]
+            patch = ax.patch
+            xticklines = ax.get_xticklines()
+            yticklines = ax.get_yticklines()
+            dirax = dir(ax)
+            for key,val in axeskw.items():
+                attr = key.replace('axes.','')
+                if 'set_'+attr in dirax:
+                    getattr(ax,'set_'+attr)(val)
+                else:
+                    if attr == 'edgecolor': # This means to color the spines
+                        for side,spine in ax.spines.items(): 
+                            spine.set_color(val)
+
+            for child in self.get_all_ax_children():
+                # Make global edits to text
+                if hasattr(child, "set_fontproperties"):
+                    child.set_fontproperties(font)
+                if 'text.color' in textkw:
+                    if isinstance(child, matplotlib.text.Text):
+                        child.set_color(textkw['text.color'])
+                
+        # Draw the new figure
+        self.canvas.draw()
+
+
+    def get_all_ax_children(self,obj=None,result=[]):
+        if globals.debug > 1: print("interactiveplot.get_all_ax_children")
+
+        if obj is None: obj = self.ax
+        if obj is not self.ax and obj not in result: result.append(obj)
+        if hasattr(obj,"get_children"):
+            for child in obj.get_children():
+                if child not in result: result.append(child)
+                self.get_all_ax_children(obj=child,result=result)
+        else:
+            if child not in result: result.append(obj)
+        return result

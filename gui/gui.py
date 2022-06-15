@@ -358,7 +358,9 @@ class GUI(tk.Frame,object):
         # Update the time text in the plot, if time data is available
         for name in ['t','time']:
             if name in ckeys:
-                self.interactiveplot.time.set(self.data['data'][name])
+                time = self.get_data(name)
+                if time is not None:
+                    self.interactiveplot.time.set(time*self.get_display_units(name))
                 break
 
     def get_data(self,key):
