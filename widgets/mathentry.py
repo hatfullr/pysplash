@@ -9,10 +9,11 @@ else:
 from widgets.flashingentry import FlashingEntry
 from widgets.button import Button
 from widgets.popupwindow import PopupWindow
-from widgets.codetext import CodeText
+from widgets.saveablecodetext import SaveableCodeText
 import globals
 import numpy as np
 import traceback
+import os
 
 # This widget expects as input some math operation using the data in the gui
 # widget. For example "rho * opacity" would multiply together the "rho" and
@@ -61,20 +62,30 @@ class MathEntry(FlashingEntry, object):
         window = PopupWindow(
             self,
             title="Edit entry...",
-            oktext='Save',
+            oktext='Apply',
             okcommand=okcommand,
             height=int(self.winfo_screenheight() / 2.),
         )
         description = ttk.Label(
             window.contents,
-            text="Enter any arbitrary Python code you wish below. You can reference data variables by their names shown in the dropdown selection box, such as \"x\", \"y\", \"z\", etc. Your code must terminate with the line \"result = <your result>\" where \"<your reuslt>\" represents a 1D array.",
+            text="Enter any arbitrary Python code you wish below. You can reference data variables by their names shown in the dropdown selection box, such as \"x\", \"y\", \"z\", etc. Your code must terminate with the line \"result = <your result>\" where \"<your reuslt>\" represents a 1D array.\nYou can save your code by giving it a name and clicking \"Save\".",
             wraplength = window.width - 2*window.cget('padx'),
         )
 
-        codetext = CodeText(window.contents)
+        selector_frame = tk.Frame(window.contents)
+        #label = ttk.Label(selector_frame, text="Name:")
+        #combobox_text = tk.StringVar()
+        #combobox = ttk.Combobox(selector_frame, textvariable=combobox_text)
+        #save_button = Button(selector_frame, text="Save")
+        
+        codetext = SaveableCodeText(window.contents, os.path.join(globals.profile_path,"axis"))
         codetext.insert('0.0', self.get())
 
         description.pack(side='top',fill='both')
+        #label.pack(side='left')
+        #combobox.pack(side='left',fill='both',expand=True,padx=5)
+        #save_button.pack(side='left')
+        #selector_frame.pack(side='top',fill='both',expand=True)
         codetext.pack(side='top', fill='both', expand=True)
 
         
