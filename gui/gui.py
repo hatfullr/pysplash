@@ -166,7 +166,6 @@ class GUI(tk.Frame,object):
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
-        self.menubar = MenuBar(self.window,self)
         
         
         self.left_frame = tk.Frame(self)
@@ -197,7 +196,8 @@ class GUI(tk.Frame,object):
             bd=1,
             relief='sunken',
         )
-        
+
+        self.menubar = MenuBar(self.window,self)
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
         
     def place_widgets(self):
@@ -232,15 +232,15 @@ class GUI(tk.Frame,object):
         self.message_after_id = None
         super(GUI,self).destroy(*args, **kwargs)
         
-    def message(self,text,duration=None):
+    def message(self,text,duration=2000):
         if globals.debug > 1: print("gui.message")
         # Display a message on the bottom-right hand corner of the window
         # If duration is None then the message will persist forever
         self.message_text.set(text)
-        if duration is not None:
-            if self.message_after_id is not None:
-                self.after_cancel(self.message_after_id)
-            self.message_after_id = self.after(duration, self.clear_message)
+        #if duration is not None:
+        if self.message_after_id is not None:
+            self.after_cancel(self.message_after_id)
+        self.message_after_id = self.after(duration, self.clear_message)
     def clear_message(self,*args,**kwargs):
         if globals.debug > 1: print("gui.clear_message")
         self.message_text.set("")

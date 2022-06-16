@@ -14,6 +14,7 @@ from functions.hotkeystostring import hotkeys_to_string
 import matplotlib
 import numpy as np
 import sys
+import os
 
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self,master,gui,canvas,**kwargs):
@@ -31,6 +32,8 @@ class CustomToolbar(NavigationToolbar2Tk):
 
         self.queued_zoom = None
         self.zoom_event = None
+
+        self.savename = ""
         
         self.configure(**kwargs)
 
@@ -155,3 +158,51 @@ class CustomToolbar(NavigationToolbar2Tk):
         version = matplotlib.__version__.split(".")
         if int(version[0]) >= 3 and int(version[1]) <= 3:
             self.draw_rubberband(event,0,0,0,0)
+
+
+# https://github.com/matplotlib/matplotlib/blob/1ff14f140546b8df3f17543ff8dac3ddd210c0f1/lib/matplotlib/backends/_backend_tk.py#L782
+            
+    def save_figure_as(self, *args, **kwargs):
+        filetypes = self.canvas.get_supported_filetypes().copy()
+        default_filetype = self.canvas.get_default_filetype()
+
+        # Tk doesn't provide a way to choose a default filetype,
+        # so we just have to put it first
+        default_filetype_name = filetypes.pop(default_filetype)
+        sorted_filetypes = ([(default_filetype, default_filetype_name)]
+                            + sorted(filetypes.items()))
+        tk_filetypes = [(name, '*.%s' % ext) for ext, name in sorted_filetypes]
+        
+        # adding a default extension seems to break the
+        # asksaveasfilename dialog when you choose various save types
+        # from the dropdown.  Passing in the empty string seems to
+        # work - JDH!
+        # defaultextension = self.canvas.get_default_filetype()
+        defaultextension = ''
+        initialfile = self.canvas.get_default_filename()
+        
+        self.savename = tk.filedialog.asksaveasfilename(
+            master=self.canvas.get_tk_widget().master,
+            title="Save the figure",
+            filetypes=tk_filetypes,
+            defaultextension=defaultextension,
+            initialdir=os.getcwd(),
+            initialfile=initialfile,
+        )
+
+        if self.savename in ["",()]: return
+
+        # Save dir for next time
+        matplotlib.rcParams['savefig.directory'] = (
+            os.path.dirname(str(self.savename)))
+            
+    def save_figure(self, *args, **kwargs):
+        # If we haven't done a "Save As" yet, then do that first
+        if self.savename in ["", ()]: self.save_figure_as()
+
+        try:
+            # This method will handle the delegation to the correct type
+            self.canvas.figure.savefig(self.savename)
+            self.gui.message("Figure saved")
+        except Exception as e:
+            tk.messagebox.showerror("Error saving file", str(e))

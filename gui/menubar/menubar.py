@@ -6,6 +6,7 @@ from gui.menubar.menu import Menu
 from gui.menubar.functionsmenubar import FunctionsMenuBar
 from gui.menubar.datamenubar import DataMenuBar
 from gui.menubar.plotmenubar import PlotMenuBar
+from gui.menubar.filemenubar import FileMenuBar
 
 class MenuBar(Menu, object):
     def __init__(self,root,gui,*args,**kwargs):
@@ -13,7 +14,11 @@ class MenuBar(Menu, object):
         self.gui = gui
         kwargs['tearoff'] = 0
         super(MenuBar,self).__init__(self.root,*args,**kwargs)
-        
+
+        self.add_cascade(
+            label="File",
+            menu=FileMenuBar(self,gui),
+        )
         self.add_cascade(
             label="Functions",
             menu=FunctionsMenuBar(self,gui),
