@@ -161,8 +161,7 @@ class AddArtist(PopupWindow,object):
         if globals.debug > 1: print("addartist.add_artist")
 
         if not self.is_artist_saved():
-            if self.ask_continue_without_saving(message="Do you want to save your artist to the list of pre-made artists?"):
-                self.save_artist()
+            if not self.ask_continue_without_saving(): return
         
         ax = self.gui.interactiveplot.ax
         
