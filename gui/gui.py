@@ -6,9 +6,7 @@ if sys.version_info.major < 3:
     from controls import Controls
     from customtoolbar import CustomToolbar
     from filecontrols import FileControls
-    from menubar.functionsmenubar import FunctionsMenuBar
-    from menubar.datamenubar import DataMenuBar
-    from menubar.plotmenubar import PlotMenuBar
+    from menubar.menubar import MenuBar
 else:
     import tkinter as tk
     import tkinter.font as tkFont
@@ -16,12 +14,9 @@ else:
     from gui.controls import Controls
     from gui.customtoolbar import CustomToolbar
     from gui.filecontrols import FileControls
-    from gui.menubar.functionsmenubar import FunctionsMenuBar
-    from gui.menubar.datamenubar import DataMenuBar
-    from gui.menubar.plotmenubar import PlotMenuBar
+    from gui.menubar.menubar import MenuBar
 
 from lib.data import Data
-from widgets.menubar import MenuBar
 from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
@@ -172,18 +167,7 @@ class GUI(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
         self.menubar = MenuBar(self.window,self)
-        self.menubar.add_cascade(
-            label="Functions",
-            menu=FunctionsMenuBar(self.menubar,self),
-        )
-        self.menubar.add_cascade(
-            label="Data",
-            menu=DataMenuBar(self.menubar,self),
-        )
-        self.menubar.add_cascade(
-            label="Plot",
-            menu=PlotMenuBar(self.menubar,self),
-        )
+        
         
         self.left_frame = tk.Frame(self)
         self.interactiveplot = InteractivePlot(

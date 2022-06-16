@@ -6,13 +6,13 @@ from functions.downloaddatafromserver import download_data_from_server
 from functions.importdata import importdata
 from functions.hotkeystostring import hotkeys_to_string
 from functions.findparticle import findparticle
+from gui.menubar.menu import Menu
 
-class DataMenuBar(tk.Menu, object):
-    def __init__(self, master, gui, name='data', tearoff=0, *args, **kwargs):
+class DataMenuBar(Menu, object):
+    def __init__(self, master, gui, tearoff=0, *args, **kwargs):
         super(DataMenuBar, self).__init__(
             master,
             *args,
-            name=name,
             tearoff=tearoff,
             **kwargs
         )

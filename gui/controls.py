@@ -88,21 +88,16 @@ class Controls(tk.Frame,object):
         for name, axis_controller in self.axis_controllers.items():
             pref = self.gui.get_preference(name)
             if pref is not None:
-                try:
+                if pref['value'] in data.keys():
                     axis_controller.value.set(pref['value'])
                     axis_controller.get_data()
                     value_to_set = pref['value']
                     label_to_set = pref['label']
-                except:
-                    print(traceback.format_exc())
-                    
+                else:
                     values = list(axis_controller.combobox['values'])
                     value_to_set = ""
                     label_to_set = ""
-                    #if pref['value'] in values:
-                    #    value_to_set = pref['value']
-                    #    label_to_set = pref['label']
-                    #else:
+                    
                     # Choose the first available option that has not been chosen by the other axis controllers
                     available_values = copy(values)
                     for ac in self.axis_controllers.values():

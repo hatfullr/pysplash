@@ -5,13 +5,13 @@ else: import Tkinter as tk
 from functions.addartist import AddArtist
 from functions.manageartists import ManageArtists
 from functions.setstyle import SetStyle
+from gui.menubar.menu import Menu
 
-class PlotMenuBar(tk.Menu, object):
-    def __init__(self, master, gui, name='functions', tearoff=0, *args, **kwargs):
+class PlotMenuBar(Menu, object):
+    def __init__(self, master, gui, tearoff=0, *args, **kwargs):
         super(PlotMenuBar, self).__init__(
             master,
             *args,
-            name=name,
             tearoff=tearoff,
             **kwargs
         )
