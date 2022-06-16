@@ -43,8 +43,9 @@ exec_imports = [
     "import numpy as np",
 ]
 
-
-
+# Specify the location of the profile directory
+import os.path
+profile_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"profile")
 
 
 

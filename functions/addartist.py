@@ -20,7 +20,7 @@ import json
 
 class AddArtist(PopupWindow,object):
     tmp_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
-    artist_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"artists")
+    artist_directory = os.path.join(globals.profile_path,"artists")
     forbidden_characters = ["#","%","&","{","}","\\","<",">","*","?","/"," ","$","!","'",'"',":","@","+","`","|","="]
     def __init__(self, gui):
         if globals.debug > 1: print("addartist.__init__")

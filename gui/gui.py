@@ -42,6 +42,8 @@ class GUI(tk.Frame,object):
         self.fontname = fontname
         self.fontsize = fontsize
 
+        self.preferences_path = os.path.join(globals.profile_path,"preferences.json")
+
         # Turn this on and off to indicate that edits are being
         # made from the code rather than from the user
         self.user_controlled = True
@@ -70,7 +72,6 @@ class GUI(tk.Frame,object):
         self.display_data = None
         
         self.preferences = {}
-        self.preferences_file = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"preferences.json")
 
         self.load_preferences()
 
@@ -436,13 +437,13 @@ class GUI(tk.Frame,object):
         
     def save_preferences(self,*args,**kwargs):
         if globals.debug > 1: print("gui.save_preferences")
-        with open(self.preferences_file,'w') as f:
+        with open(self.preferences_path,'w') as f:
             json.dump(self.preferences, f, indent=4)
 
     def load_preferences(self,*args,**kwargs):
         if globals.debug > 1: print("gui.load_preferences")
-        if not os.path.isfile(self.preferences_file): return
-        with open(self.preferences_file,'r') as f:
+        if not os.path.isfile(self.preferences_path): return
+        with open(self.preferences_path,'r') as f:
             f.seek(0,2)
             filesize = f.tell()
             f.seek(0)
