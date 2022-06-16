@@ -537,6 +537,8 @@ class InteractivePlot(tk.Frame,object):
         
         # Disconnect the scroll wheel zoom binding while panning
         if self.hotkeys.is_bound("zoom"): self.hotkeys.unbind("zoom")
+        if self.hotkeys.is_bound("zoom x"): self.hotkeys.unbind("zoom x")
+        if self.hotkeys.is_bound("zoom y"): self.hotkeys.unbind("zoom y")
         
         # Trick Matplotlib into thinking we pressed the left mouse button
         event.button = 1
@@ -560,6 +562,8 @@ class InteractivePlot(tk.Frame,object):
         self.gui.plottoolbar.release_pan(event)
         # Reconnect the scroll wheel zoom binding
         if not self.hotkeys.is_bound("zoom"): self.hotkeys.bind("zoom", self.zoom)
+        if not self.hotkeys.is_bound("zoom x"): self.hotkeys.bind("zoom x", lambda event: self.zoom(event, which='x'))
+        if not self.hotkeys.is_bound("zoom y"): self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
 
     def color_particles(self, event):
         if globals.debug > 1: print("interactiveplot.color_particles")
