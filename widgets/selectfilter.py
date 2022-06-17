@@ -22,25 +22,27 @@ class SelectFilter(tk.Frame,object):
             if smode == 'dragdrop':
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
 
-        self.left = left
-        self.right = right
+        self._left = left
+        self._right = right
                 
     @property
     def left(self):
-        return self.__listbox_left.get(0,'end')
+        return self._left
 
     @left.setter
     def left(self, value):
+        self._left = value
         self.__listbox_left.delete(0,'end')
         for i,val in enumerate(value):
             self.__listbox_left.insert(i,val)
 
     @property
     def right(self):
-        return self.__listbox_right.get(0,'end')
+        return self._right
 
     @right.setter
     def right(self, value):
+        self._right = value
         self.__listbox_right.delete(0,'end')
         for i,val in enumerate(value):
             self.__listbox_right.insert(i,val)
