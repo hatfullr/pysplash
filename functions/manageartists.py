@@ -28,10 +28,14 @@ class ManageArtists(PopupWindow,object):
         self.ax = self.gui.interactiveplot.ax
 
         self.artists = self.ax.get_children()
+
+        # Remove any duplicate artists. This can happen for ax.plot artists, for some reason...
+        self.artists = [artist for i,artist in enumerate(self.artists) if artist not in self.artists[:i]]
+        
         self.initial_visible = [artist for artist in self.artists if hasattr(artist, "get_visible") and artist.get_visible()]
         self.initial_hidden = [artist for artist in self.artists if hasattr(artist, "get_visible") and not artist.get_visible()]
-        self.visible_artists = [artist for artist in self.artists if hasattr(artist, "get_visible") and artist.get_visible()]
-        self.hidden_artists = [artist for artist in self.artists if hasattr(artist, "get_visible") and not artist.get_visible()]
+        self.visible_artists = [artist for artist in self.initial_visible]
+        self.hidden_artists = [artist for artist in self.initial_hidden]
 
         self.create_variables()
         self.create_widgets()

@@ -31,7 +31,8 @@ class SelectFilter(tk.Frame,object):
 
     @left.setter
     def left(self, value):
-        self._left = value
+        # Disallow duplicates
+        self._left = value#tuple(v for i,v in enumerate(value) if v not in value[:i])
         self.__listbox_left.delete(0,'end')
         for i,val in enumerate(value):
             self.__listbox_left.insert(i,val)
@@ -42,7 +43,8 @@ class SelectFilter(tk.Frame,object):
 
     @right.setter
     def right(self, value):
-        self._right = value
+        # Disallow duplicates
+        self._right = value#tuple(v for i,v in enumerate(value) if v not in value[:i])
         self.__listbox_right.delete(0,'end')
         for i,val in enumerate(value):
             self.__listbox_right.insert(i,val)
@@ -83,8 +85,8 @@ class SelectFilter(tk.Frame,object):
     def move_selected_left(self,*args,**kwargs):
         indices = self.__listbox_right.curselection()
         
-        moved = tuple([self.right[i] for i in indices])
-        self.right = tuple(val for val in self.right if val not in moved)
+        moved = [self.right[i] for i in indices]
+        self.right = [val for val in self.right if val not in moved]
         self.left += moved
 
         self.event_generate("<<ValuesUpdated>>")
@@ -98,8 +100,8 @@ class SelectFilter(tk.Frame,object):
     def move_selected_right(self,*args,**kwargs):
         indices = self.__listbox_left.curselection()
         
-        moved = tuple([self.left[i] for i in indices])
-        self.left = tuple(val for val in self.left if val not in moved)
+        moved = [self.left[i] for i in indices]
+        self.left = [val for val in self.left if val not in moved]
         self.right += moved
 
         self.event_generate("<<ValuesUpdated>>")
