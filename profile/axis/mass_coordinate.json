@@ -1,0 +1,1 @@
+"import numpy as np\nxyz = np.column_stack((x,y,z))\nr2 = np.sum(xyz**2,axis=-1)\nidx = np.argsort(r2)\nresult = np.cumsum(m[idx])[np.argsort(idx)]\n"

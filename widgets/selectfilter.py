@@ -18,12 +18,12 @@ class SelectFilter(tk.Frame,object):
         self._create_widgets()
         self._place_widgets()
 
+        self.left = left
+        self.right = right
+
         for smode, lbox in zip(self.selectmode, [self.__listbox_left,self.__listbox_right]):
             if smode == 'dragdrop':
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
-
-        self._left = left
-        self._right = right
                 
     @property
     def left(self):
@@ -84,7 +84,7 @@ class SelectFilter(tk.Frame,object):
         indices = self.__listbox_right.curselection()
         
         moved = tuple([self.right[i] for i in indices])
-        self.right = (val for val in self.right if val not in moved)
+        self.right = tuple(val for val in self.right if val not in moved)
         self.left += moved
 
         self.event_generate("<<ValuesUpdated>>")
@@ -99,7 +99,7 @@ class SelectFilter(tk.Frame,object):
         indices = self.__listbox_left.curselection()
         
         moved = tuple([self.left[i] for i in indices])
-        self.left = (val for val in self.left if val not in moved)
+        self.left = tuple(val for val in self.left if val not in moved)
         self.right += moved
 
         self.event_generate("<<ValuesUpdated>>")
@@ -111,25 +111,7 @@ class SelectFilter(tk.Frame,object):
             self.__listbox_left.event_generate("<<ListboxSelect>>")
 
     def update_values(self,left=None,right=None):
-        if left is None: left = self.left
-        if right is None: right = self.right
+        if left is not None: self.left = left
+        if right is not None: self.right = right
+        if left is not None or right is not None: self.event_generate("<<ValuesUpdated>>")
 
-        self.left = left
-        self.right = right
-        #self.update_left(left)
-        #self.update_right(right)
-        self.event_generate("<<ValuesUpdated>>")
-
-    """
-    def update_left(self,values):
-        self.__listbox_left.delete(0,'end')
-        for i, val in enumerate(values):
-            self.__listbox_left.insert(i, val)
-        self.left = values
-
-    def update_right(self,values):
-        self.__listbox_right.delete(0,'end')
-        for i, val in enumerate(values):
-            self.__listbox_right.insert(i, val)
-        self.right = values 
-    """
