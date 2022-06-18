@@ -96,6 +96,7 @@ def read_file(filename):
             ["out*.sph*",starsmasher],
             ["restartrad*.sph*",starsmasher],
             ["energy*.sph*", starsmasher_energy],
+            ["parent.sph*", starsmasher_parent],
         ],
         "fluxcal" : [
             ["fluxcal*.track*",fluxcal_track],
@@ -245,6 +246,37 @@ def starsmasher_energy(filename):
     to_return['physical_units']['Etot'] = eunit
     return to_return
 
+
+def starsmasher_parent(filename):
+    to_return = {
+        'data'           : OrderedDict(),
+        'display_units'  : OrderedDict(),
+        'physical_units' : OrderedDict(),
+    }
+
+    data = np.loadtxt(filename)
+    to_return['data']['r'] = data[:,0]
+    to_return['data']['rho'] = data[:,2]
+    to_return['data']['T'] = data[:,3]
+    to_return['data']['mu'] = data[:,4]
+    to_return['data']['u'] = data[:,5]
+    
+    # All data is in cgs except for r which is in Rsun
+    to_return['display_units']['r'] = 1.
+    to_return['display_units']['rho'] = 1.
+    to_return['display_units']['T'] = 1.
+    to_return['display_units']['mu'] = 1.
+    to_return['display_units']['u'] = 1.
+
+    to_return['physical_units']['r'] = 1.
+    to_return['physical_units']['rho'] = 1.
+    to_return['physical_units']['T'] = 1.
+    to_return['physical_units']['mu'] = 1.
+    to_return['physical_units']['u'] = 1.
+
+    return to_return
+    
+    
 
 # For fluxcal*.track files from FluxCal
 def fluxcal_track(filename):
