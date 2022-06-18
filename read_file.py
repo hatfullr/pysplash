@@ -248,6 +248,12 @@ def starsmasher_energy(filename):
 
 
 def starsmasher_parent(filename):
+    munit = 1.9891e33
+    runit = 6.9599e10
+    gravconst = 6.67390e-8
+    tunit = np.sqrt(runit**3/(munit*gravconst))
+    eunit = gravconst*munit**2/runit
+    
     to_return = {
         'data'           : OrderedDict(),
         'display_units'  : OrderedDict(),
@@ -259,20 +265,17 @@ def starsmasher_parent(filename):
     to_return['data']['rho'] = data[:,2]
     to_return['data']['T'] = data[:,3]
     to_return['data']['mu'] = data[:,4]
-    to_return['data']['u'] = data[:,5]
     
     # All data is in cgs except for r which is in Rsun
     to_return['display_units']['r'] = 1.
     to_return['display_units']['rho'] = 1.
     to_return['display_units']['T'] = 1.
     to_return['display_units']['mu'] = 1.
-    to_return['display_units']['u'] = 1.
 
     to_return['physical_units']['r'] = 1.
     to_return['physical_units']['rho'] = 1.
     to_return['physical_units']['T'] = 1.
     to_return['physical_units']['mu'] = 1.
-    to_return['physical_units']['u'] = 1.
 
     return to_return
     
