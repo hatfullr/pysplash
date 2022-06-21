@@ -67,7 +67,7 @@ class ImportData(PopupWindow,object):
         self.selectfilter = SelectFilter(
             self.contents,
             labels=("Unused Files", "Used Files"),
-            selectmode=("extended","dragdrop"),
+            selectmode=("extended","extended"),
             right=self.gui.filenames,
             sort=(True,True),
         )
