@@ -9,7 +9,9 @@ import os
 import globals
 from widgets.popupwindow import PopupWindow
 from widgets.pathentry import PathEntry
+from widgets.selectfilter import SelectFilter
 import traceback
+import read_file
 
 def importdata(gui):
     ImportData(gui)
@@ -23,7 +25,7 @@ class ImportData(PopupWindow,object):
         super(ImportData,self).__init__(
             gui,
             title="Import data",
-            oktext="Import (Enter)",
+            oktext="Import",
             okcommand=self.import_data,
             show=False,
         )
@@ -34,8 +36,10 @@ class ImportData(PopupWindow,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.pathentry._entry.bind("<Return>", lambda *args, **kwargs: self.okbutton.invoke(), add="+")
-        #self.bind("<Configure>", lambda *args, **kwargs: print("event"), add="+")
+        self.pathentry.bind("<<ValidateSuccess>>", self.on_validate_success, add="+")
+        self.pathentry.bind("<<ValidateFail>>", self.on_validate_fail, add="+")
+
+        #self.pathentry._entry.bind("<Return>", lambda *args, **kwargs: self.okbutton.invoke(), add="+")
 
         self.deiconify()
         self.pathentry._entry.focus()
@@ -43,9 +47,9 @@ class ImportData(PopupWindow,object):
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_variables")
         # Gather the preferences
-        preference = self.gui.get_preference("importdata")
-        if preference is None: preference = {'path':''}
-        self.path = tk.StringVar(value=preference['path'])
+        #preference = self.gui.get_preference("importdata")
+        #if preference is None: preference = {'path':''}
+        self.path = tk.StringVar(value="")
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_widgets")
@@ -55,54 +59,67 @@ class ImportData(PopupWindow,object):
             wraplength=self.width-2*self.cget('padx'),
             justify='left',
         )
-        self.pathentry = PathEntry(self.contents,"open filenames",textvariable=self.path)
+        self.pathentry = PathEntry(
+            self.contents,
+            "open filenames",
+            textvariable=self.path,
+        )
+        self.selectfilter = SelectFilter(
+            self.contents,
+            labels=("Unused Files", "Used Files"),
+            selectmode=("extended","dragdrop"),
+            right=self.gui.filenames,
+            sort=(True,True),
+        )
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.place_widgets")
         self.description.pack(side='top',fill='both',expand=True)
         self.pathentry.pack(side='top',fill='x',expand=True)
-
+        self.selectfilter.pack(side='top',fill='both',expand=True)
+        
     def import_data(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.import_data")
-        # First validate the path names
-        if not self.pathentry.validate() or self.pathentry.textvariable.get() in [[],(),""]: return
-        error = False
-
-        # Save the path names in the gui preferences
-        self.gui.set_preference("importdata",{'path':self.path.get()})
-        
         # The value of the path entry is always a list when mode = "open filenames"
-
+        
         # If the user currently has a plot shown, check with them first
         # to make sure it is okay that we will overwrite their plot
-        newfilenames = self.pathentry.get()
-
         currentfile = self.gui.filecontrols.current_file.get()
-        is_in = False
-        for filename in newfilenames:
+        for filename in self.selectfilter.right:
             if os.path.realpath(filename) == os.path.realpath(currentfile):
-                is_in = True
                 break
-        
-        if not is_in:
+        else:
             if self.gui.interactiveplot.drawn_object is not None:
                 choice = tk.messagebox.askquestion(title="Overwrite Plot",message="Importing this list of files will erase the current plot because the data file used to create the current plot was not included. Do you wish to proceed?")
                 # The choice will be one of "yes", "no", or "cancel"
                 if choice != "yes": return
-        oldfilenames = self.gui.filenames
-        self.gui.filenames = newfilenames
-        try:
-            self.gui.initialize()
-        except ValueError as e:
-            error = True
-            if "does not match any of the accepted patterns in read_file" in str(e):
-                print(traceback.format_exc())
-                fname = str(e).split("'")[1]
-                # Also highlight the problem text
-                idx = self.pathentry._entry.get().index(fname)
-                self.pathentry._entry.selection_range(idx,idx+len(fname))
-                self.pathentry.on_validate_fail()
-                self.gui.filecontrols.current_file.set("")
-                self.gui.filenames = oldfilenames
-        if not error:
-            self.close()
+
+        self.gui.filenames = self.selectfilter.right
+        self.gui.initialize()
+        self.close()
+
+    def on_validate_success(self,*args,**kwargs):
+        for i, name in enumerate(self.pathentry.get()):
+            if read_file.get_method(name) is None:
+                print("File '"+name+"' does not match any of the accepted patterns in read_file")
+                self.pathentry.event_generate("<<ValidateFail>>")
+                return "break"
+        
+        self.selectfilter.left = self.pathentry.get()
+        self.okbutton.configure(state='normal')
+        for i, val in enumerate(self.selectfilter.left):
+            self.selectfilter.listbox_left.itemconfig(i,background='')
+
+    def on_validate_fail(self, *args, **kwargs):
+        self.selectfilter.left = self.pathentry.get()
+        self.okbutton.configure(state='disabled')
+        seen = False
+        for i, path in enumerate(self.selectfilter.left):
+            if not os.path.isfile(path) or read_file.get_method(path) is None:
+                if not seen:
+                    self.selectfilter.listbox_left.see(i)
+                    seen = True
+                self.selectfilter.listbox_left.itemconfig(i,background='red')
+        return "break"
+
+        

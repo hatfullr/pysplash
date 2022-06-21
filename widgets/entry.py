@@ -13,6 +13,7 @@ else:
     
 class Entry(ttk.Entry, object):
     def __init__(self, master, width=0, *args, **kwargs):
+        kwargs['exportselection'] = kwargs.get('exportselection',False)
 
         if isinstance(master, (tk.Frame,tk.LabelFrame)):
             super(Entry, self).__init__(master, width=width, *args, **kwargs)

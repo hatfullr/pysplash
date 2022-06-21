@@ -28,20 +28,22 @@ class FlashingEntry(Entry,object):
         super(FlashingEntry,self).destroy(*args,**kwargs)
 
     def flash(self,time=1000):
+        # Set the focus to this widget
+        self.focus()
+        
         if not self.flashing:
             self.flashing = True
             self.previous_style = {
                 'background':self.container.cget('background'),
             }
             self.container.configure(background=self.flash_color)
-            # Set the focus to this widget
-            self.focus()
         else:
             # We are already flashing, so we should extend the flash duration
             # such that the flashing ends "time" from now
             if self._flash_after_id is not None:
                 self.after_cancel(self._flash_after_id)
         self._flash_after_id = self.after(time,self._stop_flash)
+        return "break"
     
     def _stop_flash(self,*args,**kwargs):
         if self._flash_after_id is not None:

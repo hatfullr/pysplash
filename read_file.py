@@ -88,36 +88,22 @@ from globals import debug
 import os.path
 import fnmatch
 
-def read_file(filename):
-    # Supported pattern types are "*", "?", "[seq]", and "[!seq]"
-    # see https://docs.python.org/3/library/fnmatch.html for details
-    codes = {
-        "starsmasher" : [
-            ["out*.sph*",starsmasher],
-            ["restartrad*.sph*",starsmasher],
-            ["energy*.sph*", starsmasher_energy],
-            ["parent.sph*", starsmasher_parent],
-        ],
-        "fluxcal" : [
-            ["fluxcal*.track*",fluxcal_track],
-            ["teffs*.dat*",fluxcal_teff],
-        ],
-        "mesa" : [
-            ["*.mesa*", mesa],
-            ["*profile*.data*", mesa],
-        ],
-    }
 
+# Do not edit these methods unless you are confident
+def read_file(filename):
+    # See the bottom of the file for the 'codes' variable, where you can
+    # add your own methods and filematching
+    method = get_method(filename)
+    if method is not None: return method(filename)
+    raise ValueError("File '"+filename+"' does not match any of the accepted patterns in read_file")
+def get_method(filename):
     basename = os.path.basename(filename)
     for key, val in codes.items():
         for pattern,method in val:
             if fnmatch.fnmatch(basename,pattern):
-                return method(filename)
-        else: continue # Only if the inner loop didn't break
-        break # Only if the inner loop did break
-    else: # Only if the inner loop didn't break
-        raise ValueError("File name '"+basename+"' does not match any of the accepted patterns in read_file")
-
+                return method
+    return None
+# Edit/add methods anywhere below this comment
 
 
 # For out*.sph files from StarSmasher
@@ -384,3 +370,57 @@ def mesa(filename):
         to_return['physical_units'][key] = 1.
 
     return to_return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Supported pattern types are "*", "?", "[seq]", and "[!seq]"
+# see https://docs.python.org/3/library/fnmatch.html for details
+codes = {
+    "starsmasher" : [
+        ["out*.sph*",starsmasher],
+        ["restartrad*.sph*",starsmasher],
+        ["energy*.sph*", starsmasher_energy],
+        ["parent.sph*", starsmasher_parent],
+    ],
+    "fluxcal" : [
+        ["fluxcal*.track*",fluxcal_track],
+        ["teffs*.dat*",fluxcal_teff],
+    ],
+    "mesa" : [
+        ["*.mesa*", mesa],
+        ["*profile*.data*", mesa],
+    ],
+}

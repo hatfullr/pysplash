@@ -196,7 +196,11 @@ class InteractivePlot(tk.Frame,object):
         if self.track_id is not None and self.track_id in np.arange(len(x)):
             self.origin = np.array([x[self.track_id],y[self.track_id]])
 
-        if self.colors is None: self.colors = np.ones(len(x))
+        if self.colors is None:
+            if isinstance(x, (np.ndarray, list, tuple)):
+                self.colors = np.ones(len(x))
+            else:
+                self.colors = np.ones(1)
 
         if (xaxis.value.get() in ['x','y','z'] and
             yaxis.value.get() in ['x','y','z']):
