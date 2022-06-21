@@ -28,8 +28,8 @@ class SelectFilter(tk.Frame,object):
 
         self.listbox_left.bind("<<ListboxSelect>>", self._on_left_selected, add="+")
         self.listbox_right.bind("<<ListboxSelect>>", self._on_right_selected, add="+")
-        self.listbox_left.bind("<FocusOut>", self._on_left_focus_out, add="+")
-        self.listbox_right.bind("<FocusOut>", self._on_right_focus_out, add="+")
+        self.listbox_left.container.bind("<FocusOut>", self._on_left_focus_out, add="+")
+        self.listbox_right.container.bind("<FocusOut>", self._on_right_focus_out, add="+")
                 
     @property
     def left(self):

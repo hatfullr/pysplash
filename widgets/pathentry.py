@@ -52,10 +52,8 @@ class PathEntry(tk.Frame, object):
                 paths = self._text_to_paths(paths)
         final = []
         for path in paths:
-            globpath = glob(path)
-            if len(globpath) == 0: final.append(path)
-            else:
-                for p in sorted(globpath): final.append(p)
+            for p in glob(os.path.expanduser(path)):
+                final.append(p)
         return final
     
     def set(self, path, *args, **kwargs):
