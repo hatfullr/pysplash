@@ -71,7 +71,8 @@ class SelectFilter(tk.Frame,object):
 
         self.left_button = Button(
             self.__middle_frame,
-            text="<",width=2,
+            text="<",
+            width=2,
             command=self.move_selected_left,
             state='disabled',
         )
@@ -81,6 +82,18 @@ class SelectFilter(tk.Frame,object):
             width=2,
             command=self.move_selected_right,
             state='disabled',
+        )
+        self.left_all_button = Button(
+            self.__middle_frame,
+            text="|<",
+            width=2,
+            command=self.move_all_left,
+        )
+        self.right_all_button = Button(
+            self.__middle_frame,
+            text=">|",
+            width=2,
+            command=self.move_all_right,
         )
 
     def _place_widgets(self,*args,**kwargs):
@@ -92,8 +105,10 @@ class SelectFilter(tk.Frame,object):
         self.listbox_left.pack(side='top',fill='both',expand=True)
         self.listbox_right.pack(side='top',fill='both',expand=True)
 
+        self.right_all_button.pack(side='top')
         self.right_button.pack(side='top',pady=(0,2.5))
         self.left_button.pack(side='top',pady=(2.5,0))
+        self.left_all_button.pack(side='top')
         
         self.__left_frame.pack(side='left',fill='both',expand=True)
         self.__middle_frame.pack(side='left',padx=5)
@@ -130,6 +145,16 @@ class SelectFilter(tk.Frame,object):
             self.listbox_left.select_set(next_item)
             self.listbox_left.event_generate("<<ListboxSelect>>")
 
+    def move_all_left(self,*args,**kwargs):
+        self.left += self.right
+        self.right = []
+        self.event_generate("<<ValuesUpdated>>")
+
+    def move_all_right(self,*args,**kwargs):
+        self.right += self.left
+        self.left = []
+        self.event_generate("<<ValuesUpdated>>")
+        
     def update_values(self,left=None,right=None):
         if left is not None: self.left = left
         if right is not None: self.right = right
