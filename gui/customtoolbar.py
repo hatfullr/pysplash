@@ -205,4 +205,4 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.canvas.figure.savefig(self.savename)
             self.gui.message("Figure saved")
         except Exception as e:
-            tk.messagebox.showerror("Error saving file", str(e))
+            tk.messagebox.showerror(master=self.master,title="Error saving file", message=str(e))

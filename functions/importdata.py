@@ -90,7 +90,7 @@ class ImportData(PopupWindow,object):
                 break
         else:
             if self.gui.interactiveplot.drawn_object is not None:
-                choice = tk.messagebox.askquestion(title="Overwrite Plot",message="Importing this list of files will erase the current plot because the data file used to create the current plot was not included. Do you wish to proceed?")
+                choice = tk.messagebox.askquestion(master=self,title="Overwrite Plot",message="Importing this list of files will erase the current plot because the data file used to create the current plot was not included. Do you wish to proceed?")
                 # The choice will be one of "yes", "no", or "cancel"
                 if choice != "yes": return
 

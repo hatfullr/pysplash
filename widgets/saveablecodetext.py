@@ -100,7 +100,7 @@ class SaveableCodeText(CodeText, object):
         self.saved = True
 
     def ask_continue_without_saving(self, message="You have unsaved changes. Continue?"):
-        msgbox = tk.messagebox.askquestion("Continue without saving?", message, icon='warning',parent=self)
+        msgbox = tk.messagebox.askquestion(master=self.master,title="Continue without saving?", message=message, icon='warning',parent=self)
         return msgbox == "yes"
         
     def update_combobox_list(self,*args,**kwargs):
