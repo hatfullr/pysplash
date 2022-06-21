@@ -103,6 +103,9 @@ class GUI(tk.Frame,object):
     def initialize(self, first=False, *args, **kwargs):
         if globals.debug > 1: print("gui.initialize")
 
+        # Disable the colorbar axis for now because it isn't working right now
+        self.controls.axis_controllers['Colorbar'].disable()
+
         if first and len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
 

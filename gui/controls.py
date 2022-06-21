@@ -117,6 +117,7 @@ class Controls(tk.Frame,object):
             elif name != 'Colorbar':
                 uninitialized_controllers.append(axis_controller)
 
+        """
         # For controllers which did not have their preferences set (except for
         # the Colorbar controller), use the first, second, etc. columns in the data
         if len(uninitialized_controllers) > 0:
@@ -128,7 +129,7 @@ class Controls(tk.Frame,object):
                         uninitialized_controllers[cidx].label.set(val)
                         cidx += 1
                         if cidx >= len(uninitialized_controllers): break
-        
+        """
         self.initialized = True
 
     # This callback function runs a single time, after the application has been loaded
