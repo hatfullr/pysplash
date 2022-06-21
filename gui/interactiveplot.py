@@ -369,7 +369,13 @@ class InteractivePlot(tk.Frame,object):
         
     def set_time_text(self,event=None):
         if globals.debug > 1: print("interactiveplot.set_time_text")
-        text = "t = %f" % self.time.get()
+        try:
+            text = "t = %f" % self.time.get()
+        except tk.TclError as e:
+            # If the user has read in time-series data in their files, then
+            # just ignore setting the time text
+            if "expected floating-point number but got" in str(e):
+                return
 
         if self.time_text is not None:
             self.time_text.set_text(text)
