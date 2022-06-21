@@ -10,9 +10,10 @@ from widgets.listboxscrollbar import ListboxScrollbar
 from widgets.button import Button
 
 class SelectFilter(tk.Frame,object):
-    def __init__(self,master,left=[],right=[],labels=(None,None),selectmode=('extended','extended')):
+    def __init__(self,master,left=[],right=[],labels=(None,None),selectmode=('extended','extended'),sort=(False,False)):
         self.labels = labels
         self.selectmode = selectmode
+        self.sort = sort
         super(SelectFilter,self).__init__(master)
         
         self._create_widgets()
@@ -24,6 +25,11 @@ class SelectFilter(tk.Frame,object):
         for smode, lbox in zip(self.selectmode, [self.__listbox_left,self.__listbox_right]):
             if smode == 'dragdrop':
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
+
+        self.__listbox_left.bind("<<ListboxSelect>>", self._on_left_selected, add="+")
+        self.__listbox_right.bind("<<ListboxSelect>>", self._on_right_selected, add="+")
+        self.__listbox_left.bind("<FocusOut>", self._on_left_focus_out, add="+")
+        self.__listbox_right.bind("<FocusOut>", self._on_right_focus_out, add="+")
                 
     @property
     def left(self):
@@ -31,10 +37,10 @@ class SelectFilter(tk.Frame,object):
 
     @left.setter
     def left(self, value):
-        # Disallow duplicates
-        self._left = value#tuple(v for i,v in enumerate(value) if v not in value[:i])
+        if self.sort[0]: self._left = sorted(value)
+        else: self._left = value
         self.__listbox_left.delete(0,'end')
-        for i,val in enumerate(value):
+        for i,val in enumerate(self._left):
             self.__listbox_left.insert(i,val)
 
     @property
@@ -43,10 +49,10 @@ class SelectFilter(tk.Frame,object):
 
     @right.setter
     def right(self, value):
-        # Disallow duplicates
-        self._right = value#tuple(v for i,v in enumerate(value) if v not in value[:i])
+        if self.sort[1]: self._right = sorted(value)
+        else: self._right = value
         self.__listbox_right.delete(0,'end')
-        for i,val in enumerate(value):
+        for i,val in enumerate(self._right):
             self.__listbox_right.insert(i,val)
 
     def _create_widgets(self,*args,**kwargs):
@@ -59,11 +65,23 @@ class SelectFilter(tk.Frame,object):
         if self.labels[1] is not None:
             self.__right_label = ttk.Label(self.__right_frame,text=self.labels[1],anchor='center')
 
-        self.__listbox_left = ListboxScrollbar(self.__left_frame,selectmode=self.selectmode[0])
-        self.__listbox_right = ListboxScrollbar(self.__right_frame,selectmode=self.selectmode[1])
+        # exportselection=False makes the <<ListboxSelect>> event work properly. Not quite sure why.
+        self.__listbox_left = ListboxScrollbar(self.__left_frame,selectmode=self.selectmode[0],exportselection=False)
+        self.__listbox_right = ListboxScrollbar(self.__right_frame,selectmode=self.selectmode[1],exportselection=False)
 
-        self.__left_button = Button(self.__middle_frame,text="<",width=2,command=self.move_selected_left)
-        self.__right_button = Button(self.__middle_frame,text=">",width=2,command=self.move_selected_right)
+        self.__left_button = Button(
+            self.__middle_frame,
+            text="<",width=2,
+            command=self.move_selected_left,
+            state='disabled',
+        )
+        self.__right_button = Button(
+            self.__middle_frame,
+            text=">",
+            width=2,
+            command=self.move_selected_right,
+            state='disabled',
+        )
 
     def _place_widgets(self,*args,**kwargs):
         if self.labels[0] is not None:
@@ -116,4 +134,32 @@ class SelectFilter(tk.Frame,object):
         if left is not None: self.left = left
         if right is not None: self.right = right
         if left is not None or right is not None: self.event_generate("<<ValuesUpdated>>")
+
+    def _on_left_selected(self, *args, **kwargs):
+        self.__left_button.configure(state='disabled')
+        self.__right_button.configure(state='normal')
+        self.update_idletasks()
+
+    def _on_right_selected(self, *args, **kwargs):
+        self.__left_button.configure(state='normal')
+        self.__right_button.configure(state='disabled')
+        self.update_idletasks()
+
+    def _on_left_focus_out(self,*args,**kwargs):
+        current_focus = self.winfo_toplevel().focus_get()
+        if current_focus not in [self.__listbox_left, self.__listbox_right, self.__left_button, self.__right_button]:
+            self.__left_button.configure(state='disabled')
+            self.__right_button.configure(state='disabled')
+
+        if current_focus not in [self.__listbox_left, self.__right_button]:
+            self.__listbox_left.selection_clear(0,'end')
+        
+    def _on_right_focus_out(self,*args,**kwargs):
+        current_focus = self.winfo_toplevel().focus_get()
+        if current_focus not in [self.__listbox_left, self.__listbox_right, self.__left_button, self.__right_button]:
+            self.__left_button.configure(state='disabled')
+            self.__right_button.configure(state='disabled')
+
+        if current_focus not in [self.__listbox_right, self.__left_button]:
+            self.__listbox_right.selection_clear(0,'end')
 
