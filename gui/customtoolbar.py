@@ -195,6 +195,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Save dir for next time
         matplotlib.rcParams['savefig.directory'] = (
             os.path.dirname(str(self.savename)))
+        self.save_figure()
             
     def save_figure(self, *args, **kwargs):
         # If we haven't done a "Save As" yet, then do that first
