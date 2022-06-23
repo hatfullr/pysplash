@@ -16,6 +16,7 @@ class PopupWindow(tk.Toplevel, object):
         
         # Setup the window
         super(PopupWindow, self).__init__(master,**kwargs)
+        self.transient(master) # Removes minimize/maximize buttons and makes window always be on top
         self.withdraw()
 
         # When the user clicks on widgets etc, those widgets should acquire
@@ -83,3 +84,16 @@ class PopupWindow(tk.Toplevel, object):
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("popupwindow.close")
         close_window(self)
+
+    def destroy(self,*args,**kwargs):
+        self.grab_release()
+        super(PopupWindow,self).destroy(*args,**kwargs)
+
+    def deiconify(self,*args,**kwargs):
+        super(PopupWindow,self).deiconify(*args,**kwargs)
+        self.grab_set()
+
+    def withdraw(self,*args,**kwargs):
+        super(PopupWindow,self).withdraw(*args,**kwargs)
+        self.grab_release()
+

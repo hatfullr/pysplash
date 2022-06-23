@@ -203,6 +203,6 @@ class CustomToolbar(NavigationToolbar2Tk):
         try:
             # This method will handle the delegation to the correct type
             self.canvas.figure.savefig(self.savename)
-            self.gui.message("Figure saved")
+            self.gui.message("Figure saved as "+os.path.basename(self.savename))
         except Exception as e:
             tk.messagebox.showerror(master=self.master,title="Error saving file", message=str(e))
