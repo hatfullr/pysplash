@@ -12,10 +12,12 @@ import traceback
 # The only difference is we don't allow the user to type
 # anything that isn't an integer
 class IntegerEntry(FlashingEntry,object):
-    def __init__(self,master,validate='focusout',allowblank=True,extra_validatecommands=[],variable=None,disallowed_values=[],**kwargs):
+    def __init__(self,master,validate='focusout',allowblank=True,extra_validatecommands=[],variable=None,disallowed_values=[],clamp=(None,None),periodic=False,**kwargs):
         self.disallowed_values = disallowed_values
         self.extra_validatecommands = extra_validatecommands
         self.allowblank = allowblank
+        self.clamp = clamp
+        self.periodic = periodic
         self._textvariable = tk.StringVar()
         if 'validatecommand' in kwargs.keys(): kwargs.pop('validatecommand')
         if 'textvariable' in kwargs.keys():
@@ -37,6 +39,8 @@ class IntegerEntry(FlashingEntry,object):
         else: self.variable = tk.IntVar()
 
         self.variable.trace("w", self.format_text)
+        self.do_clamp = self.clamp[0] is not None or self.clamp[1] is not None
+        if self.do_clamp: self.variable.trace("w", self.clamp_variable)
 
         self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
         self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
@@ -64,6 +68,7 @@ class IntegerEntry(FlashingEntry,object):
         if all([command(newtext) for command in self.extra_validatecommands]):
             self.variable.set(int(newtext))
             self._textvariable.set(newtext)
+            self.event_generate("<<ValidateSuccess>>")
             return True
         else:
             self.event_generate("<<ValidateFail>>")
@@ -80,7 +85,34 @@ class IntegerEntry(FlashingEntry,object):
     def on_validate_success(self, *args, **kwargs):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None
-        self.variable.set(int(self.get()))
+        if self.do_clamp: self.clamp_variable()
+        else: self.variable.set(int(self.get()))
     
     def format_text(self, *args, **kwargs):
         self._textvariable.set(str(self.variable.get()))
+
+    def clamp_variable(self, *args, **kwargs):
+        value = self.variable.get()
+
+        if self.clamp[0] is not None and self.clamp[1] is not None:
+            if self.periodic:
+                # Figure out how many times the value winds around the clamp range
+                diff = max(self.clamp) - min(self.clamp)
+                nwinds = 0
+                if value >= max(self.clamp):
+                    nwinds = (value - max(self.clamp))/diff
+                    nfrac = nwinds % 1
+                    self.variable.set(min(self.clamp) + diff*nfrac)
+                elif value < min(self.clamp):
+                    nwinds = (min(self.clamp)-value)/diff
+                    nfrac = nwinds % 1
+                    self.variable.set(max(self.clamp) - diff*nfrac)
+            else:
+                if value < min(self.clamp): self.variable.set(min(self.clamp))
+                elif value > max(self.clamp): self.variable.set(max(self.clamp))
+        elif (self.clamp[0] is not None and self.clamp[1] is None) and value < self.clamp[0]:
+            self.variable.set(self.clamp[0])
+        elif (self.clamp[0] is None and self.clamp[1] is not None) and value > self.clamp[1]:
+            self.variable.set(self.clamp[1])
+
+        self.format_text()

@@ -173,8 +173,9 @@ class GUI(tk.Frame,object):
         
         
         self.left_frame = tk.Frame(self)
+        self.interactiveplotframe = tk.Frame(self.left_frame)
         self.interactiveplot = InteractivePlot(
-            self.left_frame,
+            self.interactiveplotframe,
             self,
             relief='sunken',
             bd=1,
@@ -211,8 +212,9 @@ class GUI(tk.Frame,object):
         self.filecontrols.pack(side='left',fill='both',expand=True,padx=3,pady=3)
         self.under_plot_frame.pack(side='bottom',fill='both')
 
-        self.interactiveplot.pack(side='top',fill='both',expand=True)
-
+        self.interactiveplot.pack(fill='both',expand=True)
+        self.interactiveplotframe.pack(side='top',fill='both',expand=True)
+        
         self.controls.pack(side='right',fill='both')
         self.left_frame.pack(side='right',fill='both',expand=True)
 

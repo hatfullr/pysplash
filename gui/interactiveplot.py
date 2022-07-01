@@ -27,14 +27,15 @@ from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
 from functions.eventinaxis import event_in_axis
 from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseevent
-
 from functions.getallchildren import get_all_children
+
+from widgets.resizableframe import ResizableFrame
 
 import warnings
 import inspect
 import traceback
 
-class InteractivePlot(tk.Frame,object):
+class InteractivePlot(ResizableFrame,object):
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
         self.gui = gui
@@ -98,7 +99,6 @@ class InteractivePlot(tk.Frame,object):
         # Apply the style given in the user's preferences
         style = self.gui.get_preference("style")
         if style is not None: self.set_style(style)
-        
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -145,11 +145,8 @@ class InteractivePlot(tk.Frame,object):
         
     def place_widgets(self):
         if globals.debug > 1: print("interactiveplot.place_widgets")
-        self.canvas.get_tk_widget().grid(row=0,sticky='news')
+        self.canvas.get_tk_widget().pack(fill='both', expand=True)
         self.xycoords_label.place(in_=self.canvas.get_tk_widget(),relx=1,rely=1,anchor='se')
-
-        self.rowconfigure(0,weight=1)
-        self.columnconfigure(0,weight=1)
 
     def update_mouse(self, event):
         self.mouse = np.array([event.xdata,event.ydata])
@@ -316,10 +313,10 @@ class InteractivePlot(tk.Frame,object):
         if self.track_and_annotate: self.annotate_tracked_particle()
         
         # Put the filename in the axis title for now
-        f = self.gui.filecontrols.current_file.get()
-        if len(f) > 30:
-            f = "..."+f[-27:]
-        self.ax.set_title(f)
+        #f = self.gui.filecontrols.current_file.get()
+        #if len(f) > 30:
+        #    f = "..."+f[-27:]
+        #self.ax.set_title(f)
 
         # Make absolutely sure that the only drawn object on the axis is
         # the one we just created

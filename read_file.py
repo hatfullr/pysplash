@@ -137,8 +137,8 @@ def starsmasher(filename):
         1., # divv
         eunit, # ueq
         1., # tthermal
-        1., # opacity (already in cgs)
-        1., # uraddot (already in cgs)
+        runit**2/munit, # opacity
+        (gravconst*munit)**1.5/runit**2.5, # uraddot
         1., # temperature
         1., # avgtau
     ]
@@ -164,8 +164,8 @@ def starsmasher(filename):
         1., # divv
         eunit, # ueq
         1., # tthermal
-        1., # opacity
-        1., # uraddot
+        runit**2/munit, # opacity
+        (gravconst*munit)**1.5/runit**2.5, # uraddot
         1., # temperature
         1., # avgtau
     ]
