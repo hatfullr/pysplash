@@ -65,6 +65,7 @@ class PathEntry(tk.Frame, object):
         elif self.mode == "open filenames":
             path = tkFileDialog.askopenfilenames(**self.dialogkwargs)
         elif self.mode == "save as filename":
+            self.dialogkwargs.pop('multiple')
             path = tkFileDialog.asksaveasfilename(**self.dialogkwargs)
         elif self.mode == "directory":
             path = tkFileDialog.askdirectory(**self.dialogkwargs)

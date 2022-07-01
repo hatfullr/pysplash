@@ -40,8 +40,6 @@ class MakeMovie(PopupWindow, object):
         self.create_widgets()
         self.place_widgets()
 
-        self.validate()
-
         self.path_entry.bind("<<ValidateFail>>", self.validate, add = "+")
         self.path_entry.bind("<<ValidateSuccess>>", self.validate, add = "+")
         self.start_combobox.bind("<<ComboboxSelected>>", self.validate, add = "+")
@@ -103,12 +101,10 @@ class MakeMovie(PopupWindow, object):
 
     def validate(self, *args, **kwargs):
         if globals.debug > 1: print("makemovie.validate")
-
-        # Valid paths only
-        if (self.path_entry.validatecommand(self.path_entry.get()) and
-            # No empty start/stop comboboxes
-            not (self.startfile.get().strip() or self.startfile.get().strip() == "") and
-            not (self.stopfile.get().strip() or self.stopfile.get().strip() == "")):
+        
+        # No empty start/stop comboboxes
+        if ((self.startfile.get().strip() and self.startfile.get().strip() != "") and
+            (self.stopfile.get().strip() and self.stopfile.get().strip() != "")):
             self.okbutton.configure(state='normal')
         else: self.okbutton.configure(state='disabled')
         
