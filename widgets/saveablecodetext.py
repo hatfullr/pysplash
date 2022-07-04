@@ -17,7 +17,7 @@ import json
 
 
 class SaveableCodeText(CodeText, object):
-    forbidden_characters = ["#","%","&","{","}","\\","<",">","*","?","/"," ","$","!","'",'"',":","@","+","`","|","="]
+    forbidden_characters = ["#","%","&","{","}","\\","<",">","*","?","/","$","!","'",'"',":","@","+","`","|","="]
     def __init__(self, master, directory, **kwargs):
         self.directory = directory
         if not os.path.isdir(self.directory): os.mkdir(self.directory)
