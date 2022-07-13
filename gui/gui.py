@@ -143,6 +143,7 @@ class GUI(tk.Frame,object):
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
+            self.interactiveplot.canvas.draw()
 
     """
     def initialize_xy_controls(self):

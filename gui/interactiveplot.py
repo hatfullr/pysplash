@@ -60,8 +60,6 @@ class InteractivePlot(ResizableFrame,object):
         self.place_widgets()
         self.create_hotkeys()
         
-        self.draw_enabled = False
-
         self.previous_args = None
         self.previous_kwargs = None
         self.previous_xlim = None
@@ -158,7 +156,7 @@ class InteractivePlot(ResizableFrame,object):
         if self.drawn_object is not None:
             self.drawn_object.remove()
             self.drawn_object = None
-        self.colors = None
+        self.reset_colors()
 
     def reset_colors(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.reset_colors")
