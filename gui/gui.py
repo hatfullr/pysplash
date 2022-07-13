@@ -20,8 +20,8 @@ from lib.data import Data
 from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
-from functions.importdata import importdata
-from functions.findparticle import findparticle
+from functions.importdata import ImportData
+from functions.findparticle import FindParticle
 from functions.rotate import rotate
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
@@ -228,9 +228,9 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
-        self.hotkeys.bind("import data", lambda *args,**kwargs: importdata(self))
+        self.hotkeys.bind("import data", lambda *args,**kwargs: ImportData(self))
         self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
-        self.hotkeys.bind("find particle", lambda *args,**kwargs: findparticle(self))
+        self.hotkeys.bind("find particle", lambda *args,**kwargs: FindParticle(self))
 
     def destroy(self, *args, **kwargs):
         if hasattr(self, "message_after_id") and self.message_after_id is not None:

@@ -13,10 +13,6 @@ from widgets.integerentry import IntegerEntry
 from functions.hotkeystostring import hotkeys_to_string
 import traceback
 
-def findparticle(gui):
-    FindParticle(gui)
-
-
 class FindParticle(PopupWindow,object):
     def __init__(self, gui):
         if globals.debug > 1: print("findparticle.__init__")

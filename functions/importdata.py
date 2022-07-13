@@ -13,10 +13,6 @@ from widgets.selectfilter import SelectFilter
 import traceback
 import read_file
 
-def importdata(gui):
-    ImportData(gui)
-
-
 class ImportData(PopupWindow,object):
     def __init__(self, gui):
         if globals.debug > 1: print("importdata.__init__")

@@ -21,10 +21,6 @@ except ImportError:
     DEVNULL = open(os.devnull,'wb')
 
 
-
-def download_data_from_server(gui):
-    DownloadDataFromServer(gui)
-
 class DownloadDataFromServer(PopupWindow,object):
     default_scp_options = "-Cp"
     default_rsync_options = "-a"
