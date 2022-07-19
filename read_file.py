@@ -115,7 +115,7 @@ def starsmasher(filename):
     vunit = np.sqrt(gravconst*munit/runit)
     dvdtunit = gravconst * munit / runit**2.
     eunit = gravconst*munit/runit
-    edotunit = np.sqrt(gravconst**3. * munit**5. / runit**7.)
+    edotunit = (gravconst*munit)**1.5/runit**2.5
     display_units = [
         1., # x
         1., # y
@@ -138,9 +138,9 @@ def starsmasher(filename):
         eunit, # ueq
         1., # tthermal
         runit**2/munit, # opacity
-        (gravconst*munit)**1.5/runit**2.5, # uraddot
+        edotunit, # uraddot
         1., # temperature
-        1., # avgtau
+        1., # tau
     ]
 
     physical_units = [
@@ -165,9 +165,9 @@ def starsmasher(filename):
         eunit, # ueq
         1., # tthermal
         runit**2/munit, # opacity
-        (gravconst*munit)**1.5/runit**2.5, # uraddot
+        edotunit, # uraddot
         1., # temperature
-        1., # avgtau
+        1., # tau
     ]
 
     data, header = read_starsmasher(filename, return_headers=True)

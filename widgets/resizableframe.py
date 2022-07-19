@@ -61,12 +61,23 @@ class ResizableFrame(tk.Frame, object):
         height = self.winfo_height()
         rootx = self.winfo_rootx()
         rooty = self.winfo_rooty()
-        
-        on_left = abs(event.x_root - rootx) <= self.mousedetectionwidth
-        on_right = abs(event.x_root - (rootx + width)) <= self.mousedetectionwidth
-        on_top = abs(event.y_root - rooty) <= self.mousedetectionwidth
-        on_bottom = abs(event.y_root - (rooty + height)) <= self.mousedetectionwidth
 
+        x0 = self.winfo_rootx()
+        y0 = self.winfo_rooty()
+        x1 = x0 + width
+        y1 = y0 + height
+        x,y = event.x_root, event.y_root
+        d = self.mousedetectionwidth
+        
+        on_left = (abs(x-x0) <= d and
+                   (y0-d <= y and y <= y1+d))
+        on_right = (abs(x-x1) <= d and
+                    (y0-d <= y and y <= y1+d))
+        on_top = (abs(y-y0) <= d and
+                  (x0-d <= x and x <= x1+d))
+        on_bottom = (abs(y-y1) <= d and
+                     (x0-d <= x and x <= x1+d))
+        
         if on_left and on_top: return CursorResizeEnum.TopLeft
         if on_right and on_top: return CursorResizeEnum.TopRight
         if on_left and on_bottom: return CursorResizeEnum.BottomLeft
