@@ -193,7 +193,7 @@ def starsmasher(filename):
     to_return['data']['t'] = header._data['t'][0]
     to_return['display_units']['t'] = tunit / 3600. / 24. # In days
     to_return['physical_units']['t'] = tunit
-    
+
     return to_return
 
 
