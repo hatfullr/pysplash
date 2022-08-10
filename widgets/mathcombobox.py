@@ -6,6 +6,7 @@ else:
     import tkinter as tk
     import tkinter.ttk as ttk
 from widgets.mathentry import MathEntry
+from widgets.comboboxextraoptions import ComboboxExtraOptions
 
 # This widget allows for the use of either a combobox to select data from
 # the gui's data file, or to do a math operation using that same data, such
@@ -19,16 +20,15 @@ from widgets.mathentry import MathEntry
 # then trace the combobox variable to always update and read from the
 # MathEntry variable.
     
-class MathCombobox(ttk.Combobox, object):
+class MathCombobox(ComboboxExtraOptions, object):
     def __init__(self, master, gui, *args, **kwargs):
         allowempty = kwargs.pop('allowempty', False)
         kwargs['textvariable'] = kwargs.get('textvariable', tk.StringVar())
-        textvariable = kwargs['textvariable']
+        self.textvariable = kwargs['textvariable']
         super(MathCombobox,self).__init__(master,*args,**kwargs)
         self.gui = gui
 
-        mathentrytextvariable = tk.StringVar(value=textvariable.get())
-        self.mathentry = MathEntry(self, self.gui, textvariable=textvariable, allowempty=allowempty)
+        self.mathentry = MathEntry(self, self.gui, textvariable=self.textvariable, allowempty=allowempty)
 
         # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,
         # while still retaining the default keybindings inherent to MathEntry widgets.

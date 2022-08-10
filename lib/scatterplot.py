@@ -23,8 +23,6 @@ try:
 except ImportError:
     has_jit = False
 
-
-has_jit = False
 class ScatterPlot(CustomAxesImage,object):
     cmap = None
     # s is size of markers in points**2
@@ -68,12 +66,17 @@ class ScatterPlot(CustomAxesImage,object):
 
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
+
+        cmap = kwargs.pop('cmap',ScatterPlot.cmap)
+        norm = None
+        if cmap == ScatterPlot.cmap:
+            norm = matplotlib.colors.Normalize(vmin=0,vmax=10)
         
         super(ScatterPlot,self).__init__(
             self.ax,
             np.full((1,1),np.nan,dtype=int),
-            cmap=ScatterPlot.cmap,
-            norm=matplotlib.colors.Normalize(vmin=0,vmax=10),
+            cmap=cmap,
+            norm=norm,
             #interpolation='nearest', # No anti-aliasing
             interpolation='none', # No interpolation
             **kwargs
@@ -170,7 +173,6 @@ class ScatterPlot(CustomAxesImage,object):
         indices_x = ((x-self._extent[0])/self.dx-0.5).astype(int,copy=False)
         indices_y = ((y-self._extent[2])/self.dy-0.5).astype(int,copy=False)
         data[indices_y,indices_x] = c
-        
 
     def calculate_data_cpu_mp(self,x,y,c,data=None):
         if globals.debug > 1: print("scatterplot.calculate_data_mp")

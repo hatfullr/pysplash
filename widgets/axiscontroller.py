@@ -105,6 +105,10 @@ class AxisController(LabelledFrame,object):
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
+
+        #if value in ['None',None,'']:
+        #    self.label.set("")
+        
         if self.gui.data is not None:
             if value in self.gui.data['data'].keys():
                 if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
@@ -120,7 +124,8 @@ class AxisController(LabelledFrame,object):
                 self.gui.controls.plotcontrols.disable_rotations()
 
             self.set_adaptive_limits()
-            self.label.set(value)
+            if self.combobox.textvariable.get() not in ['None',None,'']: self.label.set(value)
+            else: self.label.set("")
         
         self.previous_value = value
         

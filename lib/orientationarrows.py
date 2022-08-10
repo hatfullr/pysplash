@@ -27,20 +27,25 @@ class OrientationArrows:
             artist.remove()
         self.artists = []
 
-    def switch_on_off(self, *args, **kwargs):
+    def switch_on(self,*args,**kwargs):
         if self.cid is None: self.connect()
-        else: self.disconnect()
+
+    def switch_off(self,*args,**kwargs):
+        if self.cid is not None: self.disconnect()
         
     def connect(self,*args,**kwargs):
-        self.cid = self.ax.get_figure().canvas.mpl_connect("draw_event", self.draw)
+        canvas = self.ax.get_figure().canvas
+        self.cid = canvas.mpl_connect("draw_event", self.draw)
         self.draw()
-        self.ax.get_figure().canvas.draw_idle()
+        canvas.draw_idle()
     
     def disconnect(self,*args,**kwargs):
         if self.cid is not None:
-            self.ax.get_figure().canvas.mpl_disconnect(self.cid)
+            canvas = self.ax.get_figure().canvas
+            canvas.mpl_disconnect(self.cid)
             self.clear()
             self.cid = None
+            canvas.draw_idle()
         
     def draw(self,*args,**kwargs):
         # This function gets called only when the Update button gets pressed

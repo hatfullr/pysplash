@@ -22,6 +22,7 @@ from lib.integratedvalueplot import IntegratedValuePlot
 from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
+from lib.pointdensityplot import PointDensityPlot
 
 from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
@@ -213,7 +214,7 @@ class InteractivePlot(ResizableFrame,object):
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
         # Scatter plot
-        if not colorbar_text.strip() or colorbar_text.strip() == "":
+        if colorbar_text.strip() in ['None',None,'']:
             if self.gui.data.is_image:
                 method = CustomAxesImage
                 args = (
@@ -248,7 +249,33 @@ class InteractivePlot(ResizableFrame,object):
                 
                 self.colorbar.hide()
 
-        elif colorbar_text.strip() or colorbar_text.strip() != "":
+        elif colorbar_text.strip() == 'Point Density':
+            method = PointDensityPlot
+            args = (
+                self.ax,
+                x,
+                y,
+            )
+            kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
+            kwargs['aspect'] = aspect
+            kwargs['aftercalculate'] = self.after_scatter_calculate
+            kwargs['cmap'] = self.colorbar.cmap
+            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
+            
+            if self.track_id is not None:
+                xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
+                dx = 0.5*(xlim[1]-xlim[0])
+                dy = 0.5*(ylim[1]-ylim[0])
+                xlim = (self.origin[0]-dx,self.origin[0]+dx)
+                ylim = (self.origin[1]-dy,self.origin[1]+dy)
+                self.ax.set_xlim(xlim)
+                self.ax.set_ylim(ylim)
+                xaxis.limits.set_limits(xlim)
+                yaxis.limits.set_limits(ylim)
+                
+            self.colorbar.show()
+        else:
             A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].get_data()
             if A is None or Ap is None or Ad is None:
                 raise Exception("One of A, Ap, or Ad was None. This should never happen.")
@@ -294,8 +321,6 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['aftercalculate'] = self.after_ivp_calculate
 
             self.colorbar.show()
-        else:
-            raise Exception("Unable to decide on scatter plot or integrated value plot. This should never happen.")
         
         if self.drawn_object is None: kwargs['initialize'] = True
 

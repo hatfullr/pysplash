@@ -23,6 +23,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         
         self.show_cid = None
         self.image_cid = None
+        self.draw_cid = None
         self.connected_canvas = None
     
     def set_clim(self, cminmax):
@@ -64,18 +65,30 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             vmax = np.nanmax(data[np.isfinite(data)])
             return [vmin, vmax]
         else: return [None, None]
-        
 
-    def connect_show(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.connect_show")
+    def connect_canvas(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.connect_canvas")
         self.connected_canvas = self._ax.get_figure().canvas
+        self.connect_resize()
+        self.connect_draw()
+
+    def disconnect_canvas(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.disconnect_canvas")
+        self.disconnect_resize()
+        self.disconnect_draw()
+        self.connected_canvas = None
+
+    def connect_resize(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.connect_resize")
+        #self.connected_canvas = self._ax.get_figure().canvas
         self.show_cid = self.connected_canvas.mpl_connect("resize_event",self.update_position)
-    def disconnect_show(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.disconnect_show")
+    def disconnect_resize(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.disconnect_resize")
         if self.show_cid is not None:
             self.connected_canvas.mpl_disconnect(self.show_cid)
-            self.show_cid = None
-            self.connected_canvas = None
+        self.show_cid = None
+        #self.disconnect_draw()
+        #self.connected_canvas = None
 
     def connect_axesimage(self, axesimage):
         if globals.debug > 1: print("customcolorbar.connect_axesimage")
@@ -94,14 +107,25 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         
     def disconnect_axesimage(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_axesimage")
-        if self.image_cid: self.cax.callbacks.disconnect(self.image_cid)
+        if self.image_cid is not None:
+            self.cax.callbacks.disconnect(self.image_cid)
+        self.image_cid = None
 
+    def connect_draw(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.connect_draw")
+        self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.update_position)
+    def disconnect_draw(self,*args,**kwargs):
+        if globals.debgu > 1: print("customcolorbar.disconnect_draw")
+        if self.draw_cid is not None:
+            self.connected_canvas.mpl_disconnect(self.draw_cid)
+        self.draw_cid = None
+        
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")
         
-        pos = self._ax.get_position()
-
         fig = self._ax.get_figure()
+        fig.canvas.draw_idle() # Need to update the figure to get the right position
+        pos = self._ax.get_position()
         right = fig.subplotpars.right
         left = fig.subplotpars.left
 
@@ -162,7 +186,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
         elif self.side == 'top' or self.side == 'bottom':
             raise ValueError("Placing the colorbar on the top or bottom of the plot is not yet supported")
-
+        
         self.cax.set_position([x0,y0,self.width,height])
         self.draw_all()
         
@@ -172,7 +196,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if not self.visible:
             self.update_position()
             self.visible = True
-            self.connect_show()
+            self.connect_canvas()
 
             self._ax.get_figure().canvas.draw_idle()
             
@@ -189,7 +213,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             # Hide the colorbar
             self.visible = False
 
-            self.disconnect_show()
+            self.disconnect_canvas()
         
             # Put the axis back where it was originally
             self._ax.set_position(self.previous_ax_position)

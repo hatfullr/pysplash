@@ -104,7 +104,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.initialize")
 
         # Disable the colorbar axis for now because it isn't working right now
-        self.controls.axis_controllers['Colorbar'].disable()
+        #self.controls.axis_controllers['Colorbar'].disable()
 
         if first and len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
@@ -302,8 +302,6 @@ class GUI(tk.Frame,object):
         if new_data_length != previous_data_length:
             self.interactiveplot.reset_colors()
         
-        # Enable the colorbar
-        self.controls.axis_controllers['Colorbar'].enable()
         if self.data.is_image:
             return
 
@@ -322,15 +320,29 @@ class GUI(tk.Frame,object):
         for key,val in self.data['data'].items():
             if hasattr(val,"__len__"):
                 if len(val) == new_data_length: keys.append(key)
-        
+
+        colorbar_values = [
+            'None',
+            'rho',
+        ]
+        colorbar_extra = [
+            'Point Density',
+        ]
+                
         # Check for requisite keys for colorbar plots
         values = ['']
         ckeys = self.data['data'].keys()
-        for key in ['x','y','m','h','rho']:
-            if key not in ckeys:
-                # Disable the colorbar controls if we are missing any of these
-                self.controls.axis_controllers['Colorbar'].disable()
-                break
+        # All these conditions are required to do integrations through space
+        if not (sum([int(key in ckeys) for key in ['x','y','z']]) >= 2 and
+            'm' in ckeys and
+            'h' in ckeys and
+            'rho' in ckeys):
+            colorbar_values.pop('rho')
+        if len(colorbar_values) == 0:
+            # Disable the colorbar controls if we have no values
+            self.controls.axis_controllers['Colorbar'].disable()
+        else:
+            self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
 
         # Update the axis controllers
         for axis_name, axis_controller in self.controls.axis_controllers.items():

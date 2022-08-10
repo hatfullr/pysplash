@@ -84,13 +84,12 @@ class Controls(tk.Frame,object):
         data = self.gui.data['data']
         
         # Initialize the axis controllers using user's preferences, if there are any
-        uninitialized_controllers = []
         for name, axis_controller in self.axis_controllers.items():
             pref = self.gui.get_preference(name)
             if pref is not None:
                 if pref['value'] in axis_controller.combobox['values']:
                     axis_controller.value.set(pref['value'])
-                    axis_controller.get_data()
+                    #axis_controller.get_data()
                     value_to_set = pref['value']
                     label_to_set = pref['label']
                 else:
@@ -114,22 +113,7 @@ class Controls(tk.Frame,object):
                 axis_controller.scale.set(pref['scale'])
                 if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()
                 else: axis_controller.limits.set_limits(pref['limits'])
-            elif name != 'Colorbar':
-                uninitialized_controllers.append(axis_controller)
-
-        """
-        # For controllers which did not have their preferences set (except for
-        # the Colorbar controller), use the first, second, etc. columns in the data
-        if len(uninitialized_controllers) > 0:
-            if data is not None:
-                cidx = 0
-                for i, val in enumerate(data.keys()):
-                    if val not in [c.value.get() for c in self.axis_controllers.values()]:
-                        uninitialized_controllers[cidx].value.set(val)
-                        uninitialized_controllers[cidx].label.set(val)
-                        cidx += 1
-                        if cidx >= len(uninitialized_controllers): break
-        """
+                
         self.initialized = True
 
     # This callback function runs a single time, after the application has been loaded

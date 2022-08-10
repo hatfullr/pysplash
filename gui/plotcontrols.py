@@ -9,6 +9,7 @@ from widgets.labelledframe import LabelledFrame
 from widgets.integerentry import IntegerEntry
 from widgets.floatentry import FloatEntry
 from widgets.tooltip import ToolTip
+from widgets.switchbutton import SwitchButton
 from lib.hotkeys import Hotkeys
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
@@ -59,12 +60,16 @@ class PlotControls(LabelledFrame, object):
             ToolTip.createToolTip(widget, "Rotate the "+axis+"-axis by the provided Euler angles. Press "+hotkeys_to_string(hotkey1)+" or "+hotkeys_to_string(hotkey2)+" to increment/decrement the "+axis+" angle by "+str(globals.rotation_step)+" degrees (adjustable in globals.py).")
 
         # Show Orientation
-        self.show_orientation_checkbutton = tk.Checkbutton(
+        self.show_orientation_checkbutton = SwitchButton(
             self,
-            text="Show orientation",
+            text="Orientation",
             variable=self.show_orientation,
-            command=self.gui.interactiveplot.orientation.switch_on_off,
+            command=(
+                self.gui.interactiveplot.orientation.switch_on,
+                self.gui.interactiveplot.orientation.switch_off,
+            )
         )
+
 
     def place_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.place_widgets")
