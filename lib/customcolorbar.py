@@ -115,7 +115,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.connect_draw")
         self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.update_position)
     def disconnect_draw(self,*args,**kwargs):
-        if globals.debgu > 1: print("customcolorbar.disconnect_draw")
+        if globals.debug > 1: print("customcolorbar.disconnect_draw")
         if self.draw_cid is not None:
             self.connected_canvas.mpl_disconnect(self.draw_cid)
         self.draw_cid = None
