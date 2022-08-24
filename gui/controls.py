@@ -87,9 +87,9 @@ class Controls(tk.Frame,object):
         for name, axis_controller in self.axis_controllers.items():
             pref = self.gui.get_preference(name)
             if pref is not None:
-                if pref['value'] in axis_controller.combobox['values']:
+                if ((pref['value'] in axis_controller.combobox['values']) and
+                    (not globals.time_mode and pref['value'] not in ['t','time'])):
                     axis_controller.value.set(pref['value'])
-                    #axis_controller.get_data()
                     value_to_set = pref['value']
                     label_to_set = pref['label']
                 else:

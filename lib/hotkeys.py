@@ -17,6 +17,7 @@ class Hotkeys(object):
         if globals.debug > 1: print("hotkeys.__init__")
         self.root = root.winfo_toplevel()
         self.registry = {}
+        self.disabled_hotkeys = []
 
         # Bind all the modifiers so that we know when they are pressed/released
         self.root.bind("<KeyPress>", self.on_keypress,add="+")
@@ -57,7 +58,7 @@ class Hotkeys(object):
     def unbind(self, name, throwerror=True):
         if globals.debug > 1: print("hotkeys.unbind")
         if name in self.registry.keys():
-            for widget, key, bid in self.registry[name]:
+            for widget, key, bid, command, n in self.registry[name]:
                 widget.unbind(key, bid)
             del self.registry[name]
         elif throwerror:
@@ -66,7 +67,7 @@ class Hotkeys(object):
     def bind_global(self, name, key, command):
         if globals.debug > 1: print("hotkeys.bind_global")
         if name not in self.registry.keys(): self.registry[name] = []
-        self.registry[name].append([self.root, key, self.root.bind(key, command, add="+")])
+        self.registry[name].append([self.root, key, self.root.bind(key, command, add="+"), command, name])
     
     def bind_local(self, name, key, command):
         if globals.debug > 1: print("hotkeys.bind_local")
@@ -75,7 +76,7 @@ class Hotkeys(object):
 
         for child in get_all_children(self.root):
             if not isinstance(child, (tk.Entry, ttk.Entry, ttk.Combobox)):
-                self.registry[name].append([child, key, child.bind(key, command)])
+                self.registry[name].append([child, key, child.bind(key, command), command, name])
 
     def on_keypress(self, event):
         if "Control" in event.keysym: key = "<Control>"
@@ -121,3 +122,19 @@ class Hotkeys(object):
     # Check if a particular method has any set bindings
     def is_bound(self, name):
         return name in self.registry
+
+    def disable(self, name):
+        if name not in self.registry.keys():
+            raise KeyError("no hotkey '"+name+"' found in the reigstry")
+        self.disabled_hotkeys.append([self.registry[name]])
+        self.unbind(name)
+        print("disabled "+name)
+
+    def enable(self, name):
+        for hotkey in self.disabled_hotkeys:
+            for widget, key, bid, command, n in hotkey:
+                if name == n:
+                    self.bind(name,command)
+                    self.disabled_hotkeys.remove(hotkey)
+                    return
+        raise Exception("cannot enable hotkey '"+name+"' because it was never disabled")

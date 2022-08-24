@@ -65,5 +65,8 @@ class MathCombobox(ComboboxExtraOptions, object):
         self.set_entry_size()
         self.bind("<Configure>", self.set_entry_size, add="+")
         
-
+    def configure(self, *args, **kwargs):
+        if 'state' in kwargs.keys():
+            self.mathentry.configure(state=kwargs['state'])
+        super(MathCombobox,self).configure(*args, **kwargs)
         

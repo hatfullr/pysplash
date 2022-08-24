@@ -34,6 +34,7 @@ import os.path
 import json
 import os
 import numpy as np
+import collections
 
 class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
@@ -68,8 +69,10 @@ class GUI(tk.Frame,object):
 
         super(GUI,self).__init__(self.window)
         
-        self.data = None
-        self.display_data = None
+        self._data = None
+        self._data_time_mode = None
+        self._display_data = None
+        self._display_data_time_mode = None
         
         self.preferences = {}
 
@@ -87,10 +90,27 @@ class GUI(tk.Frame,object):
 
         self.filenames = []
         self.message_after_id = None
+
+        self.previous_file = None
+        self.time_mode.trace('w',self.toggle_time_mode)
         
         #self.xy_controls_initialized = False
         self.initialize(first=True)
         self.controls.connect()
+
+    @property
+    def data(self): return self._data_time_mode if self.time_mode.get() else self._data
+    @data.setter
+    def data(self,value):
+        if self.time_mode.get(): self._data_time_mode = value
+        else: self._data = value
+
+    @property
+    def display_data(self): return self._display_data_time_mode if self.time_mode.get() else self._display_data
+    @display_data.setter
+    def display_data(self,value):
+        if self.time_mode.get(): self._display_data_time_mode = value
+        else: self._display_data = value
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
@@ -108,15 +128,16 @@ class GUI(tk.Frame,object):
 
         if first and len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
-
+            
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
             if currentfile in self.filenames:
                 self.filecontrols.current_file.set(currentfile)
             else:
                 self.filecontrols.current_file.set(self.filenames[0])
-            
-            self.read()
+
+            if globals.time_mode: self.read_time_mode()
+            else: self.read()
 
             if not self.controls.initialized: self.controls.initialize()
             xlimits = self.controls.axis_controllers['XAxis'].limits
@@ -145,6 +166,15 @@ class GUI(tk.Frame,object):
             self.interactiveplot.reset()
             self.interactiveplot.canvas.draw()
 
+        if not globals.time_mode:
+            # Make sure none of the axiscontrollers have 't' or 'time' selected
+            for controller in self.controls.axis_controllers.values():
+                if controller.combobox.textvariable.get() in ['t' or 'time']:
+                    for value in controller.combobox['values']:
+                        if value not in ['t','time']:
+                            controller.combobox.textvariable.set(value)
+                            break
+
     """
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")
@@ -168,6 +198,7 @@ class GUI(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
+        self.time_mode = tk.BooleanVar(value=False)
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
@@ -270,6 +301,10 @@ class GUI(tk.Frame,object):
 
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
+
+        if self.time_mode.get():
+            raise Exception("gui.read is not allowed in time mode. This should never happen.")
+        
         previous_data_length = 0
         if self.data is not None:
             if sys.version_info.major >= 3:
@@ -279,7 +314,7 @@ class GUI(tk.Frame,object):
 
         current_file = self.filecontrols.current_file.get()
         def get_data(*args,**kwargs):
-            self.data = Data(read_file(current_file))
+            self._data = Data(read_file(current_file))
         
         self.message("Reading data")
         thread = ThreadedTask(target=get_data)
@@ -290,9 +325,6 @@ class GUI(tk.Frame,object):
         
         self.display_data = {
             key : self.get_data(key)*self.get_display_units(key) for key in self.data['data'].keys()
-        }
-        self.physical_data = {
-            key : self.get_data(key)*self.get_physical_units(key) for key in self.data['data'].keys()
         }
 
         if sys.version_info.major >= 3:
@@ -320,7 +352,11 @@ class GUI(tk.Frame,object):
         for key,val in self.data['data'].items():
             if hasattr(val,"__len__"):
                 if len(val) == new_data_length: keys.append(key)
+                
 
+        if 't' in self.data['data'].keys(): keys.append('t')
+        elif 'time' in self.data['data'].keys(): keys.append('time')
+                
         colorbar_values = [
             'None',
             'rho',
@@ -365,13 +401,70 @@ class GUI(tk.Frame,object):
                 if time is not None:
                     self.interactiveplot.time.set(time*self.get_display_units(name))
                 break
+            
+    def read_time_mode(self,*args,**kwargs):
+        # Make the data contain *all* the input data values
+        self._data_time_mode = {
+            'data' : collections.OrderedDict({}),
+            'display_units' : collections.OrderedDict({}),
+            'physical_units' : collections.OrderedDict({}),
+        }
+
+        def get_data(*args,**kwargs):
+            total = len(self.filenames)
+            for i,filename in enumerate(self.filenames):
+                self.message_text.set("Reading data (%3d%%)..." % int(i/total*100))
+                d = read_file(filename)
+
+                # Figure out how long the data is
+                length = 0
+                for key,val in d['data'].items():
+                    if key not in ['t','time']:
+                        length = len(val)
+                        break
+                if length == 0: raise Exception("data file '"+filename+"' either only contains time data, or has no data at all")
+
+
+                for key,val in d['data'].items():
+                    if key in ['t','time']: val = np.repeat(val,length)
+                    if key not in self._data_time_mode['data'].keys(): self._data_time_mode['data'][key] = [val]
+                    else: self._data_time_mode['data'][key] += [val]
+
+                    if key not in self._data_time_mode['display_units'].keys():
+                        self._data_time_mode['display_units'][key] = d['display_units'][key]
+                    elif self._data_time_mode['display_units'][key] != d['display_units'][key]:
+                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found display units of '"+self._data_time_mode['display_units'][key]+"', but file '"+filename+"' has display units of '"+d['display_units'][key]+"' for this key.")
+
+                    if key not in self._data_time_mode['physical_units'].keys():
+                        self._data_time_mode['physical_units'][key] = d['physical_units'][key]
+                    elif self._data_time_mode['physical_units'][key] != d['physical_units'][key]:
+                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found physical units of '"+self._data_time_mode['display_units'][key]+"', but file '"+filename+"' has physical units of '"+d['display_units'][key]+"' for this key.")
+
+            total = len(self._data_time_mode['data'].keys())
+            for i,(key, val) in enumerate(self._data_time_mode['data'].items()):
+                self.message_text.set("Flattening data arrays (%3d%%)..." % int(i/total*100))
+                self._data_time_mode['data'][key] = np.array(val).flatten()
+            self._data_time_mode = Data(self._data_time_mode)
+
+            self.message_text.set("Setting up display data arrays...")
+            self._display_data_time_mode = {
+                key : self.get_data(key)*self.get_display_units(key) for key in self._data_time_mode['data'].keys()
+            }
+
+        self.set_user_controlled(False)
+        #self.message_text.set("Reading all input data...")
+        thread = ThreadedTask(target=get_data)
+        root = self.winfo_toplevel()
+        while thread.isAlive():
+            root.update()
+        self.clear_message()
+        self.set_user_controlled(True)
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
         if self.data is None: return None
         elif self.data.is_image: return self.data
         else:
-            #data = copy.copy(self.data['data'][key])
             data = self.data['data'][key]
             if key == 'h': return data*globals.compact_support
             else: return data
@@ -386,6 +479,7 @@ class GUI(tk.Frame,object):
 
     def get_display_data(self,key,raw=False,identifier=None,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
+
         if raw: return self.display_data[key]
         else: # Apply the axis scale and units to the data
             # Check to see if the key matches
@@ -419,7 +513,7 @@ class GUI(tk.Frame,object):
         if anglexdeg is None: anglexdeg = self.controls.plotcontrols.rotation_x.get()
         if angleydeg is None: angleydeg = self.controls.plotcontrols.rotation_y.get()
         if anglezdeg is None: anglezdeg = self.controls.plotcontrols.rotation_z.get()
-        
+
         # We just need to rotate the display data
         if self.display_data is not None:
             keys = self.display_data.keys()
@@ -475,4 +569,42 @@ class GUI(tk.Frame,object):
         for filename in sorted(os.listdir(tmp_path)):
             if filename not in self.filenames:
                 self.filenames.append(os.path.join(tmp_path,filename))
+
+    # When 't' (time) is selected on one of the axes, change global behavior
+    # to show only Point Density plots
+    def toggle_time_mode(self, *args, **kwargs):
+        if globals.debug > 1: print("gui.toggle_time_mode")
+        globals.time_mode = self.time_mode.get()
+        if self.time_mode.get(): self.enable_time_mode()
+        else: self.disable_time_mode()
+    
+    def enable_time_mode(self, *args, **kwargs):
+        if globals.debug > 1: print("gui.enable_time_mode")
+        # Setup the controls
+        self.controls.axis_controllers['Colorbar'].combobox.textvariable.set("Point Density")
+        self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
+
+        if self.filecontrols.current_file in globals.state_variables:
+            globals.state_variables.remove(self.filecontrols.current_file)
+        
+        self.filecontrols.disable('all')
+        self.previous_file = self.filecontrols.current_file.get()
+        self.filecontrols.current_file.set("")
+
+        self.interactiveplot.clear_tracking()
+        
+        if self._data_time_mode is None or self._display_data_time_mode is None: self.read_time_mode()
+        self.interactiveplot.reset()
+
+    def disable_time_mode(self, *args, **kwargs):
+        if globals.debug > 1: print("gui.disable_time_mode")
+        self.controls.axis_controllers['Colorbar'].combobox.configure(state='enabled')
+        self.filecontrols.enable('all')
+
+        if self.previous_file is not None:
+            self.filecontrols.current_file.set(self.previous_file)
+            self.previous_file = None
+
+        if self.filecontrols.current_file not in globals.state_variables:
+            globals.state_variables.append(self.filecontrols.current_file)
 

@@ -322,9 +322,12 @@ class InteractivePlot(ResizableFrame,object):
 
             self.colorbar.show()
         
-        if self.drawn_object is None: kwargs['initialize'] = True
-
-        self.drawn_object = method(*args,**kwargs)
+        if self.drawn_object is None:
+            kwargs['initialize'] = True
+            self.drawn_object = method(*args,**kwargs)
+        elif not globals.time_mode:
+            self.drawn_object = method(*args,**kwargs)
+        
 
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
@@ -599,6 +602,10 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.color_particles")
         if not event_in_axis(self.ax, event): return
 
+        if self.colorbar.visible:
+            self.gui.message("Cannot change particle colors while using a colorbar")
+            return
+
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
             # We need to have a selection set before continuing
@@ -618,6 +625,7 @@ class InteractivePlot(ResizableFrame,object):
             )
             
             self.colors[IDs] = int(event.keysym)
+            
             self._update()
 
     # This method sets the origin to be at the particle closest to the mouse
@@ -625,6 +633,10 @@ class InteractivePlot(ResizableFrame,object):
     def track_particle(self, event=None, index=None):
         if globals.debug > 1: print("interactiveplot.track_particle")
 
+        if globals.time_mode:
+            self.gui.message("Cannot track particles while in time mode")
+            return
+        
         # We should always clear the old tracking no matter what
         self.clear_tracking()
         
@@ -680,6 +692,11 @@ class InteractivePlot(ResizableFrame,object):
 
     def annotate_tracked_particle(self, event=None):
         if globals.debug > 1: print("interactiveplot.annotate_tracked_particle")
+
+        if globals.time_mode:
+            self.gui.message("Cannot track particles in time mode")
+            return
+        
         if self.track_id is None: return
         if isinstance(self.drawn_object, ScatterPlot):
             if event is not None: self.track_and_annotate = True
@@ -713,23 +730,21 @@ class InteractivePlot(ResizableFrame,object):
         start_xy = self._select_info.start_xy
         (x1, y1), (x2, y2) = np.clip(
             [start_xy, [event.x, event.y]], self.ax.bbox.min, self.ax.bbox.max)
-        if abs(x2-x1) >= 5 and abs(y2-y1) >= 5:
+        if abs(x2-x1) >= globals.minimum_selection_size and abs(y2-y1) >= globals.minimum_selection_size:
+            self.selection = np.array([x1,x2,y1,y2])
             self.gui.plottoolbar.draw_rubberband(event, x1, y1, x2, y2)
 
     def release_select(self, event):
         if self._select_info is None: return
         self.canvas.mpl_disconnect(self._select_info.cid)
-
-        if None not in self._select_info.start_xy_data and None not in [event.xdata,event.ydata]:
-            x0 = min(event.xdata, self._select_info.start_xy_data[0])
-            x1 = max(event.xdata, self._select_info.start_xy_data[0])
-            y0 = min(event.ydata, self._select_info.start_xy_data[1])
-            y1 = max(event.ydata, self._select_info.start_xy_data[1])
-        
-            self.selection = np.array([x0,x1,y0,y1])
+        if self.selection is not None and not self.colorbar.visible:
+            transformed = self.ax.transData.inverted().transform([[self.selection[0],self.selection[2]],[self.selection[1],self.selection[3]]])
+            self.selection[0] = min(transformed[0][0],transformed[1][0])
+            self.selection[1] = max(transformed[0][0],transformed[1][0])
+            self.selection[2] = min(transformed[0][1],transformed[1][1])
+            self.selection[3] = max(transformed[0][1],transformed[1][1])
+            self.gui.message("Press 0-9 to change selected particles' colors")
         self._select_info = None
-        self.gui.message("Press 0-9 to change selected particles' colors",duration=5000)
-
 
     # style is a list or tuple
     def set_style(self,style):

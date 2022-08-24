@@ -121,15 +121,18 @@ class PlotControls(LabelledFrame, object):
         if globals.debug > 1: print("plotcontrols.disable_rotations")
         if 'disabled' not in self.rotation_x_entry.state():
             self.rotation_x_entry.state(["disabled"])
-            globals.state_variables.remove(self.rotation_x)
+            if self.rotation_x in globals.state_variables:
+                globals.state_variables.remove(self.rotation_x)
             self.rotation_x.set(0)
         if 'disabled' not in self.rotation_y_entry.state():
             self.rotation_y_entry.state(["disabled"])
-            globals.state_variables.remove(self.rotation_y)
+            if self.rotation_y in globals.state_variables:
+                globals.state_variables.remove(self.rotation_y)
             self.rotation_y.set(0)
         if 'disabled' not in self.rotation_z_entry.state():
             self.rotation_z_entry.state(["disabled"])
-            globals.state_variables.remove(self.rotation_z)
+            if self.rotation_z in globals.state_variables:
+                globals.state_variables.remove(self.rotation_z)
             self.rotation_z.set(0)
 
     def enable_rotations(self, *args, **kwargs):

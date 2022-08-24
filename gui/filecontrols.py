@@ -26,7 +26,7 @@ class FileControls(tk.Frame,object):
         self.canvas = canvas
         self.bg = bg
         super(FileControls,self).__init__(master,self.gui,*args,bg=self.bg,**kwargs)
-        
+
         self.create_variables()
         self.create_widgets()
         self.place_widgets()

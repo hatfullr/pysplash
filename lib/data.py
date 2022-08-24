@@ -4,7 +4,7 @@ import numpy as np
 import globals
 
 class Data(collections.OrderedDict,object):
-    def __init__(self,data,rotations=None,*args,**kwargs):
+    def __init__(self,data,*args,**kwargs):
         if globals.debug > 1: print("data.__init__")
         super(Data,self).__init__(*args,**kwargs)
 
@@ -12,7 +12,7 @@ class Data(collections.OrderedDict,object):
             self[key] = val
 
         self.is_image = False
-            
+        
         dkeys = self.keys()
         if 'image' in dkeys or 'extent' in dkeys:
             if 'image' in dkeys and 'extent' in dkeys:
@@ -29,12 +29,6 @@ class Data(collections.OrderedDict,object):
         for key in data['data'].keys():
             self.display_units[key] = data['display_units'][key]
             self.physical_units[key] = data['physical_units'][key]
-
-        if rotations is not None:
-            self.rotate(rotations[0],rotations[1],rotations[2])
-        
-        # Assume linear data initially
-        self.scale = 'linear'
 
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")

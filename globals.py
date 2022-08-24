@@ -47,6 +47,9 @@ exec_imports = [
 import os.path
 profile_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"profile")
 
+# When click-dragging with the mouse on the plot, this
+# determines the minimum allowed size of the selection
+minimum_selection_size = 5
 
 
 
@@ -55,6 +58,10 @@ profile_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"profile
 # Internal use variables. Only edit these variables
 # if you really know what you are doing.
 hotkey_pressed = False
+
+# allow starting in time mode if True. Also used to
+# control time mode at runtime
+time_mode = False
 
 def init():
     global state_variables

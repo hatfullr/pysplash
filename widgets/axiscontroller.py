@@ -106,22 +106,23 @@ class AxisController(LabelledFrame,object):
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
 
-        #if value in ['None',None,'']:
-        #    self.label.set("")
-        
         if self.gui.data is not None:
-            if value in self.gui.data['data'].keys():
-                if any(self.gui.get_display_data(self.value.get(), raw=True) <= 0):
+            self.gui.controls.plotcontrols.disable_rotations()
+
+            # When the user selects time as an axis, we need to change global behaviors
+            if not self.gui.time_mode.get() and value in ['t','time']: self.gui.time_mode.set(True)
+            elif self.gui.time_mode.get() and self.previous_value in ['t','time']:
+                if not any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]):
+                    self.gui.time_mode.set(False)
+            
+            elif value in self.gui.data['data'].keys():
+                if any(self.gui.get_display_data(value, raw=True) <= 0):
                     if self.scale.get() == "log10":
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
                 # Disable rotation controls if we're not in the spatial domain
                 if value in ['x','y','z']:
                     self.gui.controls.plotcontrols.enable_rotations()
-                else:
-                    self.gui.controls.plotcontrols.disable_rotations()
-            else:
-                self.gui.controls.plotcontrols.disable_rotations()
 
             self.set_adaptive_limits()
             if self.combobox.textvariable.get() not in ['None',None,'']: self.label.set(value)
@@ -240,8 +241,7 @@ class AxisController(LabelledFrame,object):
     
     def get_data(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.get_data")
-        widget = self.combobox
-        data, physical_units, display_units = widget.get()
+        data, physical_units, display_units = self.combobox.get()
         
         # Apply the scaling to the resulting data
         scale = self.scale.get()
@@ -249,3 +249,4 @@ class AxisController(LabelledFrame,object):
         elif scale == '^10': data = 10.**data
 
         return data, physical_units, display_units
+

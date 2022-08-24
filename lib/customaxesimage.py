@@ -10,8 +10,9 @@ import globals
 from collections import OrderedDict
 from lib.customcolorbar import CustomColorbar
 
+# interpolation 'nearest' is significantly faster than interpolation 'none'
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,cscale='linear',aspect=None,initialize=True,extent=None,colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,**kwargs):
+    def __init__(self,ax,data,cscale='linear',aspect=None,initialize=True,extent=None,interpolation='nearest',colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self._axes = ax
         self.widget = self._axes.get_figure().canvas.get_tk_widget()
@@ -38,7 +39,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
         kwargs['origin'] = 'lower'
 
-        matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,**kwargs)
+        matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,interpolation=interpolation,**kwargs)
         self._extent = extent
         
         if self.data_is_image:
@@ -169,6 +170,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             if new_data.dtype != 'bool':
                 if self.cscale == 'log10': new_data = np.log10(new_data)
                 elif self.cscale == '^10': new_data = 10.**new_data
-        self._data = new_data
+        self._data = new_data.astype('uint8')
         super(CustomAxesImage,self).set_data(new_data)
 

@@ -74,11 +74,11 @@ class ScatterPlot(CustomAxesImage,object):
         
         super(ScatterPlot,self).__init__(
             self.ax,
-            np.full((1,1),np.nan,dtype=int),
+            np.full((1,1),np.nan,dtype='uint8'),
             cmap=cmap,
             norm=norm,
             #interpolation='nearest', # No anti-aliasing
-            interpolation='none', # No interpolation
+            #interpolation='none', # No interpolation
             **kwargs
         )
 
@@ -108,7 +108,7 @@ class ScatterPlot(CustomAxesImage,object):
             self._extent = np.array([xmin,xmax,ymin,ymax])
             self.dx = (xmax-xmin)/float(self.xpixels)
             self.dy = (ymax-ymin)/float(self.ypixels)
-            
+
             self._data[:] = 0
             if has_jit:
                 self.calculate_data_gpu(self.x[idx],self.y[idx],self.c[idx])
