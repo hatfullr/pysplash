@@ -256,23 +256,14 @@ class InteractivePlot(ResizableFrame,object):
                 x,
                 y,
             )
+            
             kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
             kwargs['aspect'] = aspect
             kwargs['aftercalculate'] = self.after_scatter_calculate
             kwargs['cmap'] = self.colorbar.cmap
             kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
             kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
-            
-            if self.track_id is not None:
-                xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
-                dx = 0.5*(xlim[1]-xlim[0])
-                dy = 0.5*(ylim[1]-ylim[0])
-                xlim = (self.origin[0]-dx,self.origin[0]+dx)
-                ylim = (self.origin[1]-dy,self.origin[1]+dy)
-                self.ax.set_xlim(xlim)
-                self.ax.set_ylim(ylim)
-                xaxis.limits.set_limits(xlim)
-                yaxis.limits.set_limits(ylim)
+            kwargs['colorbar'] = self.colorbar
                 
             self.colorbar.show()
         else:
@@ -318,16 +309,12 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['aspect'] = aspect
             kwargs['colorbar'] = self.colorbar
-            kwargs['aftercalculate'] = self.after_ivp_calculate
 
             self.colorbar.show()
+
+        if self.drawn_object is None: kwargs['initialize'] = True
         
-        if self.drawn_object is None:
-            kwargs['initialize'] = True
-            self.drawn_object = method(*args,**kwargs)
-        elif not globals.time_mode:
-            self.drawn_object = method(*args,**kwargs)
-        
+        self.drawn_object = method(*args,**kwargs)
 
         if globals.use_multiprocessing_on_scatter_plots:
             if self.drawn_object.thread is None:
@@ -347,7 +334,7 @@ class InteractivePlot(ResizableFrame,object):
         # Make absolutely sure that the only drawn object on the axis is
         # the one we just created
         for child in self.ax.get_children():
-            if isinstance(child,(ScatterPlot, IntegratedValuePlot)) and child is not self.drawn_object:
+            if isinstance(child,CustomAxesImage) and child is not self.drawn_object:
                 child.remove()
           
         self.canvas.draw()
@@ -385,14 +372,6 @@ class InteractivePlot(ResizableFrame,object):
             elif xadaptive or np.nan in controls_xlimits: self.reset_xylim(which='xlim',draw=False)
             elif yadaptive or np.nan in controls_ylimits: self.reset_xylim(which='ylim',draw=False)
         self.after_calculate(*args, **kwargs)
-
-    def after_ivp_calculate(self, *args, **kwargs):
-        if globals.debug > 1: print("interactiveplot.after_ivp_calculate")
-        if ((isinstance(self.drawn_object, IntegratedValuePlot) and
-            not isinstance(self.previously_drawn_object, IntegratedValuePlot)) or
-            self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()):
-            self.reset_clim(draw=False)
-        self.after_calculate(self, *args, **kwargs)
         
     def set_time_text(self,event=None):
         if globals.debug > 1: print("interactiveplot.set_time_text")
@@ -434,13 +413,13 @@ class InteractivePlot(ResizableFrame,object):
                     self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
-    def reset_clim(self, draw=True):
-        if globals.debug > 1: print("interactiveplot.reset_clim")
-        #self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
-        newlim = np.array(self.colorbar.calculate_limits(data=self.drawn_object._data))
-        self.colorbar.set_clim(newlim)
-        self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
-        if draw: self.canvas.draw_idle()
+    #def reset_clim(self, draw=True):
+    #    if globals.debug > 1: print("interactiveplot.reset_clim")
+    #    #self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
+    #    newlim = np.array(self.colorbar.calculate_limits(data=self.drawn_object._data))
+    #    self.colorbar.set_clim(newlim)
+    #    self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
+    #    if draw: self.canvas.draw_idle()
 
     def reset_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_xylim")

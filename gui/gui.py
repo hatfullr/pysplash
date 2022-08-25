@@ -174,7 +174,10 @@ class GUI(tk.Frame,object):
                         if value not in ['t','time']:
                             controller.combobox.textvariable.set(value)
                             break
-
+        # Allow only linear colorbars for now
+        self.controls.axis_controllers['Colorbar'].scale.set('linear')
+        self.controls.axis_controllers['Colorbar'].scale.disable()
+                        
     """
     def initialize_xy_controls(self):
         if globals.debug > 1: print("gui.initialize_xy_controls")

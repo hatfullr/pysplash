@@ -17,7 +17,7 @@ class RadioButton(SwitchButton, object):
             raise TypeError("Keyword argument 'variable' must be of type tk.StringVar. Received '"+type(self.variable).__name__+"'")
         
         def varchange(*args, **kwargs):
-            if self.radiovariable.get() != self.value: self.variable.set(False)
+            self.variable.set(self.radiovariable.get() == self.value)
         def boolchange(*args, **kwargs):
             if self.variable.get(): self.radiovariable.set(self.value)
         def on_button1(*args, **kwargs):

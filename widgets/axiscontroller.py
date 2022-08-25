@@ -160,6 +160,8 @@ class AxisController(LabelledFrame,object):
                     parent_ax.set_xlabel(self.label.get())
                 elif isinstance(self.axis, YAxis):
                     parent_ax.set_ylabel(self.label.get())
+                else:
+                    raise Exception("unknown axis type '"+type(self.axis).__name__+"'")
 
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")

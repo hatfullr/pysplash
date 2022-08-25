@@ -12,6 +12,18 @@ class Button(ttk.Label, object):
         self.command = kwargs.pop('command', None)
         padding = kwargs.pop('padding', "1 1 1 1") #"0 -1 0 0")
         style = kwargs.pop('style','TButton')
+
+        s = ttk.Style()
+        s.map(
+            style,
+            relief=[
+                (('pressed','disabled'),'sunken'),
+                (('pressed','!disabled'), 'sunken'),
+                (('!pressed','disabled'),'raised'),
+                (('!pressed','!disabled'),'raised'),
+            ],
+        )
+        
         super(Button, self).__init__(master, *args, padding=padding, style=style, **kwargs)
 
         # Mouse hover behavior

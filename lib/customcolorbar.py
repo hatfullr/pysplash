@@ -41,7 +41,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                         vmax=self.vmax,
                     )
                     
-                    #axesimage.set_clim(self.vmin,self.vmax)
                     self.draw_all()
     
     def find_axesimage(self, *args, **kwargs):
@@ -55,16 +54,28 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.calculate_limits")
         if self.visible:
             # Get the color data in the plot
+            vmin,vmax = None, None
             if data is None:
                 axesimage = self.find_axesimage()
                 if axesimage:
-                    data = axesimage._data
+                    data = axesimage.get_array()
+                # Point density plots always range between 0 and 1,
+                # except when it's on a log scale (not supported yet)
+                from lib.pointdensityplot import PointDensityPlot
+                if isinstance(axesimage, PointDensityPlot):
+                    vmin, vmax = 0., 1.
             if data is None:
                 return [None, None]
-            vmin = np.nanmin(data[np.isfinite(data)])
-            vmax = np.nanmax(data[np.isfinite(data)])
+
+            finite_data = data[np.isfinite(data)]
+            if vmin is None: vmin = np.nanmin(finite_data)
+            if vmax is None: vmax = np.nanmax(finite_data)
             return [vmin, vmax]
         else: return [None, None]
+
+    def update_limits(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.update_limits")
+        self.set_clim(self.calculate_limits())
 
     def connect_canvas(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.connect_canvas")
@@ -80,15 +91,12 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     def connect_resize(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.connect_resize")
-        #self.connected_canvas = self._ax.get_figure().canvas
         self.show_cid = self.connected_canvas.mpl_connect("resize_event",self.update_position)
     def disconnect_resize(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_resize")
         if self.show_cid is not None:
             self.connected_canvas.mpl_disconnect(self.show_cid)
         self.show_cid = None
-        #self.disconnect_draw()
-        #self.connected_canvas = None
 
     def connect_axesimage(self, axesimage):
         if globals.debug > 1: print("customcolorbar.connect_axesimage")
@@ -96,12 +104,12 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if self.side in ['right', 'left']:
             self.image_cid = self.cax.callbacks.connect(
                 "ylim_changed",
-                lambda *args, **kwargs: axesimage.set_clim(self.get_cax_limits())
+                lambda *args, **kwargs: axesimage.set_clim(self.cax.get_ylim())
             )
         elif seld.side in ['top', 'bottom']:
             self.image_cid = self.cax.callbacks.connect(
                 "xlim_changed",
-                lambda *args, **kwargs: axesimage.set_clim(self.get_cax_limits())
+                lambda *args, **kwargs: axesimage.set_clim(self.cax.get_xlim())
             )
         else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
         
@@ -113,12 +121,16 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     def connect_draw(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.connect_draw")
-        self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.update_position)
+        self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.on_draw)
     def disconnect_draw(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_draw")
         if self.draw_cid is not None:
             self.connected_canvas.mpl_disconnect(self.draw_cid)
         self.draw_cid = None
+
+    def on_draw(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.on_draw")
+        self.update_position()
         
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")

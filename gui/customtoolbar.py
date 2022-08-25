@@ -50,7 +50,6 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.gui.interactiveplot.clear_tracking()
         self.gui.interactiveplot.origin = np.zeros(2)
         self.gui.interactiveplot.reset_xylim()
-        self.gui.interactiveplot.reset_clim()
 
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()

@@ -66,3 +66,14 @@ class AxisScale(tk.LabelFrame, object):
         # data is what we have control of
         self.axis = axis
 
+    def disable(self, *args, **kwargs):
+        if globals.debug > 1: print('axisscale.disable')
+        self.linear_button.configure(state='disabled')
+        self.log_button.configure(state='disabled')
+        self.pow10_button.configure(state='disabled')
+
+    def enable(self, *args, **kwargs):
+        if globals.debug > 1: print('axisscale.enable')
+        self.linear_button.configure(state='normal')
+        self.log_button.configure(state='normal')
+        self.pow10_button.configure(state='normal')
