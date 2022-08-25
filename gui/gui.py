@@ -592,7 +592,7 @@ class GUI(tk.Frame,object):
         
         self.filecontrols.disable('all')
         self.previous_file = self.filecontrols.current_file.get()
-        self.filecontrols.current_file.set("")
+        self.filecontrols.current_file.set("Time Mode")
 
         self.interactiveplot.clear_tracking()
         

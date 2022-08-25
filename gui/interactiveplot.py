@@ -348,8 +348,9 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
         if not self.gui.data.is_image:
             self.previous_args = args
-            self.previous_kwargs = kwargs            
-        
+            self.previous_kwargs = kwargs
+
+            # Only adjust the limits if any data was plotted
             xadaptive = self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get()
             yadaptive = self.gui.controls.axis_controllers['YAxis'].limits.adaptive.get()
             cadaptive = self.gui.controls.axis_controllers['Colorbar'].limits.adaptive.get()
@@ -366,7 +367,7 @@ class InteractivePlot(ResizableFrame,object):
                 self.gui.controls.axis_controllers['Colorbar'].limits.low.get(),
                 self.gui.controls.axis_controllers['Colorbar'].limits.high.get(),
             ]
-            
+
             if ((xadaptive or np.nan in controls_xlimits) and
                 (yadaptive or np.nan in controls_ylimits)): self.reset_xylim(which='both',draw=False)
             elif xadaptive or np.nan in controls_xlimits: self.reset_xylim(which='xlim',draw=False)
@@ -466,21 +467,28 @@ class InteractivePlot(ResizableFrame,object):
         else:
             if xdata is not None:
                 xdata = xdata - self.origin[0]
-                xdata = xdata[np.isfinite(xdata)]
-                new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
+                idx = np.isfinite(xdata)
+                if np.any(idx):
+                    xdata = xdata[idx]
+                    new_xlim = np.array([np.nanmin(xdata), np.nanmax(xdata)])
             if ydata is not None:
                 ydata = ydata - self.origin[1]
-                ydata = ydata[np.isfinite(ydata)]
-                new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
-        
+                idx = np.isfinite(ydata)
+                if np.any(idx):
+                    ydata = ydata[idx]
+                    new_ylim = np.array([np.nanmin(ydata), np.nanmax(ydata)])
+
         xmargin, ymargin = self.ax.margins()
-        dx = new_xlim[1]-new_xlim[0]
-        dy = new_ylim[1]-new_ylim[0]
-        # When dy or dx are zero, Matplotlib uses -margin, +margin limits
-        if dy == 0: dy = 1.
-        if dx == 0: dx = 1.
-        new_xlim = np.array([new_xlim[0]-dx*xmargin,new_xlim[1]+dx*xmargin])
-        new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
+        if None not in new_xlim:
+            # When dy or dx are zero, Matplotlib uses -margin, +margin limits
+            dx = new_xlim[1]-new_xlim[0]
+            if dx == 0: dx = 1.
+            new_xlim = np.array([new_xlim[0]-dx*xmargin,new_xlim[1]+dx*xmargin])
+
+        if None not in new_ylim:
+            dy = new_ylim[1]-new_ylim[0]
+            if dy == 0: dy = 1.
+            new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
             
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim

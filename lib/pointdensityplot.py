@@ -16,9 +16,11 @@ except ImportError:
 
 class PointDensityPlot(ScatterPlot, object):
     def __init__(self, ax, x, y, s=1, **kwargs):
-        #valid = np.logical_and(np.isfinite(x),np.isfinite(y))
-        #x = x[valid]
-        #y = y[valid]
+        # We should only need to check the y-axis for non-finite values,
+        # because time should always be finite!
+        valid = np.isfinite(y)
+        x = x[valid]
+        y = y[valid]
 
         self.unique_x = np.unique(x)
         self.calculated = False

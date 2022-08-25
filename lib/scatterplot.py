@@ -77,8 +77,6 @@ class ScatterPlot(CustomAxesImage,object):
             np.full((1,1),np.nan,dtype='uint8'),
             cmap=cmap,
             norm=norm,
-            #interpolation='nearest', # No anti-aliasing
-            #interpolation='none', # No interpolation
             **kwargs
         )
 

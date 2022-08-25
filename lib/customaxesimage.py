@@ -39,9 +39,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
         kwargs['origin'] = 'lower'
 
-        matplotlib.image.AxesImage.__init__(self,self._axes,extent=extent,interpolation=interpolation,**kwargs)
+        super(CustomAxesImage, self).__init__(self._axes,extent=extent,interpolation=interpolation,**kwargs)
         self._extent = extent
-        
+
         if self.data_is_image:
             super(CustomAxesImage,self).set_data(self._data)
         else:
@@ -49,7 +49,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._axes.add_image(self)
 
         self.colorbar = colorbar
-        if self.colorbar:
+        if self.colorbar is not None:
             self.colorbar.connect_axesimage(self)
 
         if not self.data_is_image:
@@ -77,7 +77,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         # before removing the image
         if self.after_id_calculate is not None: self.widget.after_cancel(self.after_id_calculate)
         
-        if self.colorbar: self.colorbar.disconnect_axesimage()
+        if self.colorbar is not None: self.colorbar.disconnect_axesimage()
         super(CustomAxesImage,self).remove(*args,**kwargs)
     
     def equalize_aspect_ratio(self,xlim=None,ylim=None):
@@ -141,11 +141,10 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _after_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._after_calculate")
         self.thread = None
-        self._unscaled_data = copy(self._data)
         self.set_data(self._data)
         
         # Update this image's colors based on the colorbar's limits
-        if self.colorbar:
+        if self.colorbar is not None:
             self.set_clim(self.colorbar.get_cax_limits())
         
         self.after_id_calculate = None
