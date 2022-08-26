@@ -1,3 +1,9 @@
+# When True, the threading module will be used to
+# split large tasks out to multiple threads to
+# improve performance. You can try setting this to
+# False if you are experiencing errors.
+support_threading = True
+
 # Compact support of the kernel function defined in
 # kernel.py
 compact_support = 2.

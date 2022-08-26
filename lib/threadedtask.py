@@ -1,12 +1,11 @@
-support_threading = True
-if support_threading:
+import globals
+if globals.support_threading:
     from multiprocessing import Queue
     from sys import version_info
     if version_info.major >= 3: import queue
     else: import Queue as queue
     import threading
     import sys
-    import globals
 
     class ThreadedTask(threading.Thread,object):
         def __init__(self, master=None, target=None, start=True, args=[], kwargs={},
@@ -71,9 +70,11 @@ if support_threading:
                 if self.callback is not None:
                     self.callback(*self.callback_args,**self.callback_kwargs)
         
-        if version_info.major < 3:
-            def isAlive(self,*args,**kwargs):
-                return self.is_alive(*args,**kwargs)
+        def isAlive(self,*args,**kwargs):
+            try: return super(ThreadedTask, self).isAlive(*args,**kwargs)
+            except AttributeError as e:
+                try: return self.is_alive(*args,**kwargs)
+                except AttributeError: raise(e)
             
                 
 else:
