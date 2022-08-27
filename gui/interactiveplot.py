@@ -342,7 +342,7 @@ class InteractivePlot(ResizableFrame,object):
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
-        
+
         self.gui.event_generate("<<PlotUpdate>>")
 
     def after_scatter_calculate(self, *args, **kwargs):

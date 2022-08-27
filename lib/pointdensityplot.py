@@ -10,6 +10,7 @@ import globals
 
 try:
     from numba import cuda
+    import math
     has_jit = True
 except ImportError:
     has_jit = False
@@ -32,66 +33,94 @@ class PointDensityPlot(ScatterPlot, object):
         if globals.debug > 1: print("pointdensityplot.calculate_xypixels")
         super(PointDensityPlot,self).calculate_xypixels(*args,**kwargs)
 
-        self.xbins = self.xpixels
-        self.ybins = self.ypixels
+        self.ybins = np.linspace(self._extent[2],self._extent[3],self.ypixels+1)
+        self.xbins = np.linspace(self._extent[0],self._extent[1],self.xpixels+1)
+
+        #self.xpixels_to_xbin_end = np.ones(self.xpixels)
+        #self.ypixels_to_ybin_end = np.ones(self.ypixels)
         
         # Figure out the resolution that we should use on the x-axis
         if globals.time_mode:
-            fig = self.ax.get_figure()
-            pos = self.ax.get_position()
-            figsize = fig.get_size_inches()
-            self.xbins = int(fig.dpi * figsize[0] * pos.width)
             # If we will use more pixels than what is available from our data,
             # reduce the number of bins to instead fit the data
-            if self.xbins > len(self.unique_x):
-                dx = np.diff(self.unique_x)
-                self.xbins = np.empty(len(self.unique_x)+1)
-                self.xbins[0] = self.unique_x[0]
-                self.xbins[-1] = self.unique_x[-1]
-                self.xbins[1:-1] = self.unique_x[:-1] + 0.5*dx
+            dx = np.diff(self.unique_x)
+            self.xbins = np.empty(len(self.unique_x)+1)
+            self.xbins[0] = self.unique_x[0] - 0.5*dx[0]
+            self.xbins[-1] = self.unique_x[-1] + 0.5*dx[-1]
+            self.xbins[1:-1] = self.unique_x[:-1] + 0.5*dx
+            #dxpixels = (self._extent[1]-self._extent[0])/float(self.xpixels)
+            #
+            #for i in range(self.xpixels):
+            #    xpos = self._extent[0] + dxpixels*i
+            #    for xleft, xright in zip(self.xbins[:-1],self.xbins[1:]):
+            #        if xleft <= xpos and xpos < xright:
+            #            self.xpixels_to_xbin_end[i] = int(round((xright-xleft)/dxpixels))
+            #            break
 
     if has_jit:
+        def calculate_data_gpu(self,x,y,c):
+            return self.calculate_data_cpu(x,y,c)
+        """
         @staticmethod
-        @cuda.jit('void(float32[:,:], float64[:], float64[:], float32, float32, float32, float32)')
-        def calculate_gpu(data, y, x, ymin, xmin, invdy, invdx):
+        @cuda.jit#('void(float64[:,:], float64[:], float64[:], float64, float64, float64, float64)')
+        def calculate_gpu(pixels, y, x, ymin, xmin, dypixel, dxpixel, ypixels_to_ybin_end, xpixels_to_xbin_end, N):
             i = cuda.grid(1)
-            if i < y.shape[0]:
-                cuda.atomic.add(
-                    data,
-                    (
-                        int((y[i] - ymin)*invdy), # y index
-                        int((x[i] - xmin)*invdx), # x index
-                    ),
-                    1 # Add 1
-                )
+            if i < N:
+                # Find the bin which this particle belongs to
+                #x[i] - min(xbins)
+
+                # First find where the particle belongs in the pixels
+                ix = int((x[i]-xmin)/dxpixel)
+                jy = int((y[i]-ymin)/dypixel)
+
+                # Now fill in the pixels that correspond to the bins
+                for xpixel in range(ix, ix+xpixels_to_xbin_end[ix]):
+                    cuda.atomic.add(pixels, (jy, xpixel), 1)
+                
+                #for ix,(xleft,xright) in enumerate(zip(xbins[:-1], xbins[1:])):
+                #    if xleft <= x[i] and x[i] < xright:
+                #        #print(xleft, x[i], xright)
+                #        break
+                #else: return
+                #
+                #for jy,(ybottom, ytop) in enumerate(zip(ybins[:-1], ybins[1:])):
+                #    if ybottom <= y[i] and y[i] < ytop:
+                #        break
+                #else: return
+                #print(jy,ix)
+                #cuda.atomic.add(pixels, (jy,ix), 1)
+                    
         
         def calculate_data_gpu(self,x,y,c):
-            N = len(x)
-            
-            dx = (self._extent[1]-self._extent[0])/float(self.xbins)
-            dy = (self._extent[3]-self._extent[2])/float(self.ybins)
-
+            pixels = self._data.astype('float64')
+            device_pixels = cuda.to_device(pixels)
+            device_xpixels_to_xbin_end = cuda.to_device(self.xpixels_to_xbin_end)
+            device_ypixels_to_ybin_end = cuda.to_device(self.ypixels_to_ybin_end)
             device_y = cuda.to_device(y)
             device_x = cuda.to_device(x)
-            
-            device_data = cuda.to_device(self._data.astype('float32'))
-            
+
+            N = len(x)
             blockspergrid = N // globals.threadsperblock + 1
             self.calculate_gpu[blockspergrid, globals.threadsperblock](
-                device_data,
+                device_pixels,
                 device_y,
                 device_x,
-                self._extent[2]-0.5*dy,
-                self._extent[0]-0.5*dx,
-                1./dy,
-                1./dx,
+                self._extent[2],
+                self._extent[0],
+                (self._extent[3]-self._extent[2])/float(pixels.shape[0]),
+                (self._extent[1]-self._extent[0])/float(pixels.shape[1]),
+                device_ypixels_to_ybin_end,
+                device_xpixels_to_xbin_end,
+                N,
             )
             cuda.synchronize()
-            data = device_data.copy_to_host()
-            data /= np.amax(data)
-            data[data == 0] = np.nan
-            self._data = data
+            pixels = device_pixels.copy_to_host()#.reshape(self.ypixels,self.xpixels)
+            pixels /= np.amax(pixels)
+            pixels[pixels == 0] = np.nan
+            self._data = pixels
 
+            #print(self._extent)
+        """
     def calculate_data_cpu(self,x,y,c):
         if globals.debug > 1: print("pointdensityplot.calculate_data_cpu")
         pixels,yedges,xedges = np.histogram2d(
@@ -108,7 +137,7 @@ class PointDensityPlot(ScatterPlot, object):
             np.amax(yedges) - 0.5*dy, # ymax
         ]
 
-        pixels /= np.amax(pixles)
+        pixels /= np.amax(pixels)
         pixels[pixels == 0] = np.nan
         
         self._data = pixels
