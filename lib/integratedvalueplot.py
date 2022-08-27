@@ -184,10 +184,9 @@ class IntegratedValuePlot(CustomAxesImage,object):
             xmin = self.ax.get_xlim()[0]#*display_to_physical[1]
             ymin = self.ax.get_ylim()[0]#*display_to_physical[2]
             
-            threadsperblock = 512
-            blockspergrid = len(idx) // threadsperblock + 1
+            blockspergrid = len(idx) // globals.threadsperblock + 1
             
-            self.calculate_gpu[blockspergrid,threadsperblock](
+            self.calculate_gpu[blockspergrid,globals.threadsperblock](
                 device_data,
                 device_idx,
                 self.device_x,

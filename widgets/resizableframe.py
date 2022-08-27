@@ -7,7 +7,7 @@ else:
     from tkinter import ttk
 import enum
 
-class CursorResizeEnum(enum.Enum):
+class CursorResizeEnum(enum.IntEnum):
     Normal = 0
     Left = 1
     TopLeft = 2
@@ -33,15 +33,21 @@ class CursorResizeEnum(enum.Enum):
 
     @property
     def value(self):
-        val = super(CursorResizeEnum, self).value
-        if self in [CursorResizeEnum.Left, CursorResizeEnum.Right]: val = "sb_h_double_arrow"
-        elif self in [CursorResizeEnum.Top, CursorResizeEnum.Bottom]: val = "sb_v_double_arrow"
-        elif self == CursorResizeEnum.TopLeft: val = "top_left_corner"
-        elif self == CursorResizeEnum.TopRight: val = "top_right_corner"
-        elif self == CursorResizeEnum.BottomLeft: val = "bottom_left_corner"
-        elif self == CursorResizeEnum.BottomRight: val = "bottom_right_corner"
-        else: val = ''
-        return val
+        val = self._value_ #super(CursorResizeEnum, self).value
+        #if self in [CursorResizeEnum.Left, CursorResizeEnum.Right]: val = "sb_h_double_arrow"
+        #elif self in [CursorResizeEnum.Top, CursorResizeEnum.Bottom]: val = "sb_v_double_arrow"
+        #elif self == CursorResizeEnum.TopLeft: val = "top_left_corner"
+        #elif self == CursorResizeEnum.TopRight: val = "top_right_corner"
+        #elif self == CursorResizeEnum.BottomLeft: val = "bottom_left_corner"
+        #elif self == CursorResizeEnum.BottomRight: val = "bottom_right_corner"
+        #else: val = ''
+        if int(self) in [1, 5]: return "sb_h_double_arrow"
+        elif int(self) in [3, 7]: return "sb_v_double_arrow"
+        elif int(self) == 2: return "top_left_corner"
+        elif int(self) == 4: return "top_right_corner"
+        elif int(self) == 8: return "bottom_left_corner"
+        elif int(self) == 6: return "bottom_right_corner"
+        return ''
     
 # Keyword "resizable" is for the (x, y) directions
 class ResizableFrame(tk.Frame, object):

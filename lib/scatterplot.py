@@ -116,8 +116,9 @@ class ScatterPlot(CustomAxesImage,object):
             if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time()-start))
 
     if has_jit:
+        # The string argument to cuda.jit might make it run faster, I'm not sure.
         @staticmethod
-        @cuda.jit
+        @cuda.jit('void(uint8[:,:], float64[:,:], float32, float32)')
         def calculate_indices_gpu(data,delta_xy,invdx,invdy):
             i = cuda.grid(1)
             if i < delta_xy.shape[0]:
@@ -125,7 +126,6 @@ class ScatterPlot(CustomAxesImage,object):
 
         def calculate_data_gpu(self,x,y,c):
             if globals.debug > 1: print("scatterplot.calculate_data_gpu")
-            threadsperblock=512
             N = len(x)
             # Center on each pixel, so -0.5*dx and -0.5*dy
             delta_xy = np.column_stack((x,y,c))
@@ -133,16 +133,15 @@ class ScatterPlot(CustomAxesImage,object):
             try:
                 device_delta_xy = cuda.to_device(delta_xy)
                 device_data = cuda.to_device(self._data)
-                #device_colors = cuda.to_device(self.c)
             except Exception:
                 print("Unexpected error encountered while copying data from the host to the gpu")
                 print(traceback.format_exc())
                 cuda.get_current_device().reset()
                 return
 
-            blockspergrid = N // threadsperblock + 1
-            
-            self.calculate_indices_gpu[blockspergrid,threadsperblock](
+            blockspergrid = N // globals.threadsperblock + 1
+
+            self.calculate_indices_gpu[blockspergrid,globals.threadsperblock](
                 device_data,
                 device_delta_xy,
                 1./self.dx,

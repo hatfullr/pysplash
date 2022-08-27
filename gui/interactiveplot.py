@@ -182,8 +182,8 @@ class InteractivePlot(ResizableFrame,object):
 
         xaxis = self.gui.controls.axis_controllers['XAxis']
         yaxis = self.gui.controls.axis_controllers['YAxis']
-        x, x_physical_units, x_display_units = xaxis.get_data()
-        y, y_physical_units, y_display_units = yaxis.get_data()
+        x, x_display_units, x_physical_units = xaxis.data, xaxis.display_units, xaxis.physical_units
+        y, y_display_units, y_physical_units = yaxis.data, yaxis.display_units, yaxis.physical_units
 
         # Don't try to plot anything if there's no data to plot
         if x is None or y is None: return
@@ -267,7 +267,8 @@ class InteractivePlot(ResizableFrame,object):
                 
             self.colorbar.show()
         else:
-            A, Ap, Ad = self.gui.controls.axis_controllers['Colorbar'].get_data()
+            caxis = self.gui.controls.axis_controllers['Colorbar']
+            A, Ad, Ap = caxis.data, caxis.display_data, caxis.physical_data
             if A is None or Ap is None or Ad is None:
                 raise Exception("One of A, Ap, or Ad was None. This should never happen.")
             
@@ -454,10 +455,10 @@ class InteractivePlot(ResizableFrame,object):
         ydata = None
         if using[0] is not None: xdata = using[0]
         elif hasattr(self.gui, "data") and self.gui.data:
-            xdata = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
+            xdata = self.gui.controls.axis_controllers['XAxis'].data
         if using[1] is not None: ydata = using[1]
         elif hasattr(self.gui, "data") and self.gui.data:
-            ydata = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
+            ydata = self.gui.controls.axis_controllers['YAxis'].data
 
         if xdata is None and ydata is None:
             # Get the home view and use its limits as the new limits
@@ -523,8 +524,8 @@ class InteractivePlot(ResizableFrame,object):
             x,y = self.mouse
             if None in [x,y]: return
         else:
-            x = self.gui.controls.axis_controllers['XAxis'].get_data()[0][self.track_id]
-            y = self.gui.controls.axis_controllers['YAxis'].get_data()[0][self.track_id]
+            x = self.gui.controls.axis_controllers['XAxis'].data[self.track_id]
+            y = self.gui.controls.axis_controllers['YAxis'].data[self.track_id]
 
         new_width = (curr_xlim[1]-curr_xlim[0])*factor
         new_height= (curr_ylim[1]-curr_ylim[0])*factor
@@ -600,8 +601,8 @@ class InteractivePlot(ResizableFrame,object):
                 self.gui.message("Click and drag on the plot to select particles, then try again",duration=5000)
                 return
 
-            x = self.gui.controls.axis_controllers['XAxis'].get_data()[0]
-            y = self.gui.controls.axis_controllers['YAxis'].get_data()[0]
+            x = self.gui.controls.axis_controllers['XAxis'].data
+            y = self.gui.controls.axis_controllers['YAxis'].data
 
             xlim = self.selection[:2]
             ylim = self.selection[2:]

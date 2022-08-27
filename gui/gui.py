@@ -580,6 +580,10 @@ class GUI(tk.Frame,object):
         globals.time_mode = self.time_mode.get()
         if self.time_mode.get(): self.enable_time_mode()
         else: self.disable_time_mode()
+        # Stale the axis controllers so that we obtain the correct data
+        # (the shape of the data has changed now)
+        for controller in self.controls.axis_controllers.values():
+            controller.stale = True
     
     def enable_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.enable_time_mode")

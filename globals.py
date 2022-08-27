@@ -4,6 +4,13 @@
 # False if you are experiencing errors.
 support_threading = True
 
+# For GPU-enabled calculations, use this many threads
+# per compute block. The number of threads you can
+# or should use depends on your hardware. There is
+# unfortunately no way to calculate a proper value,
+# as GPU hardware architecture changes all the time.
+threadsperblock = 512
+
 # Compact support of the kernel function defined in
 # kernel.py
 compact_support = 2.

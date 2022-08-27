@@ -49,7 +49,6 @@ class AxisController(LabelledFrame,object):
         self.limits.high.trace('w',self.update_scale_buttons)
 
         self.label.trace('w', self.update_label)
-
         self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
@@ -57,6 +56,31 @@ class AxisController(LabelledFrame,object):
         #self.limits.adaptive.trace('w', self.gui.interactiveplot.clear_tracking)
             
         self.previous_value = None
+        self._data = None
+        self.stale = False
+        self._physical_units = None
+        self._display_units = None
+        self._setting_label = True
+
+    @property
+    def data(self):
+        if self.stale:
+            self._data, self._physical_units, self._display_units = self.combobox.get()
+            # Apply the scaling to the resulting data
+            scale = self.scale.get()
+            if scale == 'log10': self._data = np.log10(self._data)
+            elif scale == '^10': self._data = 10.**data
+            self.stale = False
+        return self._data
+    @property
+    def physical_units(self):
+        if self.stale: self.data
+        return self._physical_units
+    @property
+    def display_units(self):
+        if self.stale: self.data
+        return self._display_units
+    
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
@@ -125,9 +149,9 @@ class AxisController(LabelledFrame,object):
                     self.gui.controls.plotcontrols.enable_rotations()
 
             self.set_adaptive_limits()
-            if self.combobox.textvariable.get() not in ['None',None,'']: self.label.set(value)
-            else: self.label.set("")
-        
+            self.label.set(value)
+
+        if self.previous_value != value: self.stale = True
         self.previous_value = value
         
     def connect(self,axis,*args,**kwargs):
@@ -153,15 +177,23 @@ class AxisController(LabelledFrame,object):
     
     def update_label(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.update_label")
+
+        label = self.label.get()
+        if self._setting_label:
+            if label in ['None',None]: label = ''
+            self.label.set(label)
+            self._setting_label = False
+        
         if self.axis:
-            if self.axis.get_label_text() != self.label.get():
+            if self.axis.get_label_text() != label:
                 parent_ax = self.axis.axes
                 if isinstance(self.axis, XAxis):
-                    parent_ax.set_xlabel(self.label.get())
+                    parent_ax.set_xlabel(label)
                 elif isinstance(self.axis, YAxis):
-                    parent_ax.set_ylabel(self.label.get())
+                    parent_ax.set_ylabel(label)
                 else:
                     raise Exception("unknown axis type '"+type(self.axis).__name__+"'")
+        self._setting_label = True
 
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
@@ -215,6 +247,7 @@ class AxisController(LabelledFrame,object):
                         self.limits.low.set(np.log10(np.log10(low)))
                         self.limits.high.set(np.log10(np.log10(high)))
             self.previous_scale = current_scale
+        self.stale = True
     
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print('axiscontroller.update_limits')
@@ -241,14 +274,14 @@ class AxisController(LabelledFrame,object):
             if None not in newlim:
                 self.limits.set_limits(newlim)
     
-    def get_data(self, *args, **kwargs):
-        if globals.debug > 1: print("axiscontroller.get_data")
-        data, physical_units, display_units = self.combobox.get()
-        
-        # Apply the scaling to the resulting data
-        scale = self.scale.get()
-        if scale == 'log10': data = np.log10(data)
-        elif scale == '^10': data = 10.**data
-
-        return data, physical_units, display_units
+    #def get_data(self, *args, **kwargs):
+    #    if globals.debug > 1: print("axiscontroller.get_data")
+    #    data, physical_units, display_units = self.combobox.get()
+    #    
+    #    # Apply the scaling to the resulting data
+    #    scale = self.scale.get()
+    #    if scale == 'log10': data = np.log10(data)
+    #    elif scale == '^10': data = 10.**data
+    #
+    #    return data, physical_units, display_units
 
