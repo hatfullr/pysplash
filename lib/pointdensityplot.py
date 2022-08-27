@@ -65,7 +65,6 @@ class PointDensityPlot(ScatterPlot, object):
                     1 # Add 1
                 )
         
-        @profile
         def calculate_data_gpu(self,x,y,c):
             N = len(x)
             
