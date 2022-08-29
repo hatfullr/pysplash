@@ -45,11 +45,8 @@ class AxisController(LabelledFrame,object):
         self.previous_units = self.units.value.get()
         
         self.scale.trace('w',self.on_scale_changed)
-        self.limits.low.trace('w',self.update_scale_buttons)
-        self.limits.high.trace('w',self.update_scale_buttons)
 
         self.label.trace('w', self.update_label)
-        self.gui.bind("<<PlotUpdate>>", self.update_scale_buttons, add="+")
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
 
@@ -195,18 +192,6 @@ class AxisController(LabelledFrame,object):
                     raise Exception("unknown axis type '"+type(self.axis).__name__+"'")
         self._setting_label = True
 
-    def update_scale_buttons(self, *args, **kwargs):
-        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
-        
-        limits = [self.limits.low.get(), self.limits.high.get()]
-        
-        # Allow negative values if we are in the log10 scale, but if we are in
-        # any other scale then disable the log10 button
-        #if self.scale.get() != 'log10':# and any([l <= 0. for l in limits]):
-        #    self.scale.log_button.state(['disabled'])
-        #else:
-        #    self.scale.log_button.state(['!disabled'])
-            
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
 
