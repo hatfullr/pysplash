@@ -38,3 +38,6 @@ If you happen to have Python2 installed as your default Python version and run i
 ```bash
 python3 $HOME/bin/pysplash out*.sph
 ```
+
+## Troubleshooting
+If you get the error `numba.cuda.cudadrv.error.CudaSupportError: Error at driver init: Call to cuInit results in UNKNOWN_CUDA_ERROR (804)` after opening PySplash, your NVIDIA driver might not match your CUDA library. You can detect if this is the case by running the command `nvidia-smi`. If the output is `Failed to initialize NVML: Driver/library version mismatch`, then this is the problem. The first thing you should try is rebooting your computer. If that doesn't work, check that you have the latest NVIDIA drivers.
