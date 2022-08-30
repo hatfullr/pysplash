@@ -26,6 +26,7 @@ from functions.rotate import rotate
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
+from lib.tkvariable import save, StringVar, IntVar, DoubleVar, BooleanVar
 
 from read_file import read_file
 import globals
@@ -36,22 +37,24 @@ import os
 import numpy as np
 import collections
 
+
 class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
         if globals.debug > 1: print("gui.__init__")
+        
         self.window = window
+
+        #self.preferences = Preferences(self)
+        # Save the preferences when the window closes
+        self.window.on_close['save preferences'] = {'method' : save}
+        #self.window.on_close['save preferences'] = {'method' : self.preferences.save}
+        
         self.fontname = fontname
         self.fontsize = fontsize
-
-        self.preferences_path = os.path.join(globals.profile_path,"preferences.json")
 
         # Turn this on and off to indicate that edits are being
         # made from the code rather than from the user
         self.user_controlled = True
-
-        # Capture the filenames from the execution arguments
-        #if len(sys.argv[1:]) == 0:
-        #    raise RuntimeError("No filenames provided")
         
         if sys.version_info.major < 3:
             self.default_font = tkFont(name=self.fontname,exists=True)
@@ -73,10 +76,6 @@ class GUI(tk.Frame,object):
         self._data_time_mode = None
         self._display_data = None
         self._display_data_time_mode = None
-        
-        self.preferences = {}
-
-        self.load_preferences()
 
         self.create_variables()
         self.create_widgets()
@@ -142,6 +141,7 @@ class GUI(tk.Frame,object):
             if not self.controls.initialized: self.controls.initialize()
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
+            
             xadaptive = xlimits.adaptive.get()
             yadaptive = ylimits.adaptive.get()
             if xadaptive and yadaptive:
@@ -151,8 +151,11 @@ class GUI(tk.Frame,object):
             elif not xadaptive and yadaptive:
                 self.interactiveplot.reset_xylim(which='ylim')
             else:
-                self.interactiveplot.ax.set_xlim(xlimits.get())
-                self.interactiveplot.ax.set_ylim(ylimits.get())
+                xlim, ylim = xlimits.get(), ylimits.get()
+                if all(np.isfinite(xlim)):
+                    self.interactiveplot.ax.set_xlim(xlimits.get())
+                if all(np.isfinite(ylim)):
+                    self.interactiveplot.ax.set_ylim(ylimits.get())
             #print(self.controls.axis_controllers['XAxis'].limits.get())
             
             # Set the x and y limits
@@ -200,8 +203,8 @@ class GUI(tk.Frame,object):
     """
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
-        self.message_text = tk.StringVar()
-        self.time_mode = tk.BooleanVar(value=False)
+        self.message_text = StringVar(self,None,'message text')
+        self.time_mode = BooleanVar(self,False,'time mode')
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
@@ -294,9 +297,11 @@ class GUI(tk.Frame,object):
         if value:
             self.controls.enable()
             self.filecontrols.enable('all')
+            self.plottoolbar.enable()
         else:
             self.controls.disable(temporarily=True)
             self.filecontrols.disable('all')
+            self.plottoolbar.disable()
         self.user_controlled = value
     def get_user_controlled(self):
         if globals.debug > 1: print("gui.get_user_controlled")
@@ -387,15 +392,16 @@ class GUI(tk.Frame,object):
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
-                if axis_controller.value.get() == "":
-                    exclude = []
-                    for ac in self.controls.axis_controllers.values():
-                        if ac is not axis_controller and ac.value.get() != "":
-                            exclude.append(ac.value.get())
-                    for value in axis_controller.combobox.cget('values'):
-                        if value not in exclude:
-                            axis_controller.value.set(value)
-                            break
+                #if axis_controller.value.get() == "":
+                #    exclude = []
+                #    for ac in self.controls.axis_controllers.values():
+                #        if ac is not axis_controller and ac.value.get() != "":
+                #            exclude.append(ac.value.get())
+                    #axis_controller.value.set(axis_controller.value.get())
+                    #for value in axis_controller.combobox.cget('values'):
+                        #if value not in exclude:
+                        #    axis_controller.value.set(value)
+                        #    break
 
         # Update the time text in the plot, if time data is available
         for name in ['t','time']:
@@ -527,9 +533,6 @@ class GUI(tk.Frame,object):
                 self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
             else:
                 print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
-            
-            
-    
 
     def make_movie(self, *args, **kwargs):
         if globals.debug > 1: print("gui.make_movie")
@@ -539,31 +542,31 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)
 
-    def set_preference(self,key,value):
-        if globals.debug > 1: print("gui.set_preference")
-        self.preferences[key] = value
+    #def set_preference(self,key,value):
+    #    if globals.debug > 1: print("gui.set_preference")
+    #    self.preferences[key] = value
 
-    def get_preference(self,key):
-        if globals.debug > 1: print("gui.get_preference")
-        if key in self.preferences.keys():
-            return self.preferences[key]
-        else:
-            return None
+    #def get_preference(self,key):
+    #    if globals.debug > 1: print("gui.get_preference")
+    #    if key in self.preferences.keys():
+    #        return self.preferences[key]
+    #    else:
+    #        return None
         
-    def save_preferences(self,*args,**kwargs):
-        if globals.debug > 1: print("gui.save_preferences")
-        with open(self.preferences_path,'w') as f:
-            json.dump(self.preferences, f, indent=4)
+    #def save_preferences(self,*args,**kwargs):
+    #    if globals.debug > 1: print("gui.save_preferences")
+    #    with open(self.preferences_path,'w') as f:
+    #        json.dump(self.preferences, f, indent=4)
 
-    def load_preferences(self,*args,**kwargs):
-        if globals.debug > 1: print("gui.load_preferences")
-        if not os.path.isfile(self.preferences_path): return
-        with open(self.preferences_path,'r') as f:
-            f.seek(0,2)
-            filesize = f.tell()
-            f.seek(0)
-            if filesize == 0: self.preferences = {}
-            else: self.preferences = json.load(f)
+    #def load_preferences(self,*args,**kwargs):
+    #    if globals.debug > 1: print("gui.load_preferences")
+    #    if not os.path.isfile(self.preferences_path): return
+    #    with open(self.preferences_path,'r') as f:
+    #        f.seek(0,2)
+    #        filesize = f.tell()
+    #        f.seek(0)
+    #        if filesize == 0: self.preferences = {}
+    #        else: self.preferences = json.load(f)
 
     def update_filenames(self,*args,**kwargs):
         if globals.debug > 1: print("gui.update_filenames")

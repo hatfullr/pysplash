@@ -23,6 +23,7 @@ from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 from lib.pointdensityplot import PointDensityPlot
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
@@ -96,13 +97,13 @@ class InteractivePlot(ResizableFrame,object):
         self._after_id_update = None
 
         # Apply the style given in the user's preferences
-        style = self.gui.get_preference("style")
-        if style is not None: self.set_style(style)
+        #style = self.gui.preferences["style"]
+        #if style is not None: self.set_style(style)
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
-        self.xycoords = tk.StringVar()
-        self.time = tk.DoubleVar()
+        self.xycoords = StringVar(self,None,'xycoords')
+        self.time = DoubleVar(self,None,'time')
         
         self.time.trace('w',lambda *args, **kwargs: self.set_time_text())
 

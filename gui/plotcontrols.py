@@ -11,6 +11,7 @@ from widgets.floatentry import FloatEntry
 from widgets.tooltip import ToolTip
 from widgets.switchbutton import SwitchButton
 from lib.hotkeys import Hotkeys
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
@@ -30,11 +31,11 @@ class PlotControls(LabelledFrame, object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_variables")
-        self.point_size = tk.DoubleVar(value = 1)
-        self.rotation_x = tk.DoubleVar(value = 0.)
-        self.rotation_y = tk.DoubleVar(value = 0.)
-        self.rotation_z = tk.DoubleVar(value = 0.)
-        self.show_orientation = tk.BooleanVar(value = False)
+        self.point_size = DoubleVar(self,1,'point size')
+        self.rotation_x = DoubleVar(self,0.,'rotation x')
+        self.rotation_y = DoubleVar(self,0.,'rotation y')
+        self.rotation_z = DoubleVar(self,0.,'rotation z')
+        self.show_orientation = BooleanVar(self,False,'show orientation')
         globals.state_variables.append(self.point_size)
         globals.state_variables.append(self.rotation_x)
         globals.state_variables.append(self.rotation_y)

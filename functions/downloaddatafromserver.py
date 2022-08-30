@@ -13,6 +13,7 @@ import signal
 import subprocess
 from lib.threadedtask import ThreadedTask
 from widgets.progressbar import ProgressBar
+from lib.tkvariable import save, StringVar, IntVar, DoubleVar, BooleanVar
 import globals
 
 try:
@@ -22,6 +23,7 @@ except ImportError:
 
 
 class DownloadDataFromServer(PopupWindow,object):
+    default_command_choice = 'scp'
     default_scp_options = "-Cp"
     default_rsync_options = "-a"
     
@@ -35,6 +37,7 @@ class DownloadDataFromServer(PopupWindow,object):
             canceltext="Close",
             okcommand=self.download_pressed,
             cancelcommand=self.close_soft,
+            name='downloaddatafromserver',
         )
         
         self.gui = gui
@@ -46,7 +49,7 @@ class DownloadDataFromServer(PopupWindow,object):
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
-        
+
         self.filelist = []
         self.total_size = 0
         self.filenames = []
@@ -68,25 +71,22 @@ class DownloadDataFromServer(PopupWindow,object):
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.create_variables")
-        # Gather the preferences
-        preference = self.gui.get_preference("downloaddatafromserver")
-        if preference is None:
-            preference = {'username':'','address':'','path':'','command':'scp','command options':'-Cp'}
             
         # Create variables
-        self.username = tk.StringVar(value=preference['username'])
-        self.address = tk.StringVar(value=preference['address'])
-        self.path = tk.StringVar(value=preference['path'])
-
-        command = preference['command']
-        self.command_choice = tk.StringVar(value=command)
-
-        if command == 'scp':
-            self.command_options = tk.StringVar(value=preference.get('command options', DownloadDataFromServer.default_scp_options))
-        elif command == 'rsync':
-            self.command_options = tk.StringVar(value=preference.get('command options', DownloadDataFromServer.default_rsync_options))
-        else:
-            raise ValueError("Preference 'command' in 'downloaddatafromserver' must be either 'scp' or 'rsync'. Received '"+preference['command']+"'")
+        self.username = StringVar(self,None,'username')
+        self.address = StringVar(self,None,'address')
+        self.path = StringVar(self,None,'path')
+        self.command_choice = StringVar(self,DownloadDataFromServer.default_command_choice,'command choice')
+        self.command_options = StringVar(
+            self,
+            DownloadDataFromServer.default_scp_options if self.command_choice.get() == 'scp' else DownloadDataFromServer.default_rsync_options,
+            'command options'
+        )
+        
+        #if command == 'scp':
+        #    self.command_options = StringVar(self,DownloadDataFromServer.default_scp_options,'command options')
+        #elif command == 'rsync':
+        #    self.command_options = StringVar(self,DownloadDataFromServer.default_rsync_options,'command options')
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.create_widgets")
@@ -188,6 +188,7 @@ class DownloadDataFromServer(PopupWindow,object):
         
     def close_soft(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.close_soft")
+        #save()
         self.cancel()
         self.close()
         
@@ -213,6 +214,7 @@ class DownloadDataFromServer(PopupWindow,object):
         if globals.debug > 1: print("downloaddatafromserver.on_scp_button_pressed")
         if self.previous_command_choice == 'rsync':
             self.previous_rsync_options = self.command_options.get()
+        self.command_choice.set('scp')
         self.command_options.set(self.previous_scp_options)
         self.previous_command_choice = 'scp'
         
@@ -220,6 +222,7 @@ class DownloadDataFromServer(PopupWindow,object):
         if globals.debug > 1: print("downloaddatafromserver.on_rsync_button_pressed")
         if self.previous_command_choice == 'scp':
             self.previous_scp_options = self.command_options.get()
+        self.command_choice.set('rsync')
         self.command_options.set(self.previous_rsync_options)
         self.previous_command_choice = 'rsync'
 
@@ -244,18 +247,6 @@ class DownloadDataFromServer(PopupWindow,object):
 
     def download_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.download_pressed")
-        # Save the entries in the gui preferences so they pop up
-        # automatically the next time we want to use them
-        self.gui.set_preference(
-            "downloaddatafromserver",
-            {
-                'username' : self.username.get(),
-                'address' : self.address.get(),
-                'path' : self.path.get(),
-                'command' : self.command_choice.get(),
-                'command options' : self.command_options.get(),
-            },
-        )
 
         self.disable_widgets()
         

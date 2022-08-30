@@ -4,6 +4,7 @@ if version_info.major < 3:
 else:
     import tkinter as tk
 from widgets.radiobutton import RadioButton
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import globals
 
 class AxisScale(tk.LabelFrame, object):
@@ -21,11 +22,11 @@ class AxisScale(tk.LabelFrame, object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_variables")
-        if self._variable and not isinstance(self._variable, tk.StringVar):
-            raise TypeError("Keyword argument 'variable' must be of type tk.StringVar. Received type '"+type(self._variable).__name__+"'")
+        if self._variable and not isinstance(self._variable, StringVar):
+            raise TypeError("Keyword argument 'variable' must be of type StringVar. Received type '"+type(self._variable).__name__+"'")
         else: # if self._variable is None
-            self._variable = tk.StringVar()
-        self._variable.set("linear")
+            self._variable = StringVar(self, 'linear', '_variable')
+        #self._variable.set("linear")
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_widgets")

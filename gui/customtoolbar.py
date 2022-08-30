@@ -206,3 +206,11 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.gui.message("Figure saved as "+os.path.basename(self.savename))
         except Exception as e:
             tk.messagebox.showerror(master=self.master,title="Error saving file", message=str(e))
+
+    def disable(self,*args,**kwargs):
+        for child in self.winfo_children():
+            child.configure(state='disabled')
+
+    def enable(self,*args,**kwargs):
+        for child in self.winfo_children():
+            child.configure(state='normal')

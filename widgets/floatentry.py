@@ -10,6 +10,7 @@ else:
     import tkinter.font as tkFont
     from widgets.flashingentry import FlashingEntry
 from functions.stringtofloat import string_to_float
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import numpy as np
 import traceback
 
@@ -38,8 +39,8 @@ class FloatEntry(FlashingEntry,object):
         )
         
         if self.variable is not None:
-            if not isinstance(self.variable, tk.DoubleVar):
-                raise TypeError("Keyword argument 'variable' must be of type tk.DoubleVar. Received type '"+type(self.variable).__name__+"'")
+            if not isinstance(self.variable, (tk.DoubleVar, DoubleVar)):
+                raise TypeError("Keyword argument 'variable' must be of type tk.DoubleVar or DoubleVar. Received type '"+type(self.variable).__name__+"'")
         else: self.variable = tk.DoubleVar()
 
         self.variable.trace("w", self.format_text)

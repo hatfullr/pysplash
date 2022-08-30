@@ -7,11 +7,13 @@ else:
     import ttk
 from widgets.popupwindow import PopupWindow
 from widgets.selectfilter import SelectFilter
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import inspect
 import matplotlib
 import globals
 import traceback
 import warnings
+import ast
 
 
 class SetStyle(PopupWindow,object):
@@ -34,14 +36,14 @@ class SetStyle(PopupWindow,object):
         self.available_styles = sorted(matplotlib.pyplot.style.available)
         self.available_styles = ["default"] + self.available_styles
 
-        self.current_style = self.gui.get_preference("style")
-
-        if self.current_style is None: self.current_style = ['default']
+        self.create_variables()
         
+        self.current_style = list(ast.literal_eval(self.style_name.get()))
+        if self.current_style is None: self.current_style = ['default']
+
         for style in self.current_style:
             self.available_styles.remove(style)
         
-        self.create_variables()
         self.create_widgets()
         self.place_widgets()
 
@@ -50,7 +52,7 @@ class SetStyle(PopupWindow,object):
 
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.create_variables")
-        self.style_name = tk.StringVar(value=SetStyle.default_name)
+        self.style_name = StringVar(self,[SetStyle.default_name],'style name')
 
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.create_widgets")
@@ -77,20 +79,15 @@ class SetStyle(PopupWindow,object):
 
     def set_style(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.set_style")
-
         style = self.selectfilter.right
         self.gui.interactiveplot.set_style(style)
 
     def apply(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.apply")
-
-        self.set_style()
-        
+        #self.set_style()
         style = self.selectfilter.right
-        
-        self.gui.set_preference("style",style)
-        self.gui.save_preferences()
-        
+        self.style_name.set(style)
+        self.gui.interactiveplot.set_style(style)
         self.close()
 
     def cancel(self,*args,**kwargs):

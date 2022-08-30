@@ -16,6 +16,7 @@ from widgets.entry import Entry
 from widgets.mathcombobox import MathCombobox
 from functions.setwidgetsstates import set_widgets_states
 from matplotlib.axis import XAxis, YAxis
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import globals
 import numpy as np
 
@@ -30,6 +31,8 @@ class AxisController(LabelledFrame,object):
             **kwargs
         )
 
+        self.name = text
+
         
         self.gui = gui
 
@@ -41,11 +44,32 @@ class AxisController(LabelledFrame,object):
         self.create_widgets()
         self.place_widgets()
 
+        # Save preferences
+        #self.preferences = Preferences(self, {
+        #    'value' : self.value,
+        #    'label' : self.label,
+        #    'units' : self.units.value,
+        #    'limits' : self.limits.preferences,
+        #    'scale' : self.scale,
+        #})
+
+        # Load preferences
+        #pref = self.gui.preferences[self.name]
+        #if pref is not None:
+        #    self.value.set(pref['value'])
+        #    self.label.set(pref['label'])
+        #    self.units.value.set(pref['units'])
+        #    if pref['limits'] == 'adaptive': self.limits.adaptive.set(True)
+        #    else: self.limits.set(pref['limits'])
+        #    self.scale.set(pref['scale'])
+
+        # If we have no values available, c
+        #if len(self.combobox['values']) == 0:
+
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
-        
-        self.scale.trace('w',self.on_scale_changed)
 
+        self.scale.trace('w',self.on_scale_changed)
         self.label.trace('w', self.update_label)
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
@@ -77,13 +101,12 @@ class AxisController(LabelledFrame,object):
     def display_units(self):
         if self.stale: self.data
         return self._display_units
-    
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
-        self.value = tk.StringVar(value='')
-        self.scale = tk.StringVar(value='linear')
-        self.label = tk.StringVar(value='')
+        self.value = StringVar(self, None, 'value')
+        self.scale = StringVar(self, 'linear', 'scale')
+        self.label = StringVar(self, None, 'label')
         globals.state_variables.append(self.value)
         globals.state_variables.append(self.label)
         
@@ -121,6 +144,7 @@ class AxisController(LabelledFrame,object):
         self.scale.pack(side='left')
         self.units_and_scale_frame.pack(side='top',fill='x',expand=True)
 
+    # This gets called whenever the combobox entry has been changed
     def on_combobox_selected(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.on_combobox_selected")
         # Check for any <= 0 values in the data. If there are any, then if
@@ -258,15 +282,3 @@ class AxisController(LabelledFrame,object):
             
             if None not in newlim:
                 self.limits.set_limits(newlim)
-    
-    #def get_data(self, *args, **kwargs):
-    #    if globals.debug > 1: print("axiscontroller.get_data")
-    #    data, physical_units, display_units = self.combobox.get()
-    #    
-    #    # Apply the scaling to the resulting data
-    #    scale = self.scale.get()
-    #    if scale == 'log10': data = np.log10(data)
-    #    elif scale == '^10': data = 10.**data
-    #
-    #    return data, physical_units, display_units
-

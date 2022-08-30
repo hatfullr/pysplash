@@ -7,6 +7,7 @@ else:
     import tkinter as tk
     from tkinter import ttk
     from widgets.flashingentry import FlashingEntry
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import traceback
 
 # The only difference is we don't allow the user to type
@@ -26,16 +27,17 @@ class IntegerEntry(FlashingEntry,object):
         self.bid = None
         
         self.variable = variable
-        
+
         super(IntegerEntry,self).__init__(master,textvariable=self._textvariable,**kwargs)
+
         self.configure(
             validate=validate,
             validatecommand=(self.register(self.validatecommand),'%P'),
         )
         
         if self.variable is not None:
-            if not isinstance(self.variable, tk.IntVar):
-                raise TypeError("Keyword argument 'variable' must be of type tk.IntVar. Received type '"+type(self.variable).__name__+"'")
+            if not isinstance(self.variable, (tk.IntVar, IntVar)):
+                raise TypeError("Keyword argument 'variable' must be of type tk.IntVar or IntVar. Received type '"+type(self.variable).__name__+"'")
         else: self.variable = tk.IntVar()
 
         self.variable.trace("w", self.format_text)

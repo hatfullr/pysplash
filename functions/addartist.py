@@ -11,6 +11,7 @@ from widgets.codetext import CodeText
 from widgets.button import Button
 from widgets.warningmessage import WarningMessage
 from widgets.saveablecodetext import SaveableCodeText
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import matplotlib.artist
 import traceback
 import globals
@@ -44,7 +45,7 @@ class AddArtist(PopupWindow,object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("addartist.create_variables")
-        self.error_text = tk.StringVar(value="")
+        self.error_text = StringVar(self,None,'error text')
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("addartist.create_widgets")

@@ -84,36 +84,43 @@ class Controls(tk.Frame,object):
         data = self.gui.data['data']
         
         # Initialize the axis controllers using user's preferences, if there are any
-        for name, axis_controller in self.axis_controllers.items():
-            pref = self.gui.get_preference(name)
-            if pref is not None:
-                if ((pref['value'] in axis_controller.combobox['values']) and
-                    (not globals.time_mode and pref['value'] not in ['t','time'])):
-                    axis_controller.value.set(pref['value'])
-                    value_to_set = pref['value']
-                    label_to_set = pref['label']
-                else:
-                    values = list(axis_controller.combobox['values'])
-                    value_to_set = ""
-                    label_to_set = ""
-                    
-                    # Choose the first available option that has not been chosen by the other axis controllers
-                    available_values = copy(values)
-                    for ac in self.axis_controllers.values():
-                        value = ac.value.get()
-                        if ac is not axis_controller and value in available_values:
-                            available_values.remove(value)
-                    if len(available_values) > 0:
-                        value_to_set = available_values[0]
-                        label_to_set = value_to_set
-                        
-                axis_controller.value.set(value_to_set)
-                axis_controller.label.set(label_to_set)
-                axis_controller.units.value.set(pref['units'])
-                axis_controller.scale.set(pref['scale'])
-                if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()
-                else: axis_controller.limits.set_limits(pref['limits'])
-                
+        #for name, axis_controller in self.axis_controllers.items():
+            #pref = self.gui.get_preference(name)
+            #if pref is not None:
+            #    if ((pref['value'] in axis_controller.combobox['values']) and
+            #        (not globals.time_mode and pref['value'] not in ['t','time'])):
+            #        axis_controller.value.set(pref['value'])
+            #        value_to_set = pref['value']
+            #        label_to_set = pref['label']
+            #    else:
+            #        values = list(axis_controller.combobox['values'])
+            #        value_to_set = ""
+            #        label_to_set = ""
+            #
+
+            # If the current name is not in the list of allowed values, set the name to be blank
+            #values = list(axis_controller.combobox['values'])
+            #if axis_controller.value.get() not in values:
+            #    axis_controller.value.set("")
+        """
+            # Choose the first available option that has not been chosen by the other axis controllers
+            available_values = copy(values)
+            for ac in self.axis_controllers.values():
+                value = ac.value.get()
+                if ac is not axis_controller and value in available_values:
+                    available_values.remove(value)
+            if len(available_values) > 0:
+                value_to_set = available_values[0]
+                label_to_set = value_to_set
+        """
+        
+            #axis_controller.value.set(value_to_set)
+            #axis_controller.label.set(label_to_set)
+            #axis_controller.units.value.set(pref['units'])
+            #axis_controller.scale.set(pref['scale'])
+            #if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()
+            #else: axis_controller.limits.set_limits(pref['limits'])
+
         self.initialized = True
 
     # This callback function runs a single time, after the application has been loaded
@@ -313,8 +320,14 @@ class Controls(tk.Frame,object):
 
             # Check if any of the plot's data is outside these limits
             xlim, ylim = self.gui.interactiveplot.calculate_xylim(which='both')
-            if (min(xlim) < min(user_xlims) or max(xlim) > max(user_xlims) or
-                min(ylim) < min(user_ylims) or max(ylim) > max(user_ylims)):
+            if (all([xl is not None for xl in xlim]) and
+                all([xl is not None for xl in user_xlims]) and
+                all([yl is not None for yl in ylim]) and
+                all([yl is not None for yl in user_ylims])):
+                if (min(xlim) < min(user_xlims) or max(xlim) > max(user_xlims) or
+                    min(ylim) < min(user_ylims) or max(ylim) > max(user_ylims)):
+                    need_full_redraw = True
+            else:
                 need_full_redraw = True
 
             # Check if the image's extents cut off any data
@@ -376,17 +389,6 @@ class Controls(tk.Frame,object):
     def on_plot_update(self, *args, **kwargs):
         if globals.debug > 1: print("controls.on_plot_update")
 
-        # Update the user's axis preferences
-        for name, axis_controller in self.axis_controllers.items():
-            pref = {
-                'value':axis_controller.value.get(),
-                'label':axis_controller.label.get(),
-                'units':axis_controller.units.value.get(),
-                'limits':axis_controller.limits.get() if not axis_controller.limits.adaptive.get() else 'adaptive',
-                'scale':axis_controller.scale.get(),
-            }
-            self.gui.set_preference(name,pref)
-        
         # Store the axis limits
         self.previous_xaxis_limits = self.gui.interactiveplot.ax.get_xlim()
         self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()

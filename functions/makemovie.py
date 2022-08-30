@@ -15,6 +15,7 @@ from widgets.progressbar import ProgressBar
 from matplotlib.animation import FuncAnimation
 from widgets.popupwindow import PopupWindow
 from widgets.pathentry import PathEntry
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import numpy as np
 import globals
 import os
@@ -47,16 +48,16 @@ class MakeMovie(PopupWindow, object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("makemovie.create_variables")
-        self.path = tk.StringVar(value=os.path.join(os.getcwd(),"movie.gif"))
+        self.path = StringVar(self,os.path.join(os.getcwd(),"movie.gif"),'path')
         startvalue=""
         stopvalue=""
         if len(self.gui.filenames) > 0:
             startvalue = self.gui.filenames[0]
             stopvalue = self.gui.filenames[-1]
-        self.startfile = tk.StringVar(value=startvalue)
-        self.stopfile = tk.StringVar(value=stopvalue)
-        self.step = tk.IntVar(value=1)
-        self.delay = tk.DoubleVar(value=100)
+        self.startfile = StringVar(self,startvalue,'startfile')
+        self.stopfile = StringVar(self,stopvalue,'stopfile')
+        self.step = IntVar(self,1,'step')
+        self.delay = DoubleVar(self,100,'delay')
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("makemovie.create_widgets")

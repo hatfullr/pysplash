@@ -11,6 +11,7 @@ import numpy as np
 from widgets.popupwindow import PopupWindow
 from widgets.integerentry import IntegerEntry
 from functions.hotkeystostring import hotkeys_to_string
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import traceback
 
 class FindParticle(PopupWindow,object):
@@ -36,10 +37,7 @@ class FindParticle(PopupWindow,object):
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("findparticle.create_variables")
-        # Gather the preferences
-        preference = self.gui.get_preference("findparticle")
-        if preference is None: preference = {'particle':0}
-        self.particle = tk.IntVar(value=preference['particle'])
+        self.particle = IntVar(self,0,'particle')
 
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("findparticle.create_widgets")
@@ -72,7 +70,7 @@ class FindParticle(PopupWindow,object):
         if (data is not None and
             value in np.arange(len(data['data'][list(data['data'].keys())[0]]))):
             # Save the preferences
-            self.gui.set_preference("findparticle",{"particle":value})
+            self.gui.preferences["findparticle"] = {"particle":value}
             
             # We should only get here if check_id has returned True
             self.gui.interactiveplot.track_particle(index=value)

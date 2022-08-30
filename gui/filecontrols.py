@@ -16,6 +16,7 @@ from widgets.autosizelabel import AutoSizeLabel
 from functions.getallchildren import get_all_children
 from functions.setwidgetsstates import set_widgets_states
 from functions.hotkeystostring import hotkeys_to_string
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 
@@ -33,12 +34,12 @@ class FileControls(tk.Frame,object):
 
         self.create_hotkeys()
 
-        self.skip_amount.set(1)
+        #self.skip_amount.set(1)
     
     def create_variables(self):
         if globals.debug > 1: print("filecontrols.create_variables")
-        self.skip_amount = tk.IntVar()
-        self.current_file = tk.StringVar()
+        self.skip_amount = IntVar(self,1,'skip amount')
+        self.current_file = StringVar(self,None,'current file')
         globals.state_variables.append(self.current_file)
         
     def create_widgets(self):

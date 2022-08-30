@@ -10,6 +10,7 @@ from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
 from widgets.tooltip import ToolTip
 from functions.getallchildren import get_all_children
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import gui
 from matplotlib.axis import XAxis, YAxis
 import globals
@@ -29,13 +30,19 @@ class AxisLimits(tk.LabelFrame,object):
         self.create_widgets()
         self.place_widgets()
 
+        #self.preferences = Preferences(self,{
+        #    'low' : self.low,
+        #    'high' : self.high,
+        #    'adaptive' : self.adaptive,
+        #})
+
         self.connected = False
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.create_variables")
-        self.low = tk.DoubleVar(value=0.)
-        self.high = tk.DoubleVar(value=0.)
-        self.adaptive = tk.BooleanVar(value=False)
+        self.low = DoubleVar(self,0.,'low')
+        self.high = DoubleVar(self,0.,'high')
+        self.adaptive = BooleanVar(self,False,'adaptive')
         globals.state_variables.append(self.low)
         globals.state_variables.append(self.high)
 

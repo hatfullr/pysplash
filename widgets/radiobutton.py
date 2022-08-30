@@ -5,6 +5,7 @@ else:
     import tkinter as tk
 
 from widgets.switchbutton import SwitchButton
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 class RadioButton(SwitchButton, object):
     def __init__(self, master, value=None, variable=None, *args, **kwargs):
@@ -12,9 +13,9 @@ class RadioButton(SwitchButton, object):
         
         self.value = value
         self.radiovariable = variable
-        if not self.radiovariable: self.radiovariable = tk.StringVar()
-        if not isinstance(self.radiovariable, tk.StringVar):
-            raise TypeError("Keyword argument 'variable' must be of type tk.StringVar. Received '"+type(self.variable).__name__+"'")
+        if not self.radiovariable: self.radiovariable = StringVar(self,None,'radiovariable')
+        if not isinstance(self.radiovariable, StringVar):
+            raise TypeError("Keyword argument 'variable' must be of type StringVar. Received '"+type(self.variable).__name__+"'")
         
         def varchange(*args, **kwargs):
             self.variable.set(self.radiovariable.get() == self.value)

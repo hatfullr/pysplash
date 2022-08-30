@@ -4,15 +4,17 @@ if version_info.major < 3:
 else:
     import tkinter as tk
 from widgets.button import Button
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 class SwitchButton(Button,object):
     def __init__(self,master,command=(None,None),variable=None,*args,**kwargs):
         # False for not-pressed and True for pressed
         self.variable = variable
+
         if self.variable is None: self.variable = tk.BooleanVar(value=False)
-        if not isinstance(self.variable, tk.BooleanVar):
-            raise TypeError("Keyword argument 'variable' must be of type tk.BooleanVar. Received '"+type(self.variable).__name__+"'")
-        
+        if not isinstance(self.variable, (tk.BooleanVar, BooleanVar)):
+            raise TypeError("Keyword argument 'variable' must be of type tk.BooleanVar or BooleanVar. Received '"+type(self.variable).__name__+"'")
+
         super(SwitchButton,self).__init__(master,switch=True,command=self.command,*args,**kwargs)
         
         # Set the initial button state

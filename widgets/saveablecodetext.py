@@ -9,6 +9,7 @@ else:
 from widgets.codetext import CodeText
 from widgets.button import Button
 from widgets.warningmessage import WarningMessage
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import matplotlib.artist
 import traceback
 import globals
@@ -49,7 +50,7 @@ class SaveableCodeText(CodeText, object):
         self.previous_name = None
 
     def create_variables(self, *args, **kwargs):
-        self.combobox_text = tk.StringVar()
+        self.combobox_text = StringVar(self, None, 'combobox text')
 
     def create_widgets(self, *args, **kwargs):
         self.top_frame = tk.Frame(self.frame)

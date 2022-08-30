@@ -10,6 +10,7 @@ import globals
 from widgets.popupwindow import PopupWindow
 from widgets.pathentry import PathEntry
 from widgets.selectfilter import SelectFilter
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import traceback
 import read_file
 
@@ -42,10 +43,7 @@ class ImportData(PopupWindow,object):
 
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_variables")
-        # Gather the preferences
-        #preference = self.gui.get_preference("importdata")
-        #if preference is None: preference = {'path':''}
-        self.path = tk.StringVar(value="")
+        self.path = StringVar(self, None, 'path')
         
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_widgets")
