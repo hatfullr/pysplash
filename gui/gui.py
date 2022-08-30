@@ -204,7 +204,7 @@ class GUI(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = StringVar(self,None,'message text')
-        self.time_mode = BooleanVar(self,False,'time mode')
+        self.time_mode = BooleanVar(self,globals.time_mode,'time mode')
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
