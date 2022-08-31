@@ -26,6 +26,7 @@ class FindParticle(PopupWindow,object):
             oktext="Find (Enter)",
             okcommand=self.find,
             show=True,
+            name='findparticle',
         )
 
         self.create_variables()
@@ -69,9 +70,6 @@ class FindParticle(PopupWindow,object):
         
         if (data is not None and
             value in np.arange(len(data['data'][list(data['data'].keys())[0]]))):
-            # Save the preferences
-            self.gui.preferences["findparticle"] = {"particle":value}
-            
             # We should only get here if check_id has returned True
             self.gui.interactiveplot.track_particle(index=value)
             self.gui.interactiveplot.annotate_tracked_particle()

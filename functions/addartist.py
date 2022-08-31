@@ -32,6 +32,7 @@ class AddArtist(PopupWindow,object):
             title="Add artist",
             oktext="Add",
             okcommand=self.add_artist,
+            name='addartist',
         )
 
         self.create_variables()

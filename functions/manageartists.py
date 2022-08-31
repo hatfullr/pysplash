@@ -23,6 +23,7 @@ class ManageArtists(PopupWindow,object):
             oktext="Done",
             okcommand=self.close,
             cancelcommand=self.cancel,
+            name='manageartists',
         )
         
         self.ax = self.gui.interactiveplot.ax

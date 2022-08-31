@@ -22,8 +22,9 @@ class SelectFilter(tk.Frame,object):
         self.left = left
         self.right = right
 
-        for smode, lbox in zip(self.selectmode, [self.listbox_left,self.listbox_right]):
+        for smode, lbox, side in zip(self.selectmode, [self.listbox_left,self.listbox_right], [self._left, self._right]):
             if smode == 'dragdrop':
+                lbox.bind("<<MovedSelected>>", self._update, add="+")
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
 
         self.listbox_left.bind("<<ListboxSelect>>", self._on_left_selected, add="+")
@@ -55,6 +56,12 @@ class SelectFilter(tk.Frame,object):
         for i,val in enumerate(self._right):
             self.listbox_right.insert(i,val)
 
+    # This is an internal function to make sure the self._left and self._right variables
+    # contain up-to-date values
+    def _update(self, *args, **kwargs):
+        self._left = list(self.listbox_left.get(0,'end'))
+        self._right = list(self.listbox_right.get(0,'end'))
+        
     def _create_widgets(self,*args,**kwargs):
         self.__left_frame = tk.Frame(self)
         self.__middle_frame = tk.Frame(self)
@@ -158,7 +165,7 @@ class SelectFilter(tk.Frame,object):
     def update_values(self,left=None,right=None):
         if left is not None: self.left = left
         if right is not None: self.right = right
-        if left is not None or right is not None: self.event_generate("<<ValuesUpdated>>")
+        if None not in [left, right]: self.event_generate("<<ValuesUpdated>>")
 
     def _on_left_selected(self, *args, **kwargs):
         self.left_button.configure(state='disabled')

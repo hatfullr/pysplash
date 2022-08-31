@@ -1,6 +1,9 @@
 from functions.getallchildren import get_all_children
+from lib.tkvariable import save
 
 def close_window(window):
+    # First save the user's preferences
+    save()
     # Destroy all the widgets in the application starting from the widgets
     # which have no children, moving up the heirarchy all the way to this
     # root window. This hopefully prevents any Tcl errors that can occur

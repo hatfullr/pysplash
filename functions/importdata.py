@@ -25,6 +25,7 @@ class ImportData(PopupWindow,object):
             oktext="Import",
             okcommand=self.import_data,
             show=False,
+            name='importdata',
         )
 
         self.gui = gui

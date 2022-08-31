@@ -32,6 +32,7 @@ class MakeMovie(PopupWindow, object):
             title="Make movie",
             oktext="Save",
             okcommand=self.create,
+            name='makemovie',
         )
 
         self.gui = gui

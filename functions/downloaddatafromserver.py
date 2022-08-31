@@ -13,7 +13,7 @@ import signal
 import subprocess
 from lib.threadedtask import ThreadedTask
 from widgets.progressbar import ProgressBar
-from lib.tkvariable import save, StringVar, IntVar, DoubleVar, BooleanVar
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import globals
 
 try:
@@ -188,7 +188,6 @@ class DownloadDataFromServer(PopupWindow,object):
         
     def close_soft(self,*args,**kwargs):
         if globals.debug > 1: print("downloaddatafromserver.close_soft")
-        #save()
         self.cancel()
         self.close()
         

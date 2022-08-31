@@ -27,9 +27,10 @@ class SetStyle(PopupWindow,object):
         super(SetStyle,self).__init__(
             self.gui,
             title="Set style",
-            oktext="Apply",
-            okcommand=self.apply,
+            oktext="Done",
+            okcommand=self.close,
             cancelcommand=self.cancel,
+            name='setstyle',
         )
 
         matplotlib.style.reload_library() # Make sure available styles is up-to-date
@@ -49,7 +50,6 @@ class SetStyle(PopupWindow,object):
 
         self.selectfilter.bind("<<ValuesUpdated>>", self.set_style, add="+")
 
-
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.create_variables")
         self.style_name = StringVar(self,[SetStyle.default_name],'style name')
@@ -59,7 +59,7 @@ class SetStyle(PopupWindow,object):
 
         self.description = ttk.Label(
             self.contents,
-            text="Organize the Matplotlib styles below to customize the look of the plot. Styles placed above others will be used first and any unspecified parameters will then be set by styles further down the list. Please see the Matplotlib documentation for details. You can add styles by adding .mplstyle files to "+matplotlib.get_configdir()+".",
+            text="Organize the Matplotlib styles on the right under 'Current Style' by dragging and dropping with your mouse to customize the look of the plot. Styles placed above others will be used first and any unspecified parameters will then be set by styles further down the list. Please see the Matplotlib documentation for details. You can add styles by adding .mplstyle files to "+matplotlib.get_configdir()+".",
             wraplength = self.width-2*self.cget('padx'),
             justify='left',
         )
@@ -70,6 +70,7 @@ class SetStyle(PopupWindow,object):
             right=self.current_style,
             selectmode=('extended','dragdrop'),
             labels=("Available styles", "Current style"),
+            sort=(True, False),
         )
 
     def place_widgets(self,*args,**kwargs):
@@ -81,18 +82,10 @@ class SetStyle(PopupWindow,object):
         if globals.debug > 1: print("setstyle.set_style")
         style = self.selectfilter.right
         self.gui.interactiveplot.set_style(style)
-
-    def apply(self,*args,**kwargs):
-        if globals.debug > 1: print("setstyle.apply")
-        #self.set_style()
-        style = self.selectfilter.right
         self.style_name.set(style)
-        self.gui.interactiveplot.set_style(style)
-        self.close()
 
     def cancel(self,*args,**kwargs):
         if globals.debug > 1: print('setstyle.cancel')
-
-        self.selectfilter.update_values(left=self.available_styles,right=[])
+        self.selectfilter.update_values(left=self.available_styles,right=self.current_style)
         self.close()
 
