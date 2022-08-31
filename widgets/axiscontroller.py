@@ -122,6 +122,7 @@ class AxisController(LabelledFrame,object):
         self.units_and_scale_frame.pack(side='top',fill='x',expand=True)
 
     # This gets called whenever the combobox entry has been changed
+    #@profile
     def on_combobox_selected(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.on_combobox_selected")
         # Check for any <= 0 values in the data. If there are any, then if
@@ -129,8 +130,6 @@ class AxisController(LabelledFrame,object):
         value = self.value.get()
 
         if self.gui.data is not None:
-            #self.gui.controls.plotcontrols.disable_rotations()
-
             # When the user selects time as an axis, we need to change global behaviors
             if not self.gui.time_mode.get() and value in ['t','time']: self.gui.time_mode.set(True)
             elif self.gui.time_mode.get() and self.previous_value in ['t','time']:
@@ -147,7 +146,6 @@ class AxisController(LabelledFrame,object):
 
             if self.label.get() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
 
-        self.gui.controls.plotcontrols.update_rotations_controls()
         if self.previous_value != value: self.stale = True
         self.previous_value = value
         

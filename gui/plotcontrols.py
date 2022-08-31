@@ -137,8 +137,9 @@ class PlotControls(LabelledFrame, object):
             self.rotation_z.set(0)
 
         for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
-            if self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
-        
+            if not self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
+
+    #@profile
     def enable_rotations(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.enable_rotations")
         if 'disabled' in self.rotation_x_entry.state():
@@ -152,7 +153,8 @@ class PlotControls(LabelledFrame, object):
             globals.state_variables.append(self.rotation_z)
 
         for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
-            if self.hotkeys.is_disabled(name): self.hotkeys.enable(name)
+            if self.hotkeys.is_disabled(name):
+                self.hotkeys.enable(name)
         
     def disable(self,temporarily=False):
         if globals.debug > 1: print("plotcontrols.disable")
@@ -163,7 +165,7 @@ class PlotControls(LabelledFrame, object):
         
         set_widgets_states(children,'disabled')
         for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
-            if self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
+            if not self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
 
     def enable(self):
         if globals.debug > 1: print("plotcontrols.enable")

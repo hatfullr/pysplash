@@ -380,6 +380,12 @@ class Controls(tk.Frame,object):
         # Set the focus to the canvas
         self.gui.interactiveplot.canvas.get_tk_widget().focus_set()
 
+
+        
+        # After the update, enable/disable rotations as needed
+        self.plotcontrols.update_rotations_controls()
+
+        
     def connect(self):
         if globals.debug > 1: print("controls.connect")
         # Connect the controls to the interactiveplot
