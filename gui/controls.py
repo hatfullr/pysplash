@@ -81,7 +81,7 @@ class Controls(tk.Frame,object):
 
         if self.initialized: raise RuntimeError("Controls have already been initialized!")
         
-        data = self.gui.data['data']
+        #data = self.gui.data['data']
         
         # Initialize the axis controllers using user's preferences, if there are any
         #for name, axis_controller in self.axis_controllers.items():
@@ -268,6 +268,7 @@ class Controls(tk.Frame,object):
             else: raise TypeError("All elements in the input list, tuple, or np.ndarray must be of type 'str'")
         else: raise TypeError("Argument must be one of types 'str', 'list', 'tuple', or 'np.ndarray'")
 
+    #@profile
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
         need_full_redraw = False
@@ -355,7 +356,11 @@ class Controls(tk.Frame,object):
         if (self.plotcontrols.rotation_x in changed_variables or
             self.plotcontrols.rotation_y in changed_variables or
             self.plotcontrols.rotation_z in changed_variables):
-            self.gui.rotate()
+            self.gui.data.rotate(
+                self.plotcontrols.rotation_x.get(),
+                self.plotcontrols.rotation_y.get(),
+                self.plotcontrols.rotation_z.get(),
+            )
             need_full_redraw = True
 
         # Save the previous scales
@@ -365,7 +370,7 @@ class Controls(tk.Frame,object):
         # Draw the new plot
         if need_full_redraw:
             self.gui.interactiveplot.update()
-            self.gui.interactiveplot.canvas.draw()
+            #self.gui.interactiveplot.canvas.draw()
             # Everything after this is done in interactiveplot.after_calculate
             # because we need to wait for the plot to finish calculating
         elif need_quick_redraw:

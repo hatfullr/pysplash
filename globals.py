@@ -36,8 +36,9 @@ tooltip_wraplength = 50
 # zooming using the mouse, this parameter is used to
 # determine how long in miliseconds after the change
 # in the plot to wait before calculating the new
-# image. Lower values decrease performance but make
-# the application feel more responsive.
+# image. Lower values decrease performance and
+# higher values put a hard limit on the fps.
+# Adjusting this can significantly impact performance.
 plot_update_delay = 10
 
 # The minimum allowed point size

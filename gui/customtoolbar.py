@@ -23,7 +23,7 @@ class CustomToolbar(NavigationToolbar2Tk):
             (u'Pan', u'Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect', u'move', u'pan'),
             (u'Zoom', u'Zoom to rectangle\nx/y fixes axis', u'zoom_to_rect', u'zoom'),
             (u'Subplots', u'Configure subplots', u'subplots', u'configure_subplots'),
-            (u'Save', u'Save the figure '+hotkeys_to_string('save'), u'filesave', u'save_figure'),
+            (u'Save', u'Save the figure', u'filesave', u'save_figure_as'),
         )
         self.gui = gui
         self.canvas = canvas

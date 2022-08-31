@@ -22,7 +22,7 @@ from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
 from functions.importdata import ImportData
 from functions.findparticle import FindParticle
-from functions.rotate import rotate
+#from functions.rotate import rotate
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
@@ -204,7 +204,7 @@ class GUI(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = StringVar(self,None,'message text')
-        self.time_mode = BooleanVar(self,globals.time_mode,'time mode')
+        self.time_mode = tk.BooleanVar(value=globals.time_mode) # This is not a preference for now
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
@@ -309,7 +309,7 @@ class GUI(tk.Frame,object):
 
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
-
+        
         if self.time_mode.get():
             raise Exception("gui.read is not allowed in time mode. This should never happen.")
         
@@ -319,7 +319,7 @@ class GUI(tk.Frame,object):
                 previous_data_length = len(self.data['data'][next(iter(self.data['data']))])
             else:
                 previous_data_length = len(self.data['data'][iter(self.data['data']).next()])
-
+        
         current_file = self.filecontrols.current_file.get()
         def get_data(*args,**kwargs):
             self._data = Data(read_file(current_file))
@@ -331,10 +331,6 @@ class GUI(tk.Frame,object):
             root.update()
         self.clear_message()
         
-        self.display_data = {
-            key : self.get_data(key)*self.get_display_units(key) for key in self.data['data'].keys()
-        }
-
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
         else:
@@ -344,7 +340,7 @@ class GUI(tk.Frame,object):
         
         if self.data.is_image:
             return
-
+        
         
         # Make sure the data has the required keys for scatter plots
         data_keys = self.data['data'].keys()
@@ -353,18 +349,22 @@ class GUI(tk.Frame,object):
                 break
                 #raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
         else: # If we have all the 'x', 'y', and 'z' keys
-            # Perform whatever rotation is needed from us for the display data
-            self.rotate()
+            rotationx = self.controls.plotcontrols.rotation_x.get()
+            rotationy = self.controls.plotcontrols.rotation_y.get()
+            rotationz = self.controls.plotcontrols.rotation_z.get()
+            if rotationx != 0 or rotationy != 0 or rotationz != 0:
+                # Perform whatever rotation is needed from us for the display data
+                self.data.rotate(rotationx,rotationy,rotationz)
             
         keys = []
         for key,val in self.data['data'].items():
             if hasattr(val,"__len__"):
                 if len(val) == new_data_length: keys.append(key)
-                
-
+        
+        
         if 't' in self.data['data'].keys(): keys.append('t')
         elif 'time' in self.data['data'].keys(): keys.append('time')
-                
+        
         colorbar_values = [
             'None',
             'rho',
@@ -372,7 +372,7 @@ class GUI(tk.Frame,object):
         colorbar_extra = [
             'Point Density',
         ]
-                
+        
         # Check for requisite keys for colorbar plots
         values = ['']
         ckeys = self.data['data'].keys()
@@ -387,7 +387,7 @@ class GUI(tk.Frame,object):
             self.controls.axis_controllers['Colorbar'].disable()
         else:
             self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
-
+        
         # Update the axis controllers
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':
@@ -402,7 +402,7 @@ class GUI(tk.Frame,object):
                         #if value not in exclude:
                         #    axis_controller.value.set(value)
                         #    break
-
+        
         # Update the time text in the plot, if time data is available
         for name in ['t','time']:
             if name in ckeys:
@@ -410,7 +410,7 @@ class GUI(tk.Frame,object):
                 if time is not None:
                     self.interactiveplot.time.set(time*self.get_display_units(name))
                 break
-            
+    
     def read_time_mode(self,*args,**kwargs):
         # Make the data contain *all* the input data values
         self._data_time_mode = {
@@ -489,7 +489,7 @@ class GUI(tk.Frame,object):
     def get_display_data(self,key,raw=False,identifier=None,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
 
-        if raw: return self.display_data[key]
+        if raw: return self.get_data(key) * self.get_display_units(key)
         else: # Apply the axis scale and units to the data
             # Check to see if the key matches
             xaxis = self.controls.axis_controllers['XAxis'].value.get()
@@ -504,14 +504,15 @@ class GUI(tk.Frame,object):
                 units = controller.units.value.get()
                 if scaled:
                     scale = controller.scale.get()
-                    if scale == 'linear': return self.display_data[key]/units
-                    elif scale == 'log10': return np.log10(self.display_data[key]/units)
-                    elif scale == '^10': return 10**(self.display_data[key]/units)
+                    if scale == 'linear': return self.get_data(key) * self.get_display_units(key) / units
+                    elif scale == 'log10': return np.log10(self.get_data(key) * self.get_display_units(key) / units)
+                    elif scale == '^10': return 10**(self.get_data(key) * self.get_display_units(key) / units)
                     else:
                         raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
-                else: return self.display_data[key]/units
-            return self.display_data[key]
+                else: return self.get_data(key) * self.get_display_units(key) / units
+            return self.get_data(key) * self.get_display_units(key)
 
+    """
     def rotate(self,anglexdeg=None,angleydeg=None,anglezdeg=None):
         if globals.debug > 1: print("gui.rotate")
         if self.data.is_image:
@@ -533,6 +534,7 @@ class GUI(tk.Frame,object):
                 self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
             else:
                 print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
+    """
 
     def make_movie(self, *args, **kwargs):
         if globals.debug > 1: print("gui.make_movie")
@@ -596,7 +598,9 @@ class GUI(tk.Frame,object):
 
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
-        
+
+        self.controls.plotcontrols.disable_rotations()
+            
         self.filecontrols.disable('all')
         self.previous_file = self.filecontrols.current_file.get()
         self.filecontrols.current_file.set("Time Mode")
@@ -617,4 +621,9 @@ class GUI(tk.Frame,object):
 
         if self.filecontrols.current_file not in globals.state_variables:
             globals.state_variables.append(self.filecontrols.current_file)
+
+        #if (self.controls.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
+        #    self.controls.axis_controllers['YAxis'].value.get() in ['x','y','z'] and
+        #    self.controls.axis_controllers['XAxis'].value.get() != self.controls.axis_controllers['YAxis'].value.get()):
+        #    self.controls.plotcontrols.enable_rotations()
 

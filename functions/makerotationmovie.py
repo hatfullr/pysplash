@@ -7,7 +7,7 @@ else:
     import tkinter.filedialog as tkFileDialog
 from matplotlib.animation import FuncAnimation
 import numpy as np
-from functions.rotate import rotate
+#from functions.rotate import rotate
 
 def make_rotation_movie(gui):
     nframes = 90+90+1

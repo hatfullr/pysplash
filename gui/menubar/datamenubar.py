@@ -18,7 +18,8 @@ class DataMenuBar(Menu, object):
         )
 
         label = "Import data "+hotkeys_to_string("import data")
-        self.add_command(label=label, command=lambda: ImportData(gui))
         self.add_command(label='Download data from server', command=lambda: DownloadDataFromServer(gui))
         self.add_command(label="Find particle", command = lambda: FindParticle(gui))
+        self.add_command(label=label, command=lambda: ImportData(gui))
+        
         

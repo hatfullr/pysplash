@@ -16,6 +16,8 @@ import numpy as np
 from copy import copy
 import collections
 
+from gui.customcanvas import CustomCanvas
+
 from lib.hotkeys import Hotkeys
 from lib.scatterplot import ScatterPlot
 from lib.integratedvalueplot import IntegratedValuePlot
@@ -111,6 +113,7 @@ class InteractivePlot(ResizableFrame,object):
     
     def create_widgets(self):
         if globals.debug > 1: print("interactiveplot.create_widgets")
+        #self.canvas = CustomCanvas(self.fig, master=self)
         self.canvas = FigureCanvasTkAgg(self.fig,master=self)
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
 
@@ -138,7 +141,10 @@ class InteractivePlot(ResizableFrame,object):
         # their "after" methods get cancelled properly before we
         # destroy this widget
         if (self.drawn_object is not None and
-            self.drawn_object in self.ax.get_children()): self.drawn_object.remove()
+            self.drawn_object in self.ax.get_children()):
+            #if self.drawn_object in self.canvas.blit_artists:
+            #    self.canvas.blit_artists.remove(self.drawn_object)
+            self.drawn_object.remove()
         if (self.previously_drawn_object is not None and
             self.previously_drawn_object in self.ax.get_children()):
             self.previously_drawn_object.remove()
@@ -156,6 +162,8 @@ class InteractivePlot(ResizableFrame,object):
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.reset")
         if self.drawn_object is not None:
+            #if self.drawn_object in self.canvas.blit_artists:
+            #    self.canvas.blit_artists.remove(self.drawn_object)
             self.drawn_object.remove()
             self.drawn_object = None
         self.reset_colors()
@@ -168,9 +176,11 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.update")
         # If we are waiting to update, then make sure the controls' update button is disabled
         #self.gui.controls.update_button.state(['disabled'])
-        if self._after_id_update is not None:
-            self.after_cancel(self._after_id_update)
-        self._after_id_update = self.after(globals.plot_update_delay, self._update)
+        if globals.plot_update_delay > 0:
+            if self._after_id_update is not None:
+                self.after_cancel(self._after_id_update)
+            self._after_id_update = self.after(globals.plot_update_delay, self._update)
+        else: self._update()
     
     def _update(self,*args, **kwargs):
         if globals.debug > 1:
@@ -180,6 +190,13 @@ class InteractivePlot(ResizableFrame,object):
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
+
+        #self.reset()
+
+        # Stale the axis controllers before fetching their data, so that we
+        # obtain fresh data
+        for axis_controller in self.gui.controls.axis_controllers.values():
+            axis_controller.stale = True
 
         xaxis = self.gui.controls.axis_controllers['XAxis']
         yaxis = self.gui.controls.axis_controllers['YAxis']
@@ -269,9 +286,9 @@ class InteractivePlot(ResizableFrame,object):
             self.colorbar.show()
         else:
             caxis = self.gui.controls.axis_controllers['Colorbar']
-            A, Ad, Ap = caxis.data, caxis.display_data, caxis.physical_data
-            if A is None or Ap is None or Ad is None:
-                raise Exception("One of A, Ap, or Ad was None. This should never happen.")
+            A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
+            if A is None or A_display_units is None or A_physical_units is None:
+                raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
             
             m = self.gui.get_display_data('m')
             h = self.gui.get_display_data('h')
@@ -289,7 +306,7 @@ class InteractivePlot(ResizableFrame,object):
                 h[idx],
                 rho[idx],
                 [ # physical units
-                    Ap,
+                    A_physical_units,
                     x_physical_units,
                     y_physical_units,
                     self.gui.get_physical_units('m'),
@@ -297,7 +314,7 @@ class InteractivePlot(ResizableFrame,object):
                     self.gui.get_physical_units('rho'),
                 ],
                 [ # display units
-                    Ad,
+                    A_display_units,
                     x_display_units,
                     y_display_units,
                     self.gui.get_display_units('m'),
@@ -338,8 +355,11 @@ class InteractivePlot(ResizableFrame,object):
         for child in self.ax.get_children():
             if isinstance(child,CustomAxesImage) and child is not self.drawn_object:
                 child.remove()
+
+        #if self.drawn_object not in self.canvas.blit_artists:
+        #    self.canvas.blit_artists.append(self.drawn_object)
           
-        self.canvas.draw()
+        self.canvas.draw_idle()
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()

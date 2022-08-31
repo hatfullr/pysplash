@@ -73,19 +73,11 @@ class MathEntry(FlashingEntry, object):
         )
 
         selector_frame = tk.Frame(window.contents)
-        #label = ttk.Label(selector_frame, text="Name:")
-        #combobox_text = tk.StringVar()
-        #combobox = ttk.Combobox(selector_frame, textvariable=combobox_text)
-        #save_button = Button(selector_frame, text="Save")
         
         codetext = SaveableCodeText(window.contents, os.path.join(globals.profile_path,"axis"))
         codetext.insert('0.0', self.get())
 
         description.pack(side='top',fill='both')
-        #label.pack(side='left')
-        #combobox.pack(side='left',fill='both',expand=True,padx=5)
-        #save_button.pack(side='left')
-        #selector_frame.pack(side='top',fill='both',expand=True)
         codetext.pack(side='top', fill='both', expand=True)
 
         

@@ -152,7 +152,7 @@ class AxisController(LabelledFrame,object):
         value = self.value.get()
 
         if self.gui.data is not None:
-            self.gui.controls.plotcontrols.disable_rotations()
+            #self.gui.controls.plotcontrols.disable_rotations()
 
             # When the user selects time as an axis, we need to change global behaviors
             if not self.gui.time_mode.get() and value in ['t','time']: self.gui.time_mode.set(True)
@@ -170,7 +170,7 @@ class AxisController(LabelledFrame,object):
                     self.gui.controls.plotcontrols.enable_rotations()
 
             self.set_adaptive_limits()
-            self.label.set(value)
+            if self.label.get() in ['',self.previous_value]: self.label.set(value)
 
         if self.previous_value != value: self.stale = True
         self.previous_value = value
