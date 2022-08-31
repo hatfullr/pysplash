@@ -136,6 +136,9 @@ class PlotControls(LabelledFrame, object):
                 globals.state_variables.remove(self.rotation_z)
             self.rotation_z.set(0)
 
+        for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
+            if self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
+        
     def enable_rotations(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.enable_rotations")
         if 'disabled' in self.rotation_x_entry.state():
@@ -147,6 +150,9 @@ class PlotControls(LabelledFrame, object):
         if 'disabled' in self.rotation_z_entry.state():
             self.rotation_z_entry.state(["!disabled"])
             globals.state_variables.append(self.rotation_z)
+
+        for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
+            if self.hotkeys.is_disabled(name): self.hotkeys.enable(name)
         
     def disable(self,temporarily=False):
         if globals.debug > 1: print("plotcontrols.disable")
@@ -156,6 +162,8 @@ class PlotControls(LabelledFrame, object):
         else: self.previous_state = None
         
         set_widgets_states(children,'disabled')
+        for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
+            if self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
 
     def enable(self):
         if globals.debug > 1: print("plotcontrols.enable")
@@ -166,3 +174,18 @@ class PlotControls(LabelledFrame, object):
         else:
             children = get_all_children(self)
             set_widgets_states(children,'normal')
+
+        for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
+            if self.hotkeys.is_disabled(name): self.hotkeys.enable(name)
+
+    def update_rotations_controls(self, *args, **kwargs):
+        if globals.debug > 1: print("plotcontrols.update_rotations_controls")
+        # Disable rotation controls if we're not in the spatial domain
+        stuff = [self.gui.controls.axis_controllers['XAxis'].value.get(),
+                 self.gui.controls.axis_controllers['YAxis'].value.get()]
+        for thing in stuff:
+            if thing not in ['x','y','z']:
+                self.gui.controls.plotcontrols.disable_rotations()
+                break
+        else:
+            self.gui.controls.plotcontrols.enable_rotations()

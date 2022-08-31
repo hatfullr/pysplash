@@ -44,28 +44,6 @@ class AxisController(LabelledFrame,object):
         self.create_widgets()
         self.place_widgets()
 
-        # Save preferences
-        #self.preferences = Preferences(self, {
-        #    'value' : self.value,
-        #    'label' : self.label,
-        #    'units' : self.units.value,
-        #    'limits' : self.limits.preferences,
-        #    'scale' : self.scale,
-        #})
-
-        # Load preferences
-        #pref = self.gui.preferences[self.name]
-        #if pref is not None:
-        #    self.value.set(pref['value'])
-        #    self.label.set(pref['label'])
-        #    self.units.value.set(pref['units'])
-        #    if pref['limits'] == 'adaptive': self.limits.adaptive.set(True)
-        #    else: self.limits.set(pref['limits'])
-        #    self.scale.set(pref['scale'])
-
-        # If we have no values available, c
-        #if len(self.combobox['values']) == 0:
-
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
 
@@ -74,8 +52,6 @@ class AxisController(LabelledFrame,object):
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
 
-        #self.limits.adaptive.trace('w', self.gui.interactiveplot.clear_tracking)
-            
         self.previous_value = None
         self._data = None
         self.stale = False
@@ -166,13 +142,12 @@ class AxisController(LabelledFrame,object):
                     if self.scale.get() == "log10":
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
-                # Disable rotation controls if we're not in the spatial domain
-                if value in ['x','y','z']:
-                    self.gui.controls.plotcontrols.enable_rotations()
 
             self.set_adaptive_limits()
-            if self.label.get() in ['',self.previous_value]: self.label.set(value)
 
+            if self.label.get() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
+
+        self.gui.controls.plotcontrols.update_rotations_controls()
         if self.previous_value != value: self.stale = True
         self.previous_value = value
         

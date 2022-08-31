@@ -175,6 +175,8 @@ class GUI(tk.Frame,object):
         # Allow only linear colorbars for now
         self.controls.axis_controllers['Colorbar'].scale.set('linear')
         self.controls.axis_controllers['Colorbar'].scale.disable()
+
+        self.controls.plotcontrols.update_rotations_controls()
     
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")

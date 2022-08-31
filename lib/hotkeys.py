@@ -121,14 +121,19 @@ class Hotkeys(object):
 
     # Check if a particular method has any set bindings
     def is_bound(self, name):
-        return name in self.registry
+        return name in self.registry.keys()
+
+    def is_disabled(self, name):
+        for hotkey in self.disabled_hotkeys:
+            for widget, key, bid, command, n in hotkey:
+                if name == n: return True
+        return False
 
     def disable(self, name):
-        if name not in self.registry.keys():
+        if not self.is_bound(name):
             raise KeyError("no hotkey '"+name+"' found in the reigstry")
         self.disabled_hotkeys.append([self.registry[name]])
         self.unbind(name)
-        print("disabled "+name)
 
     def enable(self, name):
         for hotkey in self.disabled_hotkeys:
