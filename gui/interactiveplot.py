@@ -104,7 +104,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
-        self.xycoords = StringVar(self,None,'xycoords')
+        self.xycoords = tk.StringVar()
         self.time = DoubleVar(self,None,'time')
         
         self.time.trace('w',lambda *args, **kwargs: self.set_time_text())

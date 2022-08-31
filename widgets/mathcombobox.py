@@ -7,6 +7,7 @@ else:
     import tkinter.ttk as ttk
 from widgets.mathentry import MathEntry
 from widgets.comboboxextraoptions import ComboboxExtraOptions
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 # This widget allows for the use of either a combobox to select data from
 # the gui's data file, or to do a math operation using that same data, such
@@ -23,9 +24,10 @@ from widgets.comboboxextraoptions import ComboboxExtraOptions
 class MathCombobox(ComboboxExtraOptions, object):
     def __init__(self, master, gui, *args, **kwargs):
         allowempty = kwargs.pop('allowempty', False)
-        kwargs['textvariable'] = kwargs.get('textvariable', tk.StringVar())
+        kwargs['textvariable'] = kwargs.get('textvariable', StringVar(master, None, 'mathcomboboxtextvariable'))
         self.textvariable = kwargs['textvariable']
         super(MathCombobox,self).__init__(master,*args,**kwargs)
+        
         self.gui = gui
 
         self.mathentry = MathEntry(self, self.gui, textvariable=self.textvariable, allowempty=allowempty)

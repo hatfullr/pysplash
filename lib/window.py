@@ -22,9 +22,6 @@ class Window(tk.Tk):
         self.height = self.winfo_height()
 
         self.configure(padx=5,pady=5)
-        # Add functions to this dict to be called when the window is
-        # about to be closed. Must have a 'method' key defined
-        self.on_close = {}
 
     # This prevents tkinter from slowing down by first closing tkinter
     # before printing traceback whenever an error occurs
@@ -39,11 +36,6 @@ class Window(tk.Tk):
 
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("window.close")
-
-        for com in self.on_close.values():
-            arguments = com.get('args',[])
-            keywords = com.get('kwargs',{})
-            com['method'](*arguments, **keywords)
         
         # Remove all files from the "tmp" directory
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")

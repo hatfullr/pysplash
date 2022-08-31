@@ -5,6 +5,7 @@ else:
     import tkinter as tk
     
 from widgets.floatmathentry import FloatMathEntry
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 #from widgets.mathentry import MathEntry
 from functions.getallchildren import get_all_children
 from matplotlib.axis import XAxis, YAxis
@@ -27,7 +28,7 @@ class AxisUnits(tk.LabelFrame, object):
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axisunits.create_variables")
-        self.value = tk.DoubleVar(value=1)
+        self.value = DoubleVar(self,1.,'value')
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axisunits.create_widgets")

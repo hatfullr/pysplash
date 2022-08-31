@@ -43,11 +43,6 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.__init__")
         
         self.window = window
-
-        #self.preferences = Preferences(self)
-        # Save the preferences when the window closes
-        self.window.on_close['save preferences'] = {'method' : save}
-        #self.window.on_close['save preferences'] = {'method' : self.preferences.save}
         
         self.fontname = fontname
         self.fontsize = fontsize
@@ -180,30 +175,10 @@ class GUI(tk.Frame,object):
         # Allow only linear colorbars for now
         self.controls.axis_controllers['Colorbar'].scale.set('linear')
         self.controls.axis_controllers['Colorbar'].scale.disable()
-                        
-    """
-    def initialize_xy_controls(self):
-        if globals.debug > 1: print("gui.initialize_xy_controls")
-     
-        N = len(self.get_data('x'))
-        found_first = False
-        for key,val in self.data['data'].items():
-            if hasattr(val,"__len__"):
-                if len(val) == N:
-                    if not found_first:
-                        self.controls.axis_controllers['XAxis'].value.set(key)
-                        self.controls.axis_controllers['XAxis'].label.set(key)
-                        found_first = True
-                    else:
-                        self.controls.axis_controllers['YAxis'].value.set(key)
-                        self.controls.axis_controllers['YAxis'].label.set(key)
-                        break
-        self.controls.update()
-        #self.xy_controls_initialized = True
-    """
+    
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
-        self.message_text = StringVar(self,None,'message text')
+        self.message_text = tk.StringVar()
         self.time_mode = tk.BooleanVar(value=globals.time_mode) # This is not a preference for now
         
     def create_widgets(self):

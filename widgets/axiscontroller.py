@@ -108,6 +108,7 @@ class AxisController(LabelledFrame,object):
         self.scale = StringVar(self, 'linear', 'scale')
         self.label = StringVar(self, None, 'label')
         globals.state_variables.append(self.value)
+        globals.state_variables.append(self.scale)
         globals.state_variables.append(self.label)
         
     def create_widgets(self,*args,**kwargs):
