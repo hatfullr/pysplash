@@ -23,7 +23,7 @@ from functions.getallchildren import get_all_children
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
-from lib.tkvariable import save, StringVar, IntVar, DoubleVar, BooleanVar
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 from read_file import read_file
 import globals

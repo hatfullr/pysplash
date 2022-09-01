@@ -12,7 +12,6 @@ class Menu(tk.Menu, object):
         super(Menu,self).__init__(master,*args,**kwargs)
 
         self.hotkeys = Hotkeys(root)
-        
         self.index = 0
         
     def add_command(self,label,*args,**kwargs):

@@ -34,6 +34,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.zoom_event = None
 
         self.savename = ""
+        self.initialdir = os.getcwd()
         
         self.configure(**kwargs)
 
@@ -176,20 +177,22 @@ class CustomToolbar(NavigationToolbar2Tk):
         # asksaveasfilename dialog when you choose various save types
         # from the dropdown.  Passing in the empty string seems to
         # work - JDH!
-        # defaultextension = self.canvas.get_default_filetype()
-        defaultextension = ''
-        initialfile = self.canvas.get_default_filename()
         
-        self.savename = tk.filedialog.asksaveasfilename(
+        defaultextension = ''
+        initialfile = os.path.basename(self.savename) if self.savename else self.canvas.get_default_filename()
+        
+        savename = tk.filedialog.asksaveasfilename(
             master=self.canvas.get_tk_widget().master,
             title="Save the figure",
             filetypes=tk_filetypes,
             defaultextension=defaultextension,
-            initialdir=os.getcwd(),
+            initialdir=self.initialdir,
             initialfile=initialfile,
         )
-
-        if self.savename in ["",()]: return
+        if not savename: return
+        
+        self.savename = savename
+        self.initialdir = os.path.dirname(self.savename)
 
         # Save dir for next time
         matplotlib.rcParams['savefig.directory'] = (
@@ -198,14 +201,17 @@ class CustomToolbar(NavigationToolbar2Tk):
             
     def save_figure(self, *args, **kwargs):
         # If we haven't done a "Save As" yet, then do that first
-        if self.savename in ["", ()]: self.save_figure_as()
+        if not self.savename: self.save_figure_as()
+
+        # If the user didn't specify any name to save, then don't try to save
+        if not self.savename: return
 
         try:
             # This method will handle the delegation to the correct type
             self.canvas.figure.savefig(self.savename)
-            self.gui.message("Figure saved as "+os.path.basename(self.savename))
         except Exception as e:
             tk.messagebox.showerror(master=self.master,title="Error saving file", message=str(e))
+        self.gui.message("Figure saved as "+os.path.basename(self.savename))
 
     def disable(self,*args,**kwargs):
         for child in self.winfo_children():

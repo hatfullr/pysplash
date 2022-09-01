@@ -38,6 +38,8 @@ class MenuBar(Menu, object):
         )
 
         self.root.configure(menu=self)
+
+        self.bind("<<MenuSelect>>", lambda *args, **kwargs: print("press"),add="+")
         
     def future_feature(self, *args, **kwargs):
         raise Exception("Future feature")
