@@ -19,10 +19,8 @@ class Menu(tk.Menu, object):
         command = kwargs.get('command', None)
 
         if hotkey is not None and command is not None:
-            label += " "+hotkeys_to_string(hotkey)
             self.hotkeys.bind(hotkey, command)
-        
-        kwargs['label'] = label
+            kwargs['accelerator'] = hotkeys_to_string(hotkey).replace("(","").replace(")","")
         
         state = kwargs.get('state','normal')
         kwargs['state'] = state
@@ -31,7 +29,8 @@ class Menu(tk.Menu, object):
             self.states[label] = {'state':state, 'hotkey':hotkey}
             if state == 'disabled' and hotkey is not None:
                 self.hotkeys.disable(hotkey)
-        
+
+        kwargs['label'] = label
         super(Menu,self).add_command(*args,**kwargs)
         self.index += 1
 
