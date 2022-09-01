@@ -134,13 +134,13 @@ class AxisController(LabelledFrame,object):
 
         if self.gui.data is not None:
             # When the user selects time as an axis, we need to change global behaviors
-            if globals.time_mode and value in ['t','time']: self.gui.time_mode.set(True)
-            elif globals.time_mode and self.previous_value in ['t','time']:
-                if not any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]):
-                    self.gui.time_mode.set(False)
+
+            self.gui.time_mode.set(
+                any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()])
+            )
             
-            elif value in self.gui.data['data'].keys():
-                if any(self.gui.get_display_data(value, raw=True) <= 0):
+            if value in self.gui.data['data'].keys():
+                if np.any(self.gui.get_display_data(value, raw=True) <= 0):
                     if self.scale.get() == "log10":
                         self.scale.linear_button.invoke()
                         self.on_scale_changed()
