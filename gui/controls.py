@@ -70,6 +70,7 @@ class Controls(tk.Frame,object):
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
 
         self.current_state = None
+        self.previous_state = None
         self.saved_state = None
         
         self.bid = self.winfo_toplevel().bind("<Visibility>", self.on_visible, add="+")

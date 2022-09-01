@@ -57,6 +57,7 @@ class ComboboxExtraOptions(ttk.Combobox, object):
             values_set = True
         super(ComboboxExtraOptions,self).configure(*args,**kwargs)
         if 'values' in kwargs.keys() or values_set: self._on_values_set()
+        self.event_generate("<Configure>")
 
     def config(self,*args,**kwargs):
         self.configure(*args,**kwargs)

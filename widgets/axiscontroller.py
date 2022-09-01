@@ -44,15 +44,18 @@ class AxisController(LabelledFrame,object):
         self.create_widgets()
         self.place_widgets()
 
+        self.previous_value = None
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
 
-        self.scale.trace('w',self.on_scale_changed)
+        self.value.trace('w', self.set_widgets_states)
+        self.scale.trace('w', self.on_scale_changed)
         self.label.trace('w', self.update_label)
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
 
-        self.previous_value = None
+        self.combobox.bind("<Configure>", self.set_widgets_states, add="+")
+
         self._data = None
         self.stale = False
         self._physical_units = None
@@ -101,6 +104,7 @@ class AxisController(LabelledFrame,object):
         self.label_entry = Entry(
             self.label_frame,
             textvariable=self.label,
+            state='disabled',
         )
         
         self.limits = AxisLimits(self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
@@ -130,8 +134,8 @@ class AxisController(LabelledFrame,object):
 
         if self.gui.data is not None:
             # When the user selects time as an axis, we need to change global behaviors
-            if not self.gui.time_mode.get() and value in ['t','time']: self.gui.time_mode.set(True)
-            elif self.gui.time_mode.get() and self.previous_value in ['t','time']:
+            if globals.time_mode and value in ['t','time']: self.gui.time_mode.set(True)
+            elif globals.time_mode and self.previous_value in ['t','time']:
                 if not any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]):
                     self.gui.time_mode.set(False)
             
@@ -160,14 +164,6 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.disconnect")
         self.limits.disconnect()
         self.scale.disconnect()
-        
-    def disable(self,*args,**kwargs):
-        if globals.debug > 1: print("axiscontroller.disable")
-        set_widgets_states(get_all_children(self), 'disabled')
-
-    def enable(self,*args,**kwargs):
-        if globals.debug > 1: print("axiscontroller.enable")
-        set_widgets_states(get_all_children(self), 'normal')
     
     def update_label(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.update_label")
@@ -255,3 +251,25 @@ class AxisController(LabelledFrame,object):
             
             if None not in newlim:
                 self.limits.set_limits(newlim)
+
+    def set_widgets_states(self, *args, **kwargs):
+        widgets = [
+            self.label_entry,
+            self.limits.entry_low,
+            self.limits.entry_high,
+            self.limits.adaptive_button,
+            self.scale.linear_button,
+            self.scale.log_button,
+            self.scale.pow10_button,
+            self.units.entry,
+        ]
+
+        state = self.combobox.cget('state')
+        if self.value.get().strip() in ["",None,'None','none']:
+            for widget in widgets: widget.configure(state='disabled')
+        else:
+            for widget in widgets:
+                widget.configure(state=state)
+
+
+    

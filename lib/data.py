@@ -5,7 +5,7 @@ import globals
 from functions.rotate import rotate
 
 class Data(collections.OrderedDict,object):
-    def __init__(self,data):
+    def __init__(self,data,mask=None):
         if globals.debug > 1: print("data.__init__")
         super(Data,self).__init__(data)
 
@@ -30,26 +30,28 @@ class Data(collections.OrderedDict,object):
 
         self.rotation = np.zeros(3) # Euler angles
 
+        self._mask = mask
+        if mask is not None: self.mask(self._mask)
+
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
-        if not self.is_image: self.__init__(self._original)
+        if not self.is_image: self.__init__(self._original,**kwargs)
 
+    def clear_mask(self, *args, **kwargs):
+        if globals.debug > 1: print("data.clear_mask")
+        rotation = copy.deepcopy(self.rotation) # Copy just to be safe
+        self.reset()
+        self.rotate(*rotation)
+        self._mask = None
+        
+    # Use None for mask to clear the mask
     def mask(self, mask):
         if globals.debug > 1: print("data.mask")
-        pass
 
-    # Mask the original data by a radial slice, so that particles who are
-    # located within the slice are shown, and those outside are hidden
-    def radial_mask(self, rmin, rmax, origin=np.zeros(3)):
-        if globals.debug > 1: print("data.radial_mask")
-        if isinstance(origin, int): origin = xyz[origin]
-        xyz = np.column_stack((
-            self._original['data']['x'],
-            self._original['data']['y'],
-            self._original['data']['z'],
-        ))
-        r2 = np.sum((xyz-origin)**2, axis=-1)
-        self.mask(np.logical_and(rmin*rmin <= r2, r2 <= rmax*rmax))
+        for key, val in self['data'].items():
+            if key in ['t','time']: continue
+            self['data'][key] = val[mask]
+        self._mask = mask
 
     # Rotate the data using euler angles
     def rotate(self, anglexdeg, angleydeg, anglezdeg):

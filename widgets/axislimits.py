@@ -9,6 +9,7 @@ else:
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
 from widgets.tooltip import ToolTip
+from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import gui
@@ -52,10 +53,12 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low = FloatEntry(
             self,
             variable=self.low,
+            state='disabled',
         )
         self.entry_high = FloatEntry(
             self,
             variable=self.high,
+            state='disabled',
         )
         self.adaptive_button = SwitchButton(
             self,
@@ -63,6 +66,7 @@ class AxisLimits(tk.LabelFrame,object):
             width=2,
             variable=self.adaptive,
             command=(self.adaptive_on, self.adaptive_off),
+            state='disabled',
         )
         ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible.")
 
@@ -76,27 +80,12 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_high.pack(side='left',fill='both',expand=True,pady=(0,2))
         if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2,pady=(0,2))
 
-    def set_widget_state(self,widgets,state):
-        if globals.debug > 1: print("axislimits.set_widget_state")
-        if not isinstance(widgets,(list,tuple,np.ndarray)): widgets = [widgets]
-        for widget in widgets:
-            if 'state' in widget.configure():
-                if isinstance(widget,tk.Label): continue
-                current_state = widget.cget('state')
-                if current_state != state:
-                    if isinstance(widget,ttk.Combobox):
-                        if state == 'normal': widget.configure(state='readonly')
-                    else:
-                        widget.configure(state=state)
-
-    def disable(self,*args,**kwargs):
-        if globals.debug > 1: print("axislimits.disable")
-        for child in get_all_children(self):
-            self.set_widget_state(child,'disabled')
-    def enable(self,*args,**kwargs):
-        if globals.debug > 1: print("axislimits.enable")
-        for child in get_all_children(self):
-            self.set_widget_state(child,'normal')
+    #def disable(self,*args,**kwargs):
+    #    if globals.debug > 1: print("axislimits.disable")
+    #    set_widgets_states(get_all_children(self),'disabled')
+    #def enable(self,*args,**kwargs):
+    #    if globals.debug > 1: print("axislimits.enable")
+    #    set_widgets_states(get_all_children(self),'normal')
                         
     def connect(self,axis):
         if globals.debug > 1: print("axislimits.connect")

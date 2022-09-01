@@ -29,6 +29,8 @@ class PlotControls(LabelledFrame, object):
         self.place_widgets()
         self.create_hotkeys()
 
+        self.previous_state = None
+
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.create_variables")
         self.point_size = DoubleVar(self,1,'point size')

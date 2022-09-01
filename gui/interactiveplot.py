@@ -359,7 +359,7 @@ class InteractivePlot(ResizableFrame,object):
         #if self.drawn_object not in self.canvas.blit_artists:
         #    self.canvas.blit_artists.append(self.drawn_object)
           
-        self.canvas.draw_idle()
+        self.canvas.draw()
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()

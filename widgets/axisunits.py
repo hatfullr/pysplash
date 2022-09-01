@@ -8,6 +8,7 @@ from widgets.floatmathentry import FloatMathEntry
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 #from widgets.mathentry import MathEntry
 from functions.getallchildren import get_all_children
+from functions.setwidgetsstates import set_widgets_states
 from matplotlib.axis import XAxis, YAxis
 import matplotlib.image
 import copy
@@ -36,6 +37,7 @@ class AxisUnits(tk.LabelFrame, object):
             self,
             variable=self.value,
             #disallowed_values=[0,0.,-0,-0.],
+            state='disabled',
         )
 
     def place_widgets(self, *args, **kwargs):
@@ -49,5 +51,13 @@ class AxisUnits(tk.LabelFrame, object):
     def on_axis_controller_combobox_selected(self,*args,**kwargs):
         if globals.debug > 1: print('axisunits.on_axis_controller_combobox_selected')
         self.reset()
-    
+
+    def disable(self,*args,**kwargs):
+        if globals.debug > 1: print("axisunits.disable")
+        set_widgets_states(get_all_children(self), 'disabled')
+
+    def enable(self,*args,**kwargs):
+        if globals.debug > 1: print("axisunits.enable")
+        set_widgets_states(get_all_children(self), 'normal')
+        
     

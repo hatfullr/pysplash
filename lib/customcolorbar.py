@@ -211,7 +211,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             self.connect_canvas()
 
             self._ax.get_figure().canvas.draw_idle()
-            
 
     def hide(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.hide")
@@ -229,8 +228,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         
             # Put the axis back where it was originally
             self._ax.set_position(self.previous_ax_position)
-
-            self._ax.get_figure().canvas.draw_idle()
+            self._ax.get_figure().draw_idle()
         
     @property
     def visible(self):

@@ -32,7 +32,7 @@ class MathEntry(FlashingEntry, object):
             frame,
             text="...",
             command=self.show_rich_edit,
-            width=2,
+            width=0,
         )
         self.pack(side='left',fill='both',expand=True)
         self.rich_edit_button.pack(side='left')

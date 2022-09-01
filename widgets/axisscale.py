@@ -36,6 +36,7 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="linear",
             width=0,
+            state='disabled',
         )
         self.log_button = RadioButton(
             self,
@@ -43,6 +44,7 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="log10",
             width=0,
+            state='disabled',
         )
         self.pow10_button = RadioButton(
             self,
@@ -50,6 +52,7 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="^10",
             width=0,
+            state='disabled',
         )
 
     def place_widgets(self, *args, **kwargs):

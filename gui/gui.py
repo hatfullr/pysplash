@@ -66,7 +66,7 @@ class GUI(tk.Frame,object):
         
         self._data = None
         self._data_time_mode = None
-
+        
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
@@ -88,17 +88,35 @@ class GUI(tk.Frame,object):
         self.controls.connect()
 
     @property
-    def data(self): return self._data_time_mode if self.time_mode.get() else self._data
+    def data(self): return self._data_time_mode if globals.time_mode else self._data
     @data.setter
     def data(self,value):
-        if self.time_mode.get(): self._data_time_mode = value
-        else: self._data = value
+        if not isinstance(value, (dict, type(None))):
+            raise TypeError("can only set data to type 'dict' or 'None', not '"+type(value).__name__+"'")
+
+        previous_data = self._data if not globals.time_mode else self._data_time_mode
+        mask = None if previous_data is None else previous_data._mask
+        
+        # If we switched time mode on/off, don't apply a mask
+        if (previous_data is self._data and globals.time_mode or
+            previous_data is self._data_time_mode and not globals.time_mode):
+            mask = None
+
         if value is None:
+            for axis_controller in self.controls.axis_controllers.values():
+                axis_controller.combobox.configure(state='disabled')
             self.menubar.data.disable()
             self.menubar.functions.disable()
         else:
+            value = Data(value,mask=mask)
+            
+            for axis_controller in self.controls.axis_controllers.values():
+                axis_controller.combobox.configure(state='normal')
             self.menubar.data.enable()
             self.menubar.functions.enable()
+
+        if globals.time_mode: self._data_time_mode = value
+        else: self._data = value
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
@@ -276,7 +294,7 @@ class GUI(tk.Frame,object):
     def read(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read")
         
-        if self.time_mode.get():
+        if globals.time_mode:
             raise Exception("gui.read is not allowed in time mode. This should never happen.")
         
         previous_data_length = 0
@@ -287,8 +305,9 @@ class GUI(tk.Frame,object):
                 previous_data_length = len(self.data['data'][iter(self.data['data']).next()])
         
         current_file = self.filecontrols.current_file.get()
+        self._temp = None
         def get_data(*args,**kwargs):
-            self._data = Data(read_file(current_file))
+            self._temp = read_file(current_file)
         
         self.message("Reading data")
         thread = ThreadedTask(target=get_data)
@@ -299,7 +318,7 @@ class GUI(tk.Frame,object):
 
         # We can't update the data property of this class from the spawned thread,
         # so instead we obtain self._data and then assign self.data to that.
-        self.data = self._data
+        self.data = self._temp
         
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
@@ -352,26 +371,13 @@ class GUI(tk.Frame,object):
             'h' in ckeys and
             'rho' in ckeys):
             colorbar_values.pop('rho')
-        if len(colorbar_values) == 0:
-            # Disable the colorbar controls if we have no values
-            self.controls.axis_controllers['Colorbar'].disable()
-        else:
+        if len(colorbar_values) > 0:
             self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
         
         # Update the axis controllers
         for axis_name, axis_controller in self.controls.axis_controllers.items():
             if axis_name != 'Colorbar':
                 axis_controller.combobox.configure(values=keys)
-                #if axis_controller.value.get() == "":
-                #    exclude = []
-                #    for ac in self.controls.axis_controllers.values():
-                #        if ac is not axis_controller and ac.value.get() != "":
-                #            exclude.append(ac.value.get())
-                    #axis_controller.value.set(axis_controller.value.get())
-                    #for value in axis_controller.combobox.cget('values'):
-                        #if value not in exclude:
-                        #    axis_controller.value.set(value)
-                        #    break
         
         # Update the time text in the plot, if time data is available
         for name in ['t','time']:
@@ -388,6 +394,8 @@ class GUI(tk.Frame,object):
             'display_units' : collections.OrderedDict({}),
             'physical_units' : collections.OrderedDict({}),
         }
+
+        self._temp = None
 
         def get_data(*args,**kwargs):
             total = len(self.filenames)
@@ -423,7 +431,7 @@ class GUI(tk.Frame,object):
             for i,(key, val) in enumerate(data['data'].items()):
                 self.message_text.set("Flattening data arrays (%3d%%)..." % int(i/total*100))
                 data['data'][key] = np.array(val).flatten()
-            self._data_time_mode = Data(data)
+            self._temp = data
 
             self.message_text.set("Setting up display data arrays...")
 
@@ -437,7 +445,7 @@ class GUI(tk.Frame,object):
         
         # We can't update the data property of this class from the spawned thread,
         # so instead we obtain self._data and then assign self.data to that.
-        self.data = self._data_time_mode
+        self.data = self._temp
         
         self.set_user_controlled(True)
 
@@ -505,7 +513,7 @@ class GUI(tk.Frame,object):
     def toggle_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.toggle_time_mode")
         globals.time_mode = self.time_mode.get()
-        if self.time_mode.get(): self.enable_time_mode()
+        if globals.time_mode: self.enable_time_mode()
         else: self.disable_time_mode()
         # Stale the axis controllers so that we obtain the correct data
         # (the shape of the data has changed now)
