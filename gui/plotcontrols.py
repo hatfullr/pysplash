@@ -139,7 +139,6 @@ class PlotControls(LabelledFrame, object):
         for name in ['rotate +x', 'rotate -x', 'rotate +y', 'rotate -y', 'rotate +z', 'rotate -z']:
             if not self.hotkeys.is_disabled(name): self.hotkeys.disable(name)
 
-    #@profile
     def enable_rotations(self, *args, **kwargs):
         if globals.debug > 1: print("plotcontrols.enable_rotations")
         if 'disabled' in self.rotation_x_entry.state():

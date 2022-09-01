@@ -139,8 +139,15 @@ class Hotkeys(object):
     def is_disabled(self, name):
         return name in self.disabled_hotkeys
 
-    def disable(self, name):
-        if not self.is_disabled(name): self.disabled_hotkeys.append(name)
+    def disable(self, name=None):
+        if name is None: # Disable all hotkeys
+            for name in self.registry.keys():
+                self.disable(name=name)
+        elif not self.is_disabled(name): # Disable single hotkey
+            self.disabled_hotkeys.append(name)
     
-    def enable(self, name):
-        if self.is_disabled(name): self.disabled_hotkeys.remove(name)
+    def enable(self, name=None):
+        if name is None: # Enable all disabled hotkeys
+            self.disabled_hotkeys = []
+        elif self.is_disabled(name):
+            self.disabled_hotkeys.remove(name)

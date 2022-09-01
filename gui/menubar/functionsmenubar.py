@@ -7,11 +7,22 @@ class FunctionsMenuBar(Menu, object):
     def __init__(self, master, gui, tearoff=0, *args, **kwargs):
         super(FunctionsMenuBar, self).__init__(
             master,
+            gui.window,
             *args,
             tearoff=tearoff,
             **kwargs
         )
 
-        self.add_command(label='Make movie', command=gui.make_movie)
-        self.add_command(label='Make rotation movie', command=gui.make_rotation_movie)
+        self.add_command(
+            'Make movie',
+            command=gui.make_movie,
+            state='disabled',
+            can_disable=True,
+        )
+        self.add_command(
+            'Make rotation movie',
+            command=gui.make_rotation_movie,
+            state='disabled',
+            can_disable=True,
+        )
         

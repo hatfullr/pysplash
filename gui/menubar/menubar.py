@@ -13,23 +13,28 @@ class MenuBar(Menu, object):
         self.root = root
         self.gui = gui
         kwargs['tearoff'] = 0
-        super(MenuBar,self).__init__(self.root,*args,**kwargs)
+        super(MenuBar,self).__init__(self.root,gui.window,*args,**kwargs)
+
+        self.file = FileMenuBar(self, gui)
+        self.functions = FunctionsMenuBar(self, gui)
+        self.data = DataMenuBar(self, gui)
+        self.plot = PlotMenuBar(self, gui)
 
         self.add_cascade(
             label="File",
-            menu=FileMenuBar(self,gui),
+            menu=self.file,
         )
         self.add_cascade(
             label="Functions",
-            menu=FunctionsMenuBar(self,gui),
+            menu=self.functions,
         )
         self.add_cascade(
             label="Data",
-            menu=DataMenuBar(self,gui),
+            menu=self.data,
         )
         self.add_cascade(
             label="Plot",
-            menu=PlotMenuBar(self,gui),
+            menu=self.plot,
         )
 
         self.root.configure(menu=self)

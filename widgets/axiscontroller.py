@@ -122,7 +122,6 @@ class AxisController(LabelledFrame,object):
         self.units_and_scale_frame.pack(side='top',fill='x',expand=True)
 
     # This gets called whenever the combobox entry has been changed
-    #@profile
     def on_combobox_selected(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.on_combobox_selected")
         # Check for any <= 0 values in the data. If there are any, then if

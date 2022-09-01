@@ -20,9 +20,6 @@ from lib.data import Data
 from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
-from functions.importdata import ImportData
-from functions.findparticle import FindParticle
-#from functions.rotate import rotate
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
@@ -69,8 +66,6 @@ class GUI(tk.Frame,object):
         
         self._data = None
         self._data_time_mode = None
-        self._display_data = None
-        self._display_data_time_mode = None
 
         self.create_variables()
         self.create_widgets()
@@ -98,13 +93,12 @@ class GUI(tk.Frame,object):
     def data(self,value):
         if self.time_mode.get(): self._data_time_mode = value
         else: self._data = value
-
-    @property
-    def display_data(self): return self._display_data_time_mode if self.time_mode.get() else self._display_data
-    @display_data.setter
-    def display_data(self,value):
-        if self.time_mode.get(): self._display_data_time_mode = value
-        else: self._display_data = value
+        if value is None:
+            self.menubar.data.disable()
+            self.menubar.functions.disable()
+        else:
+            self.menubar.data.enable()
+            self.menubar.functions.enable()
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
@@ -151,10 +145,8 @@ class GUI(tk.Frame,object):
                     self.interactiveplot.ax.set_xlim(xlimits.get())
                 if all(np.isfinite(ylim)):
                     self.interactiveplot.ax.set_ylim(ylimits.get())
-            #print(self.controls.axis_controllers['XAxis'].limits.get())
             
             # Set the x and y limits
-            #self.interactiveplot.reset_xylim()
             if self.interactiveplot.drawn_object is None:
                 self.interactiveplot.update()
             else:
@@ -177,7 +169,7 @@ class GUI(tk.Frame,object):
         self.controls.axis_controllers['Colorbar'].scale.disable()
 
         self.controls.plotcontrols.update_rotations_controls()
-    
+
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
@@ -243,9 +235,6 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
-        self.hotkeys.bind("import data", lambda *args,**kwargs: ImportData(self))
-        self.hotkeys.bind("save", lambda *args,**kwargs: self.plottoolbar.save_figure())
-        self.hotkeys.bind("find particle", lambda *args,**kwargs: FindParticle(self))
 
     def destroy(self, *args, **kwargs):
         if hasattr(self, "message_after_id") and self.message_after_id is not None:
@@ -307,6 +296,10 @@ class GUI(tk.Frame,object):
         while thread.isAlive():
             root.update()
         self.clear_message()
+
+        # We can't update the data property of this class from the spawned thread,
+        # so instead we obtain self._data and then assign self.data to that.
+        self.data = self._data
         
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
@@ -390,7 +383,7 @@ class GUI(tk.Frame,object):
     
     def read_time_mode(self,*args,**kwargs):
         # Make the data contain *all* the input data values
-        self._data_time_mode = {
+        data = {
             'data' : collections.OrderedDict({}),
             'display_units' : collections.OrderedDict({}),
             'physical_units' : collections.OrderedDict({}),
@@ -413,29 +406,26 @@ class GUI(tk.Frame,object):
 
                 for key,val in d['data'].items():
                     if key in ['t','time']: val = np.repeat(val,length)
-                    if key not in self._data_time_mode['data'].keys(): self._data_time_mode['data'][key] = [val]
-                    else: self._data_time_mode['data'][key] += [val]
+                    if key not in data['data'].keys(): data['data'][key] = [val]
+                    else: data['data'][key] += [val]
 
-                    if key not in self._data_time_mode['display_units'].keys():
-                        self._data_time_mode['display_units'][key] = d['display_units'][key]
-                    elif self._data_time_mode['display_units'][key] != d['display_units'][key]:
-                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found display units of '"+self._data_time_mode['display_units'][key]+"', but file '"+filename+"' has display units of '"+d['display_units'][key]+"' for this key.")
+                    if key not in data['display_units'].keys():
+                        data['display_units'][key] = d['display_units'][key]
+                    elif data['display_units'][key] != d['display_units'][key]:
+                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found display units of '"+data['display_units'][key]+"', but file '"+filename+"' has display units of '"+d['display_units'][key]+"' for this key.")
 
-                    if key not in self._data_time_mode['physical_units'].keys():
-                        self._data_time_mode['physical_units'][key] = d['physical_units'][key]
-                    elif self._data_time_mode['physical_units'][key] != d['physical_units'][key]:
-                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found physical units of '"+self._data_time_mode['display_units'][key]+"', but file '"+filename+"' has physical units of '"+d['display_units'][key]+"' for this key.")
+                    if key not in data['physical_units'].keys():
+                        data['physical_units'][key] = d['physical_units'][key]
+                    elif data['physical_units'][key] != d['physical_units'][key]:
+                        raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found physical units of '"+data['display_units'][key]+"', but file '"+filename+"' has physical units of '"+d['display_units'][key]+"' for this key.")
 
-            total = len(self._data_time_mode['data'].keys())
-            for i,(key, val) in enumerate(self._data_time_mode['data'].items()):
+            total = len(data['data'].keys())
+            for i,(key, val) in enumerate(data['data'].items()):
                 self.message_text.set("Flattening data arrays (%3d%%)..." % int(i/total*100))
-                self._data_time_mode['data'][key] = np.array(val).flatten()
-            self._data_time_mode = Data(self._data_time_mode)
+                data['data'][key] = np.array(val).flatten()
+            self._data_time_mode = Data(data)
 
             self.message_text.set("Setting up display data arrays...")
-            self._display_data_time_mode = {
-                key : self.get_data(key)*self.get_display_units(key) for key in self._data_time_mode['data'].keys()
-            }
 
         self.set_user_controlled(False)
         #self.message_text.set("Reading all input data...")
@@ -444,6 +434,11 @@ class GUI(tk.Frame,object):
         while thread.isAlive():
             root.update()
         self.clear_message()
+        
+        # We can't update the data property of this class from the spawned thread,
+        # so instead we obtain self._data and then assign self.data to that.
+        self.data = self._data_time_mode
+        
         self.set_user_controlled(True)
 
     def get_data(self,key):
@@ -489,30 +484,6 @@ class GUI(tk.Frame,object):
                 else: return self.get_data(key) * self.get_display_units(key) / units
             return self.get_data(key) * self.get_display_units(key)
 
-    """
-    def rotate(self,anglexdeg=None,angleydeg=None,anglezdeg=None):
-        if globals.debug > 1: print("gui.rotate")
-        if self.data.is_image:
-            print("Cannot perform rotations on data that have been identified as an image with is_image = True")
-            return
-
-        # Perform the rotation specified in the plot controls
-        if anglexdeg is None: anglexdeg = self.controls.plotcontrols.rotation_x.get()
-        if angleydeg is None: angleydeg = self.controls.plotcontrols.rotation_y.get()
-        if anglezdeg is None: anglezdeg = self.controls.plotcontrols.rotation_z.get()
-
-        # We just need to rotate the display data
-        if self.display_data is not None:
-            keys = self.display_data.keys()
-            if 'x' in keys and 'y' in keys and 'z' in keys:
-                x = self.data._original['data']['x']
-                y = self.data._original['data']['y']
-                z = self.data._original['data']['z']
-                self.display_data['x'],self.display_data['y'],self.display_data['z'] = rotate(x,y,z,anglexdeg,angleydeg,anglezdeg)
-            else:
-                print("Cannot perform rotations on data that do not contain all fields 'x', 'y', and 'z'")
-    """
-
     def make_movie(self, *args, **kwargs):
         if globals.debug > 1: print("gui.make_movie")
         make_movie(self)
@@ -520,32 +491,6 @@ class GUI(tk.Frame,object):
     def make_rotation_movie(self,*args,**kwargs):
         if globals.debug > 1: print("gui.make_rotation_movie")
         make_rotation_movie(self)
-
-    #def set_preference(self,key,value):
-    #    if globals.debug > 1: print("gui.set_preference")
-    #    self.preferences[key] = value
-
-    #def get_preference(self,key):
-    #    if globals.debug > 1: print("gui.get_preference")
-    #    if key in self.preferences.keys():
-    #        return self.preferences[key]
-    #    else:
-    #        return None
-        
-    #def save_preferences(self,*args,**kwargs):
-    #    if globals.debug > 1: print("gui.save_preferences")
-    #    with open(self.preferences_path,'w') as f:
-    #        json.dump(self.preferences, f, indent=4)
-
-    #def load_preferences(self,*args,**kwargs):
-    #    if globals.debug > 1: print("gui.load_preferences")
-    #    if not os.path.isfile(self.preferences_path): return
-    #    with open(self.preferences_path,'r') as f:
-    #        f.seek(0,2)
-    #        filesize = f.tell()
-    #        f.seek(0)
-    #        if filesize == 0: self.preferences = {}
-    #        else: self.preferences = json.load(f)
 
     def update_filenames(self,*args,**kwargs):
         if globals.debug > 1: print("gui.update_filenames")
@@ -584,7 +529,7 @@ class GUI(tk.Frame,object):
 
         self.interactiveplot.clear_tracking()
         
-        if self._data_time_mode is None or self._display_data_time_mode is None: self.read_time_mode()
+        if self.data is None: self.read_time_mode()
         self.interactiveplot.reset()
 
     def disable_time_mode(self, *args, **kwargs):
@@ -599,8 +544,4 @@ class GUI(tk.Frame,object):
         if self.filecontrols.current_file not in globals.state_variables:
             globals.state_variables.append(self.filecontrols.current_file)
 
-        #if (self.controls.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
-        #    self.controls.axis_controllers['YAxis'].value.get() in ['x','y','z'] and
-        #    self.controls.axis_controllers['XAxis'].value.get() != self.controls.axis_controllers['YAxis'].value.get()):
-        #    self.controls.plotcontrols.enable_rotations()
 

@@ -11,13 +11,23 @@ class PlotMenuBar(Menu, object):
     def __init__(self, master, gui, tearoff=0, *args, **kwargs):
         super(PlotMenuBar, self).__init__(
             master,
+            gui.window,
             *args,
             tearoff=tearoff,
             **kwargs
         )
 
-        self.add_command(label='Add artist', command=lambda *args,**kwargs: AddArtist(gui))
-        self.add_command(label='Manage artists', command=lambda *args,**kwargs: ManageArtists(gui))
-        self.add_command(label='Set style', command=lambda *args,**kwargs: SetStyle(gui))
+        self.add_command(
+            'Add artist',
+            command=lambda *args,**kwargs: AddArtist(gui),
+        )
+        self.add_command(
+            'Manage artists',
+            command=lambda *args,**kwargs: ManageArtists(gui),
+        )
+        self.add_command(
+            'Set style',
+            command=lambda *args,**kwargs: SetStyle(gui),
+        )
 
         

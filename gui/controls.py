@@ -268,7 +268,6 @@ class Controls(tk.Frame,object):
             else: raise TypeError("All elements in the input list, tuple, or np.ndarray must be of type 'str'")
         else: raise TypeError("Argument must be one of types 'str', 'list', 'tuple', or 'np.ndarray'")
 
-    #@profile
     def on_update_button_pressed(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_update_button_pressed")
         need_full_redraw = False
