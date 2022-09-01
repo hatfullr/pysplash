@@ -151,3 +151,11 @@ class Hotkeys(object):
             self.disabled_hotkeys = []
         elif self.is_disabled(name):
             self.disabled_hotkeys.remove(name)
+
+    def get_hotkey_names_on_widget(self, widget):
+        names = []
+        for key, val in self.registry.items():
+            for w in val.keys():
+                if w == widget: names.append(key)
+
+        return list(set(names))

@@ -98,6 +98,15 @@ class FileControls(tk.Frame,object):
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         set_widgets_states(children, 'disabled')
 
+        # Disable the hotkeys
+        if group == 'all': self.hotkeys.disable()
+        else:
+            names = []
+            for child in children:
+                names += self.hotkeys.get_hotkey_names_on_widget(child)
+            names = list(set(names))
+            for name in names: self.hotkeys.disable(name=name)
+
     def enable(self,group):
         if globals.debug > 1: print("filecontrols.enable")
         if globals.time_mode: return
@@ -105,6 +114,15 @@ class FileControls(tk.Frame,object):
         elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
         set_widgets_states(children, 'normal')
+
+        if group == 'all': self.hotkeys.enable()
+        else:
+            names = []
+            for child in children:
+                names += self.hotkeys.get_hotkey_names_on_widget(child)
+            names = list(set(names))
+            for name in names: self.hotkeys.enable(name=name)
+            
 
     def set_state(self,widgets,state):
         if globals.debug > 1: print("filecontrols.set_state")
