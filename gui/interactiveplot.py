@@ -68,6 +68,7 @@ class InteractivePlot(ResizableFrame,object):
         self.previous_kwargs = None
         self.previous_xlim = None
         self.previous_ylim = None
+        self.previous_time_mode = globals.time_mode
 
         self.origin = np.zeros(2)
         self.origin_cid = None
@@ -190,8 +191,6 @@ class InteractivePlot(ResizableFrame,object):
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
-
-        #self.reset()
 
         # Stale the axis controllers before fetching their data, so that we
         # obtain fresh data

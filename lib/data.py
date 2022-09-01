@@ -49,7 +49,7 @@ class Data(collections.OrderedDict,object):
         if globals.debug > 1: print("data.mask")
 
         for key, val in self['data'].items():
-            if key in ['t','time']: continue
+            if key in ['t','time'] and not globals.time_mode: continue
             self['data'][key] = val[mask]
         self._mask = mask
 

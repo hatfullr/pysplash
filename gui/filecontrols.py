@@ -34,6 +34,8 @@ class FileControls(tk.Frame,object):
 
         self.create_hotkeys()
 
+        self.current_file.trace('w', self.on_current_file_changed)
+
         #self.skip_amount.set(1)
     
     def create_variables(self):
@@ -98,6 +100,7 @@ class FileControls(tk.Frame,object):
 
     def enable(self,group):
         if globals.debug > 1: print("filecontrols.enable")
+        if globals.time_mode: return
         if group == 'all': children = get_all_children(self)
         elif group == 'toolbar': children = get_all_children(self,wid=self.toolbar)
         elif group == 'skip_buttons': children = [self.back_button,self.skip_amount_entry,self.next_button]
@@ -142,3 +145,8 @@ class FileControls(tk.Frame,object):
         if nextidx == 0: self.skip_amount.set(1)
         if filenames[nextidx] != self.current_file.get():
             self.current_file.set(filenames[nextidx])
+
+    def on_current_file_changed(self,*args,**kwargs):
+        if globals.debug > 1: print("filecontrols.on_current_file_changed")
+        if self.current_file.get() == "Time Mode": self.disable('all')
+        else: self.enable('all')
