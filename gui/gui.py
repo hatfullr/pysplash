@@ -535,7 +535,6 @@ class GUI(tk.Frame,object):
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
 
-        self.controls.plotcontrols.point_size_entry.configure(state='disabled')
         self.controls.plotcontrols.disable_rotations()
         
         self.previous_file = self.filecontrols.current_file.get()
@@ -552,8 +551,6 @@ class GUI(tk.Frame,object):
         if self.previous_file is not None:
             self.filecontrols.current_file.set(self.previous_file)
             self.previous_file = None
-
-        self.controls.plotcontrols.point_size_entry.configure(state='normal')
 
         if self.filecontrols.current_file not in globals.state_variables:
             globals.state_variables.append(self.filecontrols.current_file)
