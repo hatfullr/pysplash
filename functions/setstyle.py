@@ -37,9 +37,7 @@ class SetStyle(PopupWindow,object):
         self.available_styles = sorted(matplotlib.pyplot.style.available)
         self.available_styles = ["default"] + self.available_styles
 
-        self.create_variables()
-        
-        self.current_style = list(ast.literal_eval(self.style_name.get()))
+        self.current_style = list(ast.literal_eval(self.gui.interactiveplot.style.get()))
         if self.current_style is None: self.current_style = ['default']
 
         for style in self.current_style:
@@ -49,10 +47,6 @@ class SetStyle(PopupWindow,object):
         self.place_widgets()
 
         self.selectfilter.bind("<<ValuesUpdated>>", self.set_style, add="+")
-
-    def create_variables(self,*args,**kwargs):
-        if globals.debug > 1: print("setstyle.create_variables")
-        self.style_name = StringVar(self,[SetStyle.default_name],'style name')
 
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.create_widgets")
@@ -80,9 +74,7 @@ class SetStyle(PopupWindow,object):
 
     def set_style(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.set_style")
-        style = self.selectfilter.right
-        self.gui.interactiveplot.set_style(style)
-        self.style_name.set(style)
+        self.gui.interactiveplot.style.set(self.selectfilter.right)
 
     def cancel(self,*args,**kwargs):
         if globals.debug > 1: print('setstyle.cancel')

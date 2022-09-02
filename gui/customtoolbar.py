@@ -220,3 +220,7 @@ class CustomToolbar(NavigationToolbar2Tk):
     def enable(self,*args,**kwargs):
         for child in self.winfo_children():
             child.configure(state='normal')
+
+    def configure_subplots(self,*args,**kwargs):
+        print("Hello")
+        return super(CustomToolbar,self).configure_subplots(*args,**kwargs)

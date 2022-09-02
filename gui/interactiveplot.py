@@ -38,6 +38,7 @@ from widgets.resizableframe import ResizableFrame
 import warnings
 import inspect
 import traceback
+import ast
 
 class InteractivePlot(ResizableFrame,object):
     def __init__(self,master,gui,*args,**kwargs):
@@ -100,15 +101,16 @@ class InteractivePlot(ResizableFrame,object):
         self._after_id_update = None
 
         # Apply the style given in the user's preferences
-        #style = self.gui.preferences["style"]
-        #if style is not None: self.set_style(style)
+        self._set_style()
 
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
         self.time = DoubleVar(self,None,'time')
+        self.style = StringVar(self,["default"],'style')
         
         self.time.trace('w',lambda *args, **kwargs: self.set_time_text())
+        self.style.trace('w', self._set_style)
 
         self.time_text = None
     
@@ -754,12 +756,18 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.message("Press 0-9 to change selected particles' colors")
         self._select_info = None
 
+    def _set_style(self,*args,**kwargs):
+        self.set_style(self.style.get())
+        
     # style is a list or tuple
     def set_style(self,style):
         if globals.debug > 1: print("interactiveplot.set_style")
 
         if not isinstance(style, (list,tuple)):
-            raise TypeError("'style' must be either a list or a tuple, not '"+type(style).__name__+".")
+            try:
+                style = list(ast.literal_eval(style))
+            except:
+                raise TypeError("'style' must be either a list or a tuple, not '"+type(style).__name__+".")
         
         rcParams = {}
         for s in style:
