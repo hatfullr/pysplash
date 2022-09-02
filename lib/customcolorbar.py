@@ -131,104 +131,34 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     def on_draw(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.on_draw")
         self.update_position()
-        
+
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")
-        
-        fig = self._ax.get_figure()
-        fig.canvas.draw_idle() # Need to update the figure to get the right position
         pos = self._ax.get_position()
-        right = fig.subplotpars.right
-        left = fig.subplotpars.left
 
-        aspect = pos.height/pos.width
-        
-        if pos == self.previous_ax_position: return
-        self.previous_ax_position = pos
+        y0 = pos.y0
+        height = pos.height
         
         if self.side == 'right':
-            d = self.width + sum(self.pad)
-            
-            new_ax_x0 = pos.x0
-            new_ax_x1 = right - d
-
-            changey = (pos.width - (new_ax_x1-new_ax_x0)) * aspect
-            
-            new_ax_y0 = pos.y0 + 0.5*changey
-            new_ax_y1 = pos.y1 - 0.5*changey
-            
-            x0 = new_ax_x1 + self.pad[0]
-            y0 = new_ax_y0
-            height = new_ax_y1 - new_ax_y0
-            
-            self.cax.yaxis.tick_right()
-
-            # Budge the axis to the left
-            self._ax.set_position([
-                new_ax_x0,
-                new_ax_y0,
-                new_ax_x1-new_ax_x0,
-                new_ax_y1-new_ax_y0,
-            ])
-            
+            x0 = pos.x1 + self.pad[0]
         elif self.side == 'left':
-            d = self.width + sum(self.pad)
-            
-            new_ax_x0 = left + d
-            new_ax_x1 = pos.x1
+            x0 = pos.x0 - self.pad[1]
+        else:
+            raise NotImplementedError("placing the colorbar on the top or bottom of the plot is not yet supported")
 
-            changey = (pos.width - (new_ax_x1-new_ax_x0)) * aspect
-            
-            new_ax_y0 = pos.y0 + 0.5*changey
-            new_ax_y1 = pos.y1 - 0.5*changey
-            
-            x0 = new_ax_x0 - (self.width + self.pad[0])
-            y0 = new_ax_y0
-            height = new_ax_y1 - new_ax_y0
-            
-            self.cax.yaxis.tick_left()
-
-            # Budge the axis to the left
-            self._ax.set_position([
-                new_ax_x0,
-                new_ax_y0,
-                new_ax_x1-new_ax_x0,
-                new_ax_y1-new_ax_y0,
-            ])
-
-        elif self.side == 'top' or self.side == 'bottom':
-            raise ValueError("Placing the colorbar on the top or bottom of the plot is not yet supported")
-        
         self.cax.set_position([x0,y0,self.width,height])
         self.draw_all()
-        
+        self._ax.get_figure().canvas.draw_idle()
+    
     def show(self,side='right'):
         if globals.debug > 1: print("customcolorbar.show")
-
-        if not self.visible:
-            self.update_position()
-            self.visible = True
-            self.connect_canvas()
-
-            self._ax.get_figure().canvas.draw_idle()
+        self.visible = True
+        self.connect_canvas()
 
     def hide(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.hide")
-
-        if self.previous_ax_position is None:
-            # Colorbar has yet to be shown
-            return
-
-        if self.visible:
-        
-            # Hide the colorbar
-            self.visible = False
-
-            self.disconnect_canvas()
-        
-            # Put the axis back where it was originally
-            self._ax.set_position(self.previous_ax_position)
-            self._ax.get_figure().draw_idle()
+        self.visible = False
+        self.disconnect_canvas()
         
     @property
     def visible(self):
@@ -236,7 +166,9 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     @visible.setter
     def visible(self, value):
-        self.cax.set_visible(value)
+        if value != self.cax.get_visible():
+            self.cax.set_visible(value)
+            self._ax.get_figure().canvas.draw_idle()
 
     def get_cax_limits(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.get_cax_limits")

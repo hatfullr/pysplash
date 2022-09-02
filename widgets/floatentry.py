@@ -10,7 +10,7 @@ else:
     import tkinter.font as tkFont
     from widgets.flashingentry import FlashingEntry
 from functions.stringtofloat import string_to_float
-from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
+from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar, TkVariable
 import numpy as np
 import traceback
 
@@ -115,25 +115,32 @@ class FloatEntry(FlashingEntry,object):
     def clamp_variable(self, *args, **kwargs):
         value = self.variable.get()
 
-        if self.clamp[0] is not None and self.clamp[1] is not None:
+        clamp = list(self.clamp)
+        
+        if isinstance(clamp[0], (tk.DoubleVar, DoubleVar)): clamp[0] = clamp[0].get()
+        if isinstance(clamp[1], (tk.DoubleVar, DoubleVar)): clamp[1] = clamp[1].get()
+
+        clamp0, clamp1 = clamp
+
+        if clamp0 is not None and clamp1 is not None:
             if self.periodic:
                 # Figure out how many times the value winds around the clamp range
-                diff = max(self.clamp) - min(self.clamp)
+                diff = max(clamp) - min(clamp)
                 nwinds = 0
-                if value >= max(self.clamp):
-                    nwinds = (value - max(self.clamp))/diff
+                if value >= max(clamp):
+                    nwinds = (value - max(clamp))/diff
                     nfrac = nwinds % 1
-                    self.variable.set(min(self.clamp) + diff*nfrac)
-                elif value < min(self.clamp):
-                    nwinds = (min(self.clamp)-value)/diff
+                    self.variable.set(min(clamp) + diff*nfrac)
+                elif value < min(clamp):
+                    nwinds = (min(clamp)-value)/diff
                     nfrac = nwinds % 1
-                    self.variable.set(max(self.clamp) - diff*nfrac)
+                    self.variable.set(max(clamp) - diff*nfrac)
             else:
-                if value < min(self.clamp): self.variable.set(min(self.clamp))
-                elif value > max(self.clamp): self.variable.set(max(self.clamp))
-        elif (self.clamp[0] is not None and self.clamp[1] is None) and value < self.clamp[0]:
-            self.variable.set(self.clamp[0])
-        elif (self.clamp[0] is None and self.clamp[1] is not None) and value > self.clamp[1]:
-            self.variable.set(self.clamp[1])
+                if value < min(clamp): self.variable.set(min(clamp))
+                elif value > max(clamp): self.variable.set(max(clamp))
+        elif (clamp0 is not None and clamp1 is None) and value < clamp0:
+            self.variable.set(clamp0)
+        elif (clamp0 is None and clamp1 is not None) and value > clamp1:
+            self.variable.set(clamp1)
 
         self.format_text()

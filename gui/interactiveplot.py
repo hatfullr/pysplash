@@ -103,6 +103,16 @@ class InteractivePlot(ResizableFrame,object):
         # Apply the style given in the user's preferences
         self._set_style()
 
+        # Apply the user's preferences for subplot_adjust parameters
+        self.subplots_adjust(
+            left=self.left.get(),
+            right=self.right.get(),
+            top=self.top.get(),
+            bottom=self.bottom.get(),
+            hspace=self.hspace.get(),
+            wspace=self.wspace.get(),
+        )
+
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
@@ -111,6 +121,14 @@ class InteractivePlot(ResizableFrame,object):
         
         self.time.trace('w',lambda *args, **kwargs: self.set_time_text())
         self.style.trace('w', self._set_style)
+
+        # These are for adjusting plot spacing etc.
+        self.top = DoubleVar(self,self.fig.subplotpars.top,'top')
+        self.bottom = DoubleVar(self,self.fig.subplotpars.bottom,'bottom')
+        self.left = DoubleVar(self,self.fig.subplotpars.left,'left')
+        self.right = DoubleVar(self,self.fig.subplotpars.right,'right')
+        self.hspace = DoubleVar(self,self.fig.subplotpars.hspace,'hspace')
+        self.wspace = DoubleVar(self,self.fig.subplotpars.wspace,'wspace')
 
         self.time_text = None
     
@@ -932,3 +950,22 @@ class InteractivePlot(ResizableFrame,object):
         else:
             if child not in result: result.append(obj)
         return result
+
+    def subplots_adjust(self, **kwargs):
+        # Only move the axis around, not the colorbar
+        pos = self.ax.get_position()
+
+        left = kwargs.get('left',pos.x0)
+        right = kwargs.get('right',pos.x1)
+        bottom = kwargs.get('bottom',pos.y0)
+        top = kwargs.get('top',pos.y1)
+        
+        x0 = min(left,right)
+        x1 = max(left,right)
+        y0 = min(bottom,top)
+        y1 = max(bottom,top)
+        width = x1 - x0
+        height = y1 - y0
+        self.ax.set_position([x0,y0,width,height])
+
+        self.canvas.draw_idle()

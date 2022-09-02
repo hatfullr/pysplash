@@ -11,6 +11,7 @@ from widgets.button import Button
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 from functions.hotkeystostring import hotkeys_to_string
+from functions.configuresubplots import ConfigureSubplots
 import matplotlib
 import numpy as np
 import sys
@@ -222,5 +223,5 @@ class CustomToolbar(NavigationToolbar2Tk):
             child.configure(state='normal')
 
     def configure_subplots(self,*args,**kwargs):
-        print("Hello")
-        return super(CustomToolbar,self).configure_subplots(*args,**kwargs)
+        ConfigureSubplots(self.gui)
+
