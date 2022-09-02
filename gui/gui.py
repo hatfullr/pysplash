@@ -544,7 +544,6 @@ class GUI(tk.Frame,object):
         self.interactiveplot.clear_tracking()
         
         if self.data is None: self.read_time_mode(*args,**kwargs)
-        self.interactiveplot.reset()
 
     def disable_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.disable_time_mode")
