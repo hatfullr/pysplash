@@ -142,8 +142,20 @@ class GUI(tk.Frame,object):
             else:
                 self.filecontrols.current_file.set(self.filenames[0])
 
-            if globals.time_mode: self.read_time_mode()
-            else: self.read()
+            #if globals.time_mode: self.read_time_mode()
+            #else: self.read()
+            self.read()
+
+            # Don't allow the axis controllers to start out in time mode (for now)
+            for axis_controller in self.controls.axis_controllers.values():
+                values = axis_controller.combobox['values']
+                if values[axis_controller.combobox.current()] in ['t','time']:
+                    for v in values:
+                        if v not in ['t','time']:
+                            axis_controller.combobox.set(v)
+                            # Set the label too, if the user hasn't typed their own label
+                            if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
+                            break
 
             if not self.controls.initialized: self.controls.initialize()
             xlimits = self.controls.axis_controllers['XAxis'].limits
@@ -174,14 +186,7 @@ class GUI(tk.Frame,object):
             self.interactiveplot.reset()
             self.interactiveplot.canvas.draw()
 
-        if not globals.time_mode:
-            # Make sure none of the axiscontrollers have 't' or 'time' selected
-            for controller in self.controls.axis_controllers.values():
-                if controller.combobox.textvariable.get() in ['t' or 'time']:
-                    for value in controller.combobox['values']:
-                        if value not in ['t','time']:
-                            controller.combobox.textvariable.set(value)
-                            break
+        
         # Allow only linear colorbars for now
         self.controls.axis_controllers['Colorbar'].scale.set('linear')
         self.controls.axis_controllers['Colorbar'].scale.disable()
@@ -191,7 +196,7 @@ class GUI(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
         self.message_text = tk.StringVar()
-        self.time_mode = tk.BooleanVar(value=globals.time_mode) # This is not a preference for now
+        self.time_mode = BooleanVar(self,globals.time_mode,"time mode")
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
@@ -315,21 +320,20 @@ class GUI(tk.Frame,object):
         while thread.isAlive():
             root.update()
         self.clear_message()
-
+        
         # We can't update the data property of this class from the spawned thread,
         # so instead we obtain self._data and then assign self.data to that.
         self.data = self._temp
-        
+
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
         else:
             new_data_length = len(self.data['data'][iter(self.data['data']).next()])
         if new_data_length != previous_data_length:
             self.interactiveplot.reset_colors()
-        
+
         if self.data.is_image:
             return
-        
         
         # Make sure the data has the required keys for scatter plots
         data_keys = self.data['data'].keys()
@@ -344,18 +348,22 @@ class GUI(tk.Frame,object):
             if rotationx != 0 or rotationy != 0 or rotationz != 0:
                 # Perform whatever rotation is needed from us for the display data
                 self.data.rotate(rotationx,rotationy,rotationz)
-            
+
+        if sys.version_info.major >= 3:
+            data_length = len(self.data['data'][next(iter(self.data['data']))])
+        else:
+            data_length = len(self.data['data'][iter(self.data['data']).next()])
         keys = []
         for key,val in self.data['data'].items():
             if hasattr(val,"__len__"):
-                if len(val) == new_data_length: keys.append(key)
-        
-        
-        if 't' in self.data['data'].keys(): keys.append('t')
-        elif 'time' in self.data['data'].keys(): keys.append('time')
+                if len(val) == data_length: keys.append(key)
+
+        extra = []
+        if 't' in self.data['data'].keys(): extra.append('t')
+        elif 'time' in self.data['data'].keys(): extra.append('time')
         
         colorbar_values = [
-            'None',
+            '',
             'rho',
         ]
         colorbar_extra = [
@@ -371,21 +379,20 @@ class GUI(tk.Frame,object):
             'h' in ckeys and
             'rho' in ckeys):
             colorbar_values.pop('rho')
-        if len(colorbar_values) > 0:
-            self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
+        self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
         
         # Update the axis controllers
-        for axis_name, axis_controller in self.controls.axis_controllers.items():
-            if axis_name != 'Colorbar':
-                axis_controller.combobox.configure(values=keys)
+        self.controls.axis_controllers['XAxis'].combobox.configure(values=keys, extra=extra)
+        self.controls.axis_controllers['YAxis'].combobox.configure(values=keys)
         
         # Update the time text in the plot, if time data is available
-        for name in ['t','time']:
-            if name in ckeys:
-                time = self.get_data(name)
-                if time is not None:
-                    self.interactiveplot.time.set(time*self.get_display_units(name))
-                break
+        if not globals.time_mode:
+            for name in ['t','time']:
+                if name in ckeys:
+                    time = self.get_data(name)
+                    if time is not None:
+                        self.interactiveplot.time.set(time*self.get_display_units(name))
+                    break
     
     def read_time_mode(self,*args,**kwargs):
         # Make the data contain *all* the input data values
@@ -411,7 +418,6 @@ class GUI(tk.Frame,object):
                         break
                 if length == 0: raise Exception("data file '"+filename+"' either only contains time data, or has no data at all")
 
-
                 for key,val in d['data'].items():
                     if key in ['t','time']: val = np.repeat(val,length)
                     if key not in data['data'].keys(): data['data'][key] = [val]
@@ -436,18 +442,18 @@ class GUI(tk.Frame,object):
             self.message_text.set("Setting up display data arrays...")
 
         self.set_user_controlled(False)
-        #self.message_text.set("Reading all input data...")
+
         thread = ThreadedTask(target=get_data)
         root = self.winfo_toplevel()
         while thread.isAlive():
             root.update()
-        self.clear_message()
         
         # We can't update the data property of this class from the spawned thread,
         # so instead we obtain self._data and then assign self.data to that.
         self.data = self._temp
         
         self.set_user_controlled(True)
+        self.clear_message()
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
@@ -513,8 +519,8 @@ class GUI(tk.Frame,object):
     def toggle_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.toggle_time_mode")
         globals.time_mode = self.time_mode.get()
-        if globals.time_mode: self.enable_time_mode()
-        else: self.disable_time_mode()
+        if globals.time_mode: self.enable_time_mode(*args,**kwargs)
+        else: self.disable_time_mode(*args,**kwargs)
         # Stale the axis controllers so that we obtain the correct data
         # (the shape of the data has changed now)
         for controller in self.controls.axis_controllers.values():
@@ -537,7 +543,7 @@ class GUI(tk.Frame,object):
 
         self.interactiveplot.clear_tracking()
         
-        if self.data is None: self.read_time_mode()
+        if self.data is None: self.read_time_mode(*args,**kwargs)
         self.interactiveplot.reset()
 
     def disable_time_mode(self, *args, **kwargs):

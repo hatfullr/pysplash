@@ -13,12 +13,12 @@ else:
 class ComboboxExtraOptions(ttk.Combobox, object):
     divider_character = "─"
     def __init__(self, *args, **kwargs):
-        self.where = kwargs.pop('where','bottom')
-        if self.where not in ['top','bottom']:
-            raise ValueError("Unrecognized value '"+str(self.where)+"' for keyword 'where'. Must be either 'top' or 'buttom'")
+        self._where = kwargs.pop('where','bottom')
+        if self._where not in ['top','bottom']:
+            raise ValueError("unrecognized value '"+str(self._where)+"' for keyword 'where'. Must be either 'top' or 'buttom'")
 
         extra = kwargs.pop('extra', [])
-        
+
         super(ComboboxExtraOptions,self).__init__(*args,**kwargs)
 
         self._extra = extra
@@ -33,22 +33,33 @@ class ComboboxExtraOptions(ttk.Combobox, object):
         self.listbox.bind("<<ListboxSelect>>",self._on_listbox_select,add="+")
         self.listbox.bind("<ButtonRelease-1>",self._on_listbox_release,add="+")
         self.listbox.bind("<ButtonPress-1>",self._on_listbox_press,add="+")
-        
-        values = self['values']
 
         self.divider = None
+        self._changing_textvariable = False
         
-    def __getitem__(self,key):
-        if key == 'extra': return self._extra
-        return super(ComboboxExtraOptions,self).__getitem__(key)
+    @property
+    def where(self): return self._where
+    @where.setter
+    def where(self, value):
+        if value not in ['top','bottom']:
+            raise ValueError("can only set 'where' to 'top' or 'bottom', not '"+str(value))
+        self._where = value
+        self._on_values_set()
 
-    def __setitem__(self,key,value):
-        if key == 'extra':
+    def __getitem__(self,item):
+        if item == 'extra': return self._extra
+        return super(ComboboxExtraOptions,self).__getitem__(item)
+
+    def __setitem__(self,item,value):
+        if item == 'extra':
             self._extra = value
             self._on_values_set()
             return
-        super(ComboboxExtraOptions,self).__setitem__(key,value)
-        if key == 'values': self._on_values_set()
+        super(ComboboxExtraOptions,self).__setitem__(item,value)
+        if item == 'values': self._on_values_set()
+
+    def set(self,value):
+        super(ComboboxExtraOptions,self).set(self._sanitize_selection(value))
 
     def configure(self,*args,**kwargs):
         values_set = False
@@ -110,3 +121,30 @@ class ComboboxExtraOptions(ttk.Combobox, object):
             if idx == cursel[0]:
                 return 'break'
 
+    def _on_textvariable_changed(self,*args,**kwargs):
+        print("textvariable changed",self.textvariable.get())
+        if self._changing_textvariable: return
+
+        value = self._sanitize_selection(self.textvariable.get())
+        
+        self._changing_textvariable = True
+        self.textvariable.set(value)
+        self._changing_textvariable = False
+            
+    # This is a safeguard in case the textvariable somehow gets set to
+    # the value of the divider.
+    def _sanitize_selection(self, selection):
+        if selection == self.divider:
+            idx = self._find_divider()
+            values = list(self['values'])
+            
+            # If there's no items in the list after the divider, get an item
+            # before the divider if there are any, otherwise set the
+            # textvariable to an empty string
+            if idx + 1 >= len(values) - 1:
+                if idx == 0: selection = ''
+                else: selection = values[idx - 1]
+            else: selection = values[idx + 1]
+            if selection is None:
+                raise Exception("selection is None. This should never happen.")
+        return selection

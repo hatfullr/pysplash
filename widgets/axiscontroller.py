@@ -98,6 +98,7 @@ class AxisController(LabelledFrame,object):
             width=0,
             values=[self.value.get()],
             textvariable=self.value,
+            where='top'
         )
 
         self.label_frame = tk.LabelFrame(self,text="Label")
@@ -177,10 +178,8 @@ class AxisController(LabelledFrame,object):
         if self.axis:
             if self.axis.get_label_text() != label:
                 parent_ax = self.axis.axes
-                if isinstance(self.axis, XAxis):
-                    parent_ax.set_xlabel(label)
-                elif isinstance(self.axis, YAxis):
-                    parent_ax.set_ylabel(label)
+                if isinstance(self.axis, XAxis): parent_ax.set_xlabel(label)
+                elif isinstance(self.axis, YAxis): parent_ax.set_ylabel(label)
                 else:
                     raise Exception("unknown axis type '"+type(self.axis).__name__+"'")
         self._setting_label = True
