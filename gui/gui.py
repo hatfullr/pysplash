@@ -24,6 +24,7 @@ from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
+from widgets.autosizelabel import AutoSizeLabel
 
 from read_file import read_file
 import globals
@@ -201,7 +202,6 @@ class GUI(tk.Frame,object):
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
         
-        
         self.left_frame = tk.Frame(self)
         self.interactiveplotframe = tk.Frame(self.left_frame)
         self.interactiveplot = InteractivePlot(
@@ -213,7 +213,7 @@ class GUI(tk.Frame,object):
         # Wait until the plot becomes visible to proceed
         self.update_idletasks()
         self.update()
-
+        
         self.under_plot_frame = tk.Frame(self.left_frame,relief='sunken',bd=1)
         self.plottoolbar = CustomToolbar(self.under_plot_frame,self,self.interactiveplot.canvas)
         
@@ -231,10 +231,10 @@ class GUI(tk.Frame,object):
             bd=1,
             relief='sunken',
         )
-
+        
         self.menubar = MenuBar(self.window,self)
         self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
-        
+
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
 

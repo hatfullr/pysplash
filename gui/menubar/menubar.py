@@ -7,6 +7,7 @@ from gui.menubar.functionsmenubar import FunctionsMenuBar
 from gui.menubar.datamenubar import DataMenuBar
 from gui.menubar.plotmenubar import PlotMenuBar
 from gui.menubar.filemenubar import FileMenuBar
+from gui.menubar.about import About
 
 class MenuBar(Menu, object):
     def __init__(self,root,gui,*args,**kwargs):
@@ -35,6 +36,10 @@ class MenuBar(Menu, object):
         self.add_cascade(
             label="Plot",
             menu=self.plot,
+        )
+        self.add_command(
+            label="About",
+            command=lambda *args,**kwargs: About(gui),
         )
 
         self.root.configure(menu=self)

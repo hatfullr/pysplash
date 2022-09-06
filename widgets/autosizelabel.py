@@ -16,8 +16,9 @@ class AutoSizeLabel(ttk.Label, object):
         self.truncate = kwargs.pop('truncate', 'both')
         if self.truncate not in AutoSizeLabel.truncate_values:
             raise ValueError("Keyword 'truncate' must be one of "+AutoSizeLabel.truncate_str+". Received '"+str(self.truncate)+"'")
-        self._textvariable = kwargs.pop('textvariable',tk.StringVar())
-        self.textvariable = tk.StringVar()
+        text = kwargs.get("text","")
+        self._textvariable = kwargs.pop('textvariable',tk.StringVar(value=text))
+        self.textvariable = tk.StringVar(value=text)
         kwargs['textvariable'] = self.textvariable
         
         super(AutoSizeLabel, self).__init__(master, *args, **kwargs)
