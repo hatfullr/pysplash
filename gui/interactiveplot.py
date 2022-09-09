@@ -94,6 +94,16 @@ class InteractivePlot(ResizableFrame,object):
         self.mouse = np.array([None,None])
         self.canvas.mpl_connect("axes_leave_event", self.clear_mouse)
         self.canvas.mpl_connect("motion_notify_event", self.update_mouse)
+
+        # This keeps the "x=...,y=..." text updated whenever the canvas gets redrawn
+        self.canvas_motion_event = None
+        def on_motion(event):
+            self.canvas_motion_event = event
+        self.canvas.get_tk_widget().bind("<Motion>", on_motion, add="+")
+        def on_draw(*args,**kwargs):
+            if self.canvas_motion_event is not None:
+                self.canvas.motion_notify_event(self.canvas_motion_event)
+        self.canvas.mpl_connect("draw_event", on_draw)
             
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)

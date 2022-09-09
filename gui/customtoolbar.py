@@ -45,7 +45,7 @@ class CustomToolbar(NavigationToolbar2Tk):
                 child.destroy()
 
         self.toolbar.set_message = self.set_xy_message
-
+        
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
