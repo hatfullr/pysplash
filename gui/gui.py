@@ -177,20 +177,10 @@ class GUI(tk.Frame,object):
                 if all(np.isfinite(ylim)):
                     self.interactiveplot.ax.set_ylim(ylimits.get())
             
-            # Set the x and y limits
-            if self.interactiveplot.drawn_object is None:
-                self.interactiveplot.update()
-            else:
-                self.controls.update_button.invoke()
+            self.interactiveplot.update()
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
-            self.interactiveplot.canvas.draw()
-
-        
-        # Allow only linear colorbars for now
-        self.controls.axis_controllers['Colorbar'].scale.set('linear')
-        self.controls.axis_controllers['Colorbar'].scale.disable()
 
         self.controls.plotcontrols.update_rotations_controls()
 

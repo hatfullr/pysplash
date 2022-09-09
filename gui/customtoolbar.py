@@ -159,6 +159,8 @@ class CustomToolbar(NavigationToolbar2Tk):
         version = matplotlib.__version__.split(".")
         if int(version[0]) >= 3 and int(version[1]) <= 3:
             self.draw_rubberband(event,0,0,0,0)
+        else:
+            super(CustomToolbar,self).remove_rubberband()
 
 
 # https://github.com/matplotlib/matplotlib/blob/1ff14f140546b8df3f17543ff8dac3ddd210c0f1/lib/matplotlib/backends/_backend_tk.py#L782

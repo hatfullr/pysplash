@@ -23,9 +23,16 @@ class MathEntry(FlashingEntry, object):
     def __init__(self, master, gui, *args, **kwargs):
         self.allowempty = kwargs.pop('allowempty',True)
         frame = tk.Frame(master)
+        validate = kwargs.pop('validate','focusout')
+        validatecommand = kwargs.pop('validatecommand',None)
+        self.allowed_values = kwargs.pop("allowed_values", [])
         super(MathEntry, self).__init__(frame, *args, **kwargs)
+
+        if validatecommand is None:
+            validatecommand = (self.register(self.validatecommand),'%P')
+        
         self.gui = gui
-        self.configure(validate='focusout',validatecommand=(self.register(self.validatecommand),'%P'))
+        self.configure(validate=validate,validatecommand=validatecommand)
         self.bid = None
 
         self.rich_edit_button = Button(
@@ -119,6 +126,10 @@ class MathEntry(FlashingEntry, object):
         return result1, result2, result3
 
     def validatecommand(self, newtext):
+        if newtext.strip() in self.allowed_values:
+            self.event_generate("<<ValidateSuccess>>")
+            return True
+        
         # Allow empty text
         if not newtext.strip() or newtext.strip() == "":
             if self.allowempty:

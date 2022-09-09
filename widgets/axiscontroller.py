@@ -98,7 +98,7 @@ class AxisController(LabelledFrame,object):
             width=0,
             values=[self.value.get()],
             textvariable=self.value,
-            where='top'
+            where='top',
         )
 
         self.label_frame = tk.LabelFrame(self,text="Label")
@@ -133,24 +133,26 @@ class AxisController(LabelledFrame,object):
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
 
-        self.set_widgets_states()
+        if value != self.previous_value:
 
-        if self.gui.data is not None:
-            # When the user selects time as an axis, we need to change global behaviors
-            self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
-            
-            if value in self.gui.data['data'].keys():
-                if np.any(self.gui.get_display_data(value, raw=True) <= 0):
-                    if self.scale.get() == "log10":
-                        self.scale.linear_button.invoke()
-                        self.on_scale_changed()
+            self.set_widgets_states()
 
-            self.set_adaptive_limits()
+            if self.gui.data is not None:
+                # When the user selects time as an axis, we need to change global behaviors
+                self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
 
-            if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
+                if value in self.gui.data['data'].keys():
+                    if np.any(self.gui.get_display_data(value, raw=True) <= 0):
+                        if self.scale.get() == "log10":
+                            self.scale.linear_button.invoke()
+                            self.on_scale_changed()
 
-        if self.previous_value != value: self.stale = True
-        self.previous_value = value
+                self.set_adaptive_limits()
+
+                if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
+
+            if self.previous_value != value: self.stale = True
+            self.previous_value = value
         
     def connect(self,axis,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.connect")

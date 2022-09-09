@@ -149,10 +149,33 @@ class Controls(tk.Frame,object):
         
         # Axis controls
         self.controls_frame = VerticalScrolledFrame(self,relief='sunken',bd=1)
+
+        xaxis = AxisController(
+            self.controls_frame.interior,
+            self.gui,
+            'XAxis',
+            padx=3,pady=3,
+            relief='sunken',
+        )
+        yaxis =AxisController(
+            self.controls_frame.interior,
+            self.gui,
+            'YAxis',
+            padx=3,pady=3,
+            relief='sunken',
+        )
+        colorbar = AxisController(
+            self.controls_frame.interior,
+            self.gui,
+            'Colorbar',
+            padx=3,pady=3,
+            relief='sunken',
+        )
+
         self.axis_controllers = {
-            'XAxis' : AxisController(self.controls_frame.interior,self.gui,'XAxis',padx=3,pady=3,relief='sunken'),
-            'YAxis' : AxisController(self.controls_frame.interior,self.gui,'YAxis',padx=3,pady=3,relief='sunken'),
-            'Colorbar' : AxisController(self.controls_frame.interior,self.gui,'Colorbar',padx=3,pady=3,relief='sunken'),
+            'XAxis' : xaxis,
+            'YAxis' : yaxis,
+            'Colorbar' : colorbar,
         }
         
         # Plot controls
@@ -370,11 +393,11 @@ class Controls(tk.Frame,object):
         # Draw the new plot
         if need_full_redraw:
             self.gui.interactiveplot.update()
-            #self.gui.interactiveplot.canvas.draw()
             # Everything after this is done in interactiveplot.after_calculate
             # because we need to wait for the plot to finish calculating
         elif need_quick_redraw:
-            self.gui.interactiveplot.canvas.draw_idle()
+            self.gui.interactiveplot.draw()
+        
         self.save_state()
 
         # Set the focus to the canvas

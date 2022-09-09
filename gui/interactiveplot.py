@@ -198,10 +198,17 @@ class InteractivePlot(ResizableFrame,object):
             self.drawn_object.remove()
             self.drawn_object = None
         self.reset_colors()
+        self.canvas.draw_idle()
 
     def reset_colors(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.reset_colors")
         self.colors = None
+
+    # Draw the figure
+    def draw(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.draw")
+        self.canvas.draw_idle()
+        self.canvas.flush_events()
         
     def update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update")
@@ -372,12 +379,6 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.after_calculate")
 
         if self.track_and_annotate: self.annotate_tracked_particle()
-        
-        # Put the filename in the axis title for now
-        #f = self.gui.filecontrols.current_file.get()
-        #if len(f) > 30:
-        #    f = "..."+f[-27:]
-        #self.ax.set_title(f)
 
         # Make absolutely sure that the only drawn object on the axis is
         # the one we just created
@@ -387,8 +388,8 @@ class InteractivePlot(ResizableFrame,object):
 
         #if self.drawn_object not in self.canvas.blit_artists:
         #    self.canvas.blit_artists.append(self.drawn_object)
-          
-        self.canvas.draw()
+
+        self.draw()
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
@@ -755,16 +756,21 @@ class InteractivePlot(ResizableFrame,object):
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):
-        # Callback for mouse button press to select particles
-        if self.gui.plottoolbar.mode != "": return
-        if event.button == 1 and None not in [event.x,event.y]:
+        if globals.debug > 1: print("interactiveplot.press_select")
+        if (event.button == matplotlib.backend_bases.MouseButton.RIGHT):
             self.gui.plottoolbar.cancel_queued_zoom()
-            self.selection = None
-            id_select = self.canvas.mpl_connect("motion_notify_event", self.drag_select)
-            self._select_info = collections.namedtuple("_SelectInfo", "start_xy start_xy_data cid")(
-                start_xy=(event.x, event.y), start_xy_data=(event.xdata,event.ydata), cid=id_select)
+        elif (event.button == matplotlib.backend_bases.MouseButton.LEFT):
+            # Callback for mouse button press to select particles
+            if self.gui.plottoolbar.mode != "": return
+            if event.button == 1 and None not in [event.x,event.y]:
+                self.gui.plottoolbar.cancel_queued_zoom()
+                self.selection = None
+                id_select = self.canvas.mpl_connect("motion_notify_event", self.drag_select)
+                self._select_info = collections.namedtuple("_SelectInfo", "start_xy start_xy_data cid")(
+                    start_xy=(event.x, event.y), start_xy_data=(event.xdata,event.ydata), cid=id_select)
 
     def drag_select(self, event):
+        if globals.debug > 1: print("interactiveplot.drag_select")
         start_xy = self._select_info.start_xy
         (x1, y1), (x2, y2) = np.clip(
             [start_xy, [event.x, event.y]], self.ax.bbox.min, self.ax.bbox.max)
@@ -773,6 +779,7 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.plottoolbar.draw_rubberband(event, x1, y1, x2, y2)
 
     def release_select(self, event):
+        if globals.debug > 1: print("interactiveplot.release_select")
         if self._select_info is None: return
         self.canvas.mpl_disconnect(self._select_info.cid)
         if self.selection is not None and not self.colorbar.visible:
@@ -785,6 +792,7 @@ class InteractivePlot(ResizableFrame,object):
         self._select_info = None
 
     def _set_style(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot._set_style")
         self.set_style(self.style.get())
         
     # style is a list or tuple

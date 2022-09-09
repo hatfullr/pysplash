@@ -30,7 +30,13 @@ class MathCombobox(ComboboxExtraOptions, object):
         
         self.gui = gui
 
-        self.mathentry = MathEntry(self, self.gui, textvariable=self.textvariable, allowempty=allowempty)
+        self.mathentry = MathEntry(
+            self,
+            self.gui,
+            textvariable=self.textvariable,
+            allowempty=allowempty,
+            allowed_values=self['values'],
+        )
 
         # Make the MathEntry process bindings in the same way as the Combobox's Entry widget,
         # while still retaining the default keybindings inherent to MathEntry widgets.
@@ -70,5 +76,6 @@ class MathCombobox(ComboboxExtraOptions, object):
     def configure(self, *args, **kwargs):
         if 'state' in kwargs.keys():
             self.mathentry.configure(state=kwargs['state'])
+        self.mathentry.allowed_values = kwargs.get('values', self.mathentry.allowed_values)
         super(MathCombobox,self).configure(*args, **kwargs)
         
