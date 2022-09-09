@@ -363,11 +363,11 @@ class GUI(tk.Frame,object):
         elif 'time' in self.data['data'].keys(): extra.append('time')
         
         colorbar_values = [
-            '',
+            'Point Density',
             'rho',
         ]
         colorbar_extra = [
-            'Point Density',
+            '',
         ]
         
         # Check for requisite keys for colorbar plots
