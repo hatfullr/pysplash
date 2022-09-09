@@ -133,6 +133,8 @@ class AxisController(LabelledFrame,object):
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
 
+        self.set_widgets_states()
+
         if self.gui.data is not None:
             # When the user selects time as an axis, we need to change global behaviors
             self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
@@ -145,7 +147,7 @@ class AxisController(LabelledFrame,object):
 
             self.set_adaptive_limits()
 
-            if self.label.get() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
+            if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
 
         if self.previous_value != value: self.stale = True
         self.previous_value = value
