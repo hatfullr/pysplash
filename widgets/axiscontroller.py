@@ -135,10 +135,7 @@ class AxisController(LabelledFrame,object):
 
         if self.gui.data is not None:
             # When the user selects time as an axis, we need to change global behaviors
-
-            self.gui.time_mode.set(
-                any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()])
-            )
+            self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
             
             if value in self.gui.data['data'].keys():
                 if np.any(self.gui.get_display_data(value, raw=True) <= 0):

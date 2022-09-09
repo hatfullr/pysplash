@@ -518,34 +518,43 @@ class GUI(tk.Frame,object):
     # to show only Point Density plots
     def toggle_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.toggle_time_mode")
-        globals.time_mode = self.time_mode.get()
-        if globals.time_mode: self.enable_time_mode(*args,**kwargs)
-        else: self.disable_time_mode(*args,**kwargs)
-        # Stale the axis controllers so that we obtain the correct data
-        # (the shape of the data has changed now)
-        for controller in self.controls.axis_controllers.values():
-            controller.stale = True
+
+        time_mode = self.time_mode.get()
+
+        if not globals.time_mode and time_mode: self.enable_time_mode(*args,**kwargs)
+        elif globals.time_mode and not time_mode: self.disable_time_mode(*args,**kwargs)
+        else: return
     
     def enable_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.enable_time_mode")
+
+        globals.time_mode = True
+        
         # Setup the controls
         self.controls.axis_controllers['Colorbar'].combobox.textvariable.set("Point Density")
         self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
 
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
-
-        self.controls.plotcontrols.disable_rotations()
-        
         self.previous_file = self.filecontrols.current_file.get()
         self.filecontrols.current_file.set("Time Mode")
 
+        self.controls.plotcontrols.disable_rotations()
+
         self.interactiveplot.clear_tracking()
         
-        if self.data is None: self.read_time_mode(*args,**kwargs)
+        self.read_time_mode(*args,**kwargs)
+
+        # Stale the axis controllers so that we obtain the correct data
+        # (the shape of the data has changed now)
+        for controller in self.controls.axis_controllers.values():
+            controller.stale = True
 
     def disable_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.disable_time_mode")
+
+        globals.time_mode = False
+        
         self.controls.axis_controllers['Colorbar'].combobox.configure(state='enabled')
 
         if self.previous_file is not None:
@@ -554,5 +563,10 @@ class GUI(tk.Frame,object):
 
         if self.filecontrols.current_file not in globals.state_variables:
             globals.state_variables.append(self.filecontrols.current_file)
+
+        # Stale the axis controllers so that we obtain the correct data
+        # (the shape of the data has changed now)
+        for controller in self.controls.axis_controllers.values():
+            controller.stale = True
 
 
