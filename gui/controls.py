@@ -77,53 +77,6 @@ class Controls(tk.Frame,object):
         
         self.initialized = False
 
-    def initialize(self, *args, **kwargs):
-        if globals.debug > 1: print("controls.initialize")
-
-        if self.initialized: raise RuntimeError("Controls have already been initialized!")
-        
-        #data = self.gui.data['data']
-        
-        # Initialize the axis controllers using user's preferences, if there are any
-        #for name, axis_controller in self.axis_controllers.items():
-            #pref = self.gui.get_preference(name)
-            #if pref is not None:
-            #    if ((pref['value'] in axis_controller.combobox['values']) and
-            #        (not globals.time_mode and pref['value'] not in ['t','time'])):
-            #        axis_controller.value.set(pref['value'])
-            #        value_to_set = pref['value']
-            #        label_to_set = pref['label']
-            #    else:
-            #        values = list(axis_controller.combobox['values'])
-            #        value_to_set = ""
-            #        label_to_set = ""
-            #
-
-            # If the current name is not in the list of allowed values, set the name to be blank
-            #values = list(axis_controller.combobox['values'])
-            #if axis_controller.value.get() not in values:
-            #    axis_controller.value.set("")
-        """
-            # Choose the first available option that has not been chosen by the other axis controllers
-            available_values = copy(values)
-            for ac in self.axis_controllers.values():
-                value = ac.value.get()
-                if ac is not axis_controller and value in available_values:
-                    available_values.remove(value)
-            if len(available_values) > 0:
-                value_to_set = available_values[0]
-                label_to_set = value_to_set
-        """
-        
-            #axis_controller.value.set(value_to_set)
-            #axis_controller.label.set(label_to_set)
-            #axis_controller.units.value.set(pref['units'])
-            #axis_controller.scale.set(pref['scale'])
-            #if pref['limits'] == 'adaptive': axis_controller.limits.adaptive_on()
-            #else: axis_controller.limits.set_limits(pref['limits'])
-
-        self.initialized = True
-
     # This callback function runs a single time, after the application has been loaded
     def on_visible(self, *args, **kwargs):
         self.current_state = {str(v):v.get() for v in globals.state_variables}

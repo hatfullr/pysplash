@@ -135,6 +135,10 @@ class GUI(tk.Frame,object):
 
         # Disable the colorbar axis for now because it isn't working right now
         #self.controls.axis_controllers['Colorbar'].disable()
+
+        # Setup the limits on the interactive plot using user's preferences
+        self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
+        self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
             
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
@@ -158,7 +162,6 @@ class GUI(tk.Frame,object):
                             if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
                             break
 
-            if not self.controls.initialized: self.controls.initialize()
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
             
