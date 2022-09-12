@@ -32,6 +32,7 @@ from functions.stringtofloat import string_to_float
 from functions.eventinaxis import event_in_axis
 from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseevent
 from functions.getallchildren import get_all_children
+from functions.hotkeystostring import hotkeys_to_string
 
 from widgets.resizableframe import ResizableFrame
 
@@ -84,6 +85,16 @@ class InteractivePlot(ResizableFrame,object):
         self.particle_annotation = self.ax.text(0,0,"")
         self.track_and_annotate = False
 
+        # Create an annotation which asks the user to import data if there isn't any
+        self.import_data_annotation = self.fig.text(
+            0.5,0.5,
+            "No available data\nGo to Data > Import "+hotkeys_to_string("import data")+" to import data",
+            va='center',
+            ha='center',
+            transform=self.fig.transFigure,
+            visible=True,
+        )
+
         # If the user clicks anywhere on the plot, focus the plot.
         for child in self.winfo_children():
             child.bind("<Button-1>", lambda *args, **kwargs: self.canvas.get_tk_widget().focus_set(), add="+")
@@ -100,10 +111,7 @@ class InteractivePlot(ResizableFrame,object):
         def on_motion(event):
             self.canvas_motion_event = event
         self.canvas.get_tk_widget().bind("<Motion>", on_motion, add="+")
-        def on_draw(*args,**kwargs):
-            if self.canvas_motion_event is not None:
-                self.canvas.motion_notify_event(self.canvas_motion_event)
-        self.canvas.mpl_connect("draw_event", on_draw)
+        self.canvas.mpl_connect("draw_event", self._on_draw)
             
         self.bind = lambda *args, **kwargs: self.canvas.get_tk_widget().bind(*args,**kwargs)
         self.unbind = lambda *args, **kwargs: self.canvas.get_tk_widget().unbind(*args,**kwargs)
@@ -987,3 +995,13 @@ class InteractivePlot(ResizableFrame,object):
         self.ax.set_position([x0,y0,width,height])
 
         self.canvas.draw_idle()
+
+    def _on_draw(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot._on_draw")
+
+        # Update the "x=..., y=..." text when the data has potentially been changed
+        if self.canvas_motion_event is not None:
+            self.canvas.motion_notify_event(self.canvas_motion_event)
+
+        # If there is no data to show, display the annotation which asks the user to import data
+        self.import_data_annotation.set_visible(self.drawn_object is None)

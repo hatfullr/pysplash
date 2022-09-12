@@ -42,6 +42,12 @@ class ImportData(PopupWindow,object):
         self.deiconify()
         self.pathentry._entry.focus()
 
+        # If the user has a path defined by their preferences, try to fill the select filter
+        # with items from the path
+        if self.path.get() not in [None,'']:
+            self.pathentry.validate()
+            
+
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("importdata.create_variables")
         self.path = StringVar(self, None, 'path')
@@ -99,7 +105,7 @@ class ImportData(PopupWindow,object):
                 print("File '"+name+"' does not match any of the accepted patterns in read_file")
                 self.pathentry.event_generate("<<ValidateFail>>")
                 return "break"
-        
+
         self.selectfilter.left = self.pathentry.get()
         self.okbutton.configure(state='normal')
         for i, val in enumerate(self.selectfilter.left):

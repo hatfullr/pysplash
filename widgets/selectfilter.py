@@ -19,6 +19,8 @@ class SelectFilter(tk.Frame,object):
         self._create_widgets()
         self._place_widgets()
 
+        self._left = []
+        self._right = []
         self.left = left
         self.right = right
 
@@ -33,28 +35,34 @@ class SelectFilter(tk.Frame,object):
         self.listbox_right.container.bind("<FocusOut>", self._on_right_focus_out, add="+")
                 
     @property
-    def left(self):
-        return self._left
+    def left(self): return self._left
 
     @left.setter
     def left(self, value):
-        if self.sort[0]: self._left = sorted(value)
+        orig = sorted(self._left)
+        s = sorted(value)
+        if self.sort[0]: self._left = s
         else: self._left = value
-        self.listbox_left.delete(0,'end')
-        for i,val in enumerate(self._left):
-            self.listbox_left.insert(i,val)
+        # Only update if there are new values
+        if s != orig:
+            self.listbox_left.delete(0,'end')
+            for i,val in enumerate(self._left):
+                self.listbox_left.insert(i,val)
 
     @property
-    def right(self):
-        return self._right
+    def right(self): return self._right
 
     @right.setter
     def right(self, value):
-        if self.sort[1]: self._right = sorted(value)
+        orig = sorted(self._right)
+        s = sorted(value)
+        if self.sort[1]: self._right = s
         else: self._right = value
-        self.listbox_right.delete(0,'end')
-        for i,val in enumerate(self._right):
-            self.listbox_right.insert(i,val)
+        # Only update if there are new values
+        if s != orig:
+            self.listbox_right.delete(0,'end')
+            for i,val in enumerate(self._right):
+                self.listbox_right.insert(i,val)
 
     # This is an internal function to make sure the self._left and self._right variables
     # contain up-to-date values
