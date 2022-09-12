@@ -40,9 +40,10 @@ class GUI(tk.Frame,object):
     def __init__(self,window,fontname='TkDefaultFont',fontsize=12):
         if globals.debug > 1: print("gui.__init__")
 
+        self.filenames = []
         if len(sys.argv) > 1:
             self.filenames = sys.argv[1:]
-        
+
         self.window = window
         
         self.fontname = fontname
@@ -81,7 +82,6 @@ class GUI(tk.Frame,object):
         
         self.create_hotkeys()
 
-        self.filenames = []
         self.message_after_id = None
 
         self.previous_file = None
@@ -135,9 +135,6 @@ class GUI(tk.Frame,object):
 
         # Disable the colorbar axis for now because it isn't working right now
         #self.controls.axis_controllers['Colorbar'].disable()
-
-        #if first and len(sys.argv) > 1:
-        #    self.filenames = sys.argv[1:]
             
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()

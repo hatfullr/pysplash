@@ -91,7 +91,6 @@ class InteractivePlot(ResizableFrame,object):
             "No available data\nGo to Data > Import "+hotkeys_to_string("import data")+" to import data",
             va='center',ha='center',
             transform=self.fig.transFigure,
-            visible=False,
         )
 
         # If the user clicks anywhere on the plot, focus the plot.
@@ -1003,4 +1002,4 @@ class InteractivePlot(ResizableFrame,object):
             self.canvas.motion_notify_event(self.canvas_motion_event)
 
         # If there is no data to show, display the annotation which asks the user to import data
-        self.import_data_annotation.set_visible(self.drawn_object is None)
+        self.import_data_annotation.set_visible(len(self.gui.filenames) == 0)
