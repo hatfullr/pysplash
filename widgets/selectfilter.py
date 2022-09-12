@@ -19,14 +19,11 @@ class SelectFilter(tk.Frame,object):
         self._create_widgets()
         self._place_widgets()
 
-        self._left = []
-        self._right = []
         self.left = left
         self.right = right
 
-        for smode, lbox, side in zip(self.selectmode, [self.listbox_left,self.listbox_right], [self._left, self._right]):
+        for smode, lbox in zip(self.selectmode, [self.listbox_left,self.listbox_right]):#, [self._left, self._right]):
             if smode == 'dragdrop':
-                lbox.bind("<<MovedSelected>>", self._update, add="+")
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
 
         self.listbox_left.bind("<<ListboxSelect>>", self._on_left_selected, add="+")
@@ -35,40 +32,32 @@ class SelectFilter(tk.Frame,object):
         self.listbox_right.container.bind("<FocusOut>", self._on_right_focus_out, add="+")
                 
     @property
-    def left(self): return self._left
+    def left(self): return list(self.listbox_left.get(0,'end'))
 
     @left.setter
     def left(self, value):
-        orig = sorted(self._left)
-        s = sorted(value)
-        if self.sort[0]: self._left = s
-        else: self._left = value
+        orig_sorted = sorted(self.left)
+        new_sorted = sorted(value)
+        new = new_sorted if self.sort[0] else value
         # Only update if there are new values
-        if s != orig:
+        if new_sorted != orig_sorted:
             self.listbox_left.delete(0,'end')
-            for i,val in enumerate(self._left):
+            for i,val in enumerate(new):
                 self.listbox_left.insert(i,val)
 
     @property
-    def right(self): return self._right
+    def right(self): return list(self.listbox_right.get(0,'end'))
 
     @right.setter
     def right(self, value):
-        orig = sorted(self._right)
-        s = sorted(value)
-        if self.sort[1]: self._right = s
-        else: self._right = value
+        orig_sorted = sorted(self.right)
+        new_sorted = sorted(value)
+        new = new_sorted if self.sort[0] else value
         # Only update if there are new values
-        if s != orig:
+        if new_sorted != orig_sorted:
             self.listbox_right.delete(0,'end')
-            for i,val in enumerate(self._right):
+            for i,val in enumerate(new):
                 self.listbox_right.insert(i,val)
-
-    # This is an internal function to make sure the self._left and self._right variables
-    # contain up-to-date values
-    def _update(self, *args, **kwargs):
-        self._left = list(self.listbox_left.get(0,'end'))
-        self._right = list(self.listbox_right.get(0,'end'))
         
     def _create_widgets(self,*args,**kwargs):
         self.__left_frame = tk.Frame(self)

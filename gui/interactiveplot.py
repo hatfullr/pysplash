@@ -89,10 +89,9 @@ class InteractivePlot(ResizableFrame,object):
         self.import_data_annotation = self.fig.text(
             0.5,0.5,
             "No available data\nGo to Data > Import "+hotkeys_to_string("import data")+" to import data",
-            va='center',
-            ha='center',
+            va='center',ha='center',
             transform=self.fig.transFigure,
-            visible=True,
+            visible=False,
         )
 
         # If the user clicks anywhere on the plot, focus the plot.
