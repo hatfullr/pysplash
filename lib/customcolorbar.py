@@ -152,11 +152,46 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     
     def show(self,side='right'):
         if globals.debug > 1: print("customcolorbar.show")
+        # Budge the axis which we are connected to over to the left to
+        # accommodate the size of this colorbar
+
+        # Update the position of the axis. This might not be necessary
+        #self._ax.get_figure().canvas.draw_idle()
+
+        if not self.visible:
+            # Adjust the location of the axis
+            pos = self._ax.get_position()
+            width = pos.width - self.width
+            if self.side == 'right':
+                width -= self.pad[0]
+                self._ax.set_position([pos.x0,pos.y0,width,pos.height])
+            elif self.side == 'left':
+                x0 = pos.x0 + self.pad[1]
+                width -= self.pad[1]
+                self._ax.set_position([x0,pos.y0,width,pos.height])
+            else:
+                raise NotImplementedError("placing the colorbar on the top or bottom of the plot is not yet supported")
+
         self.visible = True
         self.connect_canvas()
-
+        
     def hide(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.hide")
+
+        if self.visible:
+            # Adjust the location of the axis
+            pos = self._ax.get_position()
+            width = pos.width + self.width
+            if self.side == 'right':
+                width += self.pad[0]
+                self._ax.set_position([pos.x0,pos.y0,width,pos.height])
+            elif self.side == 'left':
+                x0 = pos.x0 - self.pad[1]
+                width += self.pad[1]
+                self._ax.set_position([x0,pos.y0,width,pos.height])
+            else:
+                raise NotImplementedError("placing the colorbar on the top or bottom of the plot is not yet supported")
+        
         self.visible = False
         self.disconnect_canvas()
         

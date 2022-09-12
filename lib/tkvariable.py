@@ -42,10 +42,11 @@ class TkVariable(tk.Variable, object):
         self.master = master
         self.name = name
                     
-        # Load the value from preferences, if there are any
+        # Save the value as the current preference if the preference is not set
         if str(self.master) not in TkVariable.preferences.keys():
             TkVariable.preferences[str(self.master)] = {}
             TkVariable.preferences[str(self.master)][self.name] = value
+        # Load the value from preferences, if there are any
         else:
             if self.name in TkVariable.preferences[str(self.master)].keys():
                 value = TkVariable.preferences[str(self.master)][self.name]

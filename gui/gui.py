@@ -76,6 +76,8 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
+        self.controls.axis_controllers['Colorbar'].combobox.configure(values=[],extra=[''])
+
         # When the user clicks on widgets etc, those widgets should acquire
         # the application focus... (why isn't this default?!)
         self.window.bind("<Button-1>", self.on_button1)
@@ -184,6 +186,9 @@ class GUI(tk.Frame,object):
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
+            for controller in self.controls.axis_controllers.values():
+                controller.combobox.textvariable.set("")
+                controller.label.set("")
 
         self.controls.plotcontrols.update_rotations_controls()
 
@@ -359,9 +364,6 @@ class GUI(tk.Frame,object):
             'Point Density',
             'rho',
         ]
-        colorbar_extra = [
-            '',
-        ]
         
         # Check for requisite keys for colorbar plots
         values = ['']
@@ -372,7 +374,7 @@ class GUI(tk.Frame,object):
             'h' in ckeys and
             'rho' in ckeys):
             colorbar_values.pop('rho')
-        self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values,extra=colorbar_extra)
+        self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values)
         
         # Update the axis controllers
         self.controls.axis_controllers['XAxis'].combobox.configure(values=keys, extra=extra)
