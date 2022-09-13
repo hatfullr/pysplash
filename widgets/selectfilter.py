@@ -52,7 +52,7 @@ class SelectFilter(tk.Frame,object):
     def right(self, value):
         orig_sorted = sorted(self.right)
         new_sorted = sorted(value)
-        new = new_sorted if self.sort[0] else value
+        new = new_sorted if self.sort[1] else value
         # Only update if there are new values
         if new_sorted != orig_sorted:
             self.listbox_right.delete(0,'end')
