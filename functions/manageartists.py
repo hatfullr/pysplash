@@ -64,7 +64,7 @@ class ManageArtists(PopupWindow,object):
         if globals.debug > 1: print("manageartists.update_artists")
         for artist in self.selectfilter.left: artist.set_visible(True)
         for artist in self.selectfilter.right: artist.set_visible(False)
-        self.ax.get_figure().canvas.draw_idle()
+        self.gui.interactiveplot.draw()
 
     def cancel(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.cancel")
