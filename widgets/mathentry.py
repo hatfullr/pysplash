@@ -54,6 +54,13 @@ class MathEntry(FlashingEntry, object):
         self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
         self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
 
+    def configure(self,*args,**kwargs):
+        super(MathEntry,self).configure(*args,**kwargs)
+        if hasattr(self, "rich_edit_button"): self.rich_edit_button.configure(state=self.cget('state'))
+
+    def config(self,*args,**kwargs):
+        self.configure(*args,**kwargs)
+
     def show_rich_edit(self, *args, **kwargs):
         self.using_rich_edit = True
         

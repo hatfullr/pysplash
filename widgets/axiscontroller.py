@@ -44,7 +44,7 @@ class AxisController(LabelledFrame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.previous_value = None
+        self.previous_value = self.value.get()
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
 
@@ -187,12 +187,14 @@ class AxisController(LabelledFrame,object):
 
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
-
+        
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             # First reset the units so that things don't get mucked up
             self.units.reset()
 
+            self.stale = True
+            
             # Recalculate the axis limits if we are in adaptive mode
             if self.limits.adaptive.get():
                 self.set_adaptive_limits()
@@ -225,7 +227,6 @@ class AxisController(LabelledFrame,object):
                         self.limits.low.set(np.log10(np.log10(low)))
                         self.limits.high.set(np.log10(np.log10(high)))
             self.previous_scale = current_scale
-        self.stale = True
     
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print('axiscontroller.update_limits')
@@ -265,11 +266,11 @@ class AxisController(LabelledFrame,object):
         ]
 
         state = self.combobox.cget('state')
+        
         if self.value.get().strip() in ["",None,'None','none']:
             for widget in widgets: widget.configure(state='disabled')
         else:
-            for widget in widgets:
-                widget.configure(state=state)
+            for widget in widgets: widget.configure(state=state)
 
 
     

@@ -22,6 +22,12 @@ class Button(ttk.Label, object):
                 (('!pressed','disabled'),'raised'),
                 (('!pressed','!disabled'),'raised'),
             ],
+            #foreground=[
+            #    (('pressed','disabled'),s.lookup('TButton','foreground',state=['pressed','disabled'])),
+            #    (('pressed','!disabled'),s.lookup('TButton','foreground',state=['pressed','!disabled'])),
+            #    (('!pressed','disabled'),s.lookup('TButton','foreground',state=['!pressed','disabled'])),
+            #    (('!pressed','!disabled'),s.lookup('TButton','foreground',state=['!pressed','!disabled'])),
+            #],
         )
         
         super(Button, self).__init__(master, *args, padding=padding, style=style, **kwargs)

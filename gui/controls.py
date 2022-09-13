@@ -213,7 +213,6 @@ class Controls(tk.Frame,object):
             self.previous_state = None
         else:
             set_widgets_states(self._children,'normal')
-    
 
     def is_limits_changed(self, which):
         if globals.debug > 1: print("controls.is_limits_changed")

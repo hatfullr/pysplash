@@ -531,7 +531,7 @@ class GUI(tk.Frame,object):
         # Setup the controls
         self.controls.axis_controllers['Colorbar'].combobox.textvariable.set("Point Density")
         self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
-
+        
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
         self.previous_file = self.filecontrols.current_file.get()

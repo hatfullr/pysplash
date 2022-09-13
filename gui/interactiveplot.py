@@ -521,14 +521,11 @@ class InteractivePlot(ResizableFrame,object):
         new_xlim = [None, None]
         new_ylim = [None, None]
 
-        xdata = None
-        ydata = None
-        if using[0] is not None: xdata = using[0]
-        elif hasattr(self.gui, "data") and self.gui.data:
-            xdata = self.gui.controls.axis_controllers['XAxis'].data
-        if using[1] is not None: ydata = using[1]
-        elif hasattr(self.gui, "data") and self.gui.data:
-            ydata = self.gui.controls.axis_controllers['YAxis'].data
+        xaxis = self.gui.controls.axis_controllers['XAxis']
+        yaxis = self.gui.controls.axis_controllers['YAxis']
+        
+        xdata = using[0] if using[0] is not None else xaxis.data
+        ydata = using[1] if using[1] is not None else yaxis.data
 
         if xdata is None and ydata is None:
             # Get the home view and use its limits as the new limits
@@ -560,7 +557,7 @@ class InteractivePlot(ResizableFrame,object):
             dy = new_ylim[1]-new_ylim[0]
             if dy == 0: dy = 1.
             new_ylim = np.array([new_ylim[0]-dy*ymargin,new_ylim[1]+dy*ymargin])
-            
+
         if which == 'xlim': return new_xlim, [None, None]
         elif which == 'ylim': return [None, None], new_ylim
         else: return new_xlim, new_ylim
