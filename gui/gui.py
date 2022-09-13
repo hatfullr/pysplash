@@ -139,9 +139,10 @@ class GUI(tk.Frame,object):
         #self.controls.axis_controllers['Colorbar'].disable()
 
         # Setup the limits on the interactive plot using user's preferences
-        self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
-        self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
-            
+        if first:
+            self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
+            self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
+        
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
             if currentfile in self.filenames:
@@ -186,6 +187,8 @@ class GUI(tk.Frame,object):
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
+            
+            # Clear the comboboxes, as there's no data to use here
             for controller in self.controls.axis_controllers.values():
                 controller.combobox.textvariable.set("")
                 controller.label.set("")

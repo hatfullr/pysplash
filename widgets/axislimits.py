@@ -31,12 +31,6 @@ class AxisLimits(tk.LabelFrame,object):
         self.create_widgets()
         self.place_widgets()
 
-        #self.preferences = Preferences(self,{
-        #    'low' : self.low,
-        #    'high' : self.high,
-        #    'adaptive' : self.adaptive,
-        #})
-
         self.connected = False
 
     def create_variables(self, *args, **kwargs):
@@ -79,13 +73,6 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.pack(side='left',fill='both',expand=True,padx=(2,0),pady=(0,2))
         self.entry_high.pack(side='left',fill='both',expand=True,pady=(0,2))
         if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2,pady=(0,2))
-
-    #def disable(self,*args,**kwargs):
-    #    if globals.debug > 1: print("axislimits.disable")
-    #    set_widgets_states(get_all_children(self),'disabled')
-    #def enable(self,*args,**kwargs):
-    #    if globals.debug > 1: print("axislimits.enable")
-    #    set_widgets_states(get_all_children(self),'normal')
                         
     def connect(self,axis):
         if globals.debug > 1: print("axislimits.connect")
@@ -134,9 +121,12 @@ class AxisLimits(tk.LabelFrame,object):
         
         self.adaptive.set(False)
         
-        # Enable the limit entries
-        self.entry_low.configure(state='normal')
-        self.entry_high.configure(state='normal')
+        # Enable the limit entries only if the adaptive button is not disabled. This could
+        # be the case such as when the user zooms or pans while the adaptive button is
+        # disabled.
+        if 'disabled' not in str(self.adaptive_button.cget('state')):
+            self.entry_low.configure(state='normal')
+            self.entry_high.configure(state='normal')
         
         # Reset the entry boxes to have the current view
         self.on_axis_limits_changed()

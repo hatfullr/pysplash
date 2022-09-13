@@ -93,6 +93,13 @@ class InteractivePlot(ResizableFrame,object):
             transform=self.fig.transFigure,
         )
 
+        self.choose_data_annotation = self.fig.text(
+            0.5,0.5,
+            "Choose data to plot\nusing the controls on the right",
+            va='center',ha='center',
+            transform=self.fig.transFigure,
+        )
+
         # If the user clicks anywhere on the plot, focus the plot.
         for child in self.winfo_children():
             child.bind("<Button-1>", lambda *args, **kwargs: self.canvas.get_tk_widget().focus_set(), add="+")
@@ -246,7 +253,11 @@ class InteractivePlot(ResizableFrame,object):
         y, y_display_units, y_physical_units = yaxis.data, yaxis.display_units, yaxis.physical_units
 
         # Don't try to plot anything if there's no data to plot
-        if x is None or y is None: return
+        if x is None or y is None:
+            # Update the 'help' text in the plot
+            self.update_help_text()
+            self.draw()
+            return
 
         self.origin = np.zeros(2)
         if self.track_id is not None and self.track_id in np.arange(len(x)):
@@ -394,7 +405,9 @@ class InteractivePlot(ResizableFrame,object):
 
         #if self.drawn_object not in self.canvas.blit_artists:
         #    self.canvas.blit_artists.append(self.drawn_object)
-
+        
+        self.update_help_text()
+        
         self.draw()
         
         self.previous_xlim = self.ax.get_xlim()
@@ -994,6 +1007,24 @@ class InteractivePlot(ResizableFrame,object):
 
         self.canvas.draw_idle()
 
+    def update_help_text(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.update_help_text")
+        
+        if self.drawn_object is not None:
+            self.import_data_annotation.set_visible(False)
+            self.choose_data_annotation.set_visible(False)
+        else:
+            # If there is no data to show, display the annotation which asks the user to import data
+            self.import_data_annotation.set_visible(len(self.gui.filenames) == 0)
+
+            # If there is data to show, but the user hasn't chosen the data they want yet,
+            # display the annotation which instructs them to pick data from the controls
+            if hasattr(self.gui, 'controls'):
+                self.choose_data_annotation.set_visible(len(self.gui.filenames) > 0 and
+                                                        (self.gui.controls.axis_controllers['XAxis'].value.get() in [None,''] or
+                                                         self.gui.controls.axis_controllers['YAxis'].value.get() in [None,'']))
+            else: self.choose_data_annotation.set_visible(False)
+
     def _on_draw(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot._on_draw")
 
@@ -1001,5 +1032,5 @@ class InteractivePlot(ResizableFrame,object):
         if self.canvas_motion_event is not None:
             self.canvas.motion_notify_event(self.canvas_motion_event)
 
-        # If there is no data to show, display the annotation which asks the user to import data
-        self.import_data_annotation.set_visible(len(self.gui.filenames) == 0)
+        self.update_help_text()
+    
