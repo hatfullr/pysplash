@@ -393,6 +393,8 @@ class GUI(tk.Frame,object):
                     break
     
     def read_time_mode(self,*args,**kwargs):
+        if globals.debug > 1: print("gui.read_time_mode")
+
         # Make the data contain *all* the input data values
         data = {
             'data' : collections.OrderedDict({}),

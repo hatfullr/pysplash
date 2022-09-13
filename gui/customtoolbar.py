@@ -144,7 +144,7 @@ class CustomToolbar(NavigationToolbar2Tk):
     def press_pan(self,*args,**kwargs):
         self.cancel_queued_zoom()
         super(CustomToolbar,self).press_pan(*args,**kwargs)
-            
+
     def release_pan(self, *args, **kwargs):
         super(CustomToolbar, self).release_pan(*args, **kwargs)
 
