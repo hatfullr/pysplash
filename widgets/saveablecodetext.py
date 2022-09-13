@@ -45,9 +45,11 @@ class SaveableCodeText(CodeText, object):
         self.combobox.bind("<Return>", lambda *args, **kwargs: self.focus(), add="+")
 
         self.combobox.focus()
-        
-        self.saved = False
+
         self.previous_name = None
+        v = self.combobox_text.get()
+        self.saved = v in self.combobox['values']
+        if self.saved: self.load(name=v)
 
     def create_variables(self, *args, **kwargs):
         self.combobox_text = StringVar(self, None, 'combobox text')
