@@ -31,6 +31,10 @@ class AxisLimits(tk.LabelFrame,object):
         self.create_widgets()
         self.place_widgets()
 
+        self._on_adaptive_set()
+
+        self.adaptive.trace('w', self._on_adaptive_set)
+
         self.connected = False
 
     def create_variables(self, *args, **kwargs):
@@ -47,12 +51,12 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low = FloatEntry(
             self,
             variable=self.low,
-            state='disabled',
+            state='disabled' if self.adaptive.get() else 'normal',
         )
         self.entry_high = FloatEntry(
             self,
             variable=self.high,
-            state='disabled',
+            state='disabled' if self.adaptive.get() else 'normal',
         )
         self.adaptive_button = SwitchButton(
             self,
@@ -110,8 +114,8 @@ class AxisLimits(tk.LabelFrame,object):
         self.adaptive.set(True)
         
         # Disable the limit entries
-        self.entry_low.configure(state='disabled')
-        self.entry_high.configure(state='disabled')
+        #self.entry_low.configure(state='disabled')
+        #self.entry_high.configure(state='disabled')
 
         if self.adaptivecommands[0] is not None: self.adaptivecommands[0](*args, **kwargs)
 
@@ -124,11 +128,21 @@ class AxisLimits(tk.LabelFrame,object):
         # Enable the limit entries only if the adaptive button is not disabled. This could
         # be the case such as when the user zooms or pans while the adaptive button is
         # disabled.
-        if 'disabled' not in str(self.adaptive_button.cget('state')):
-            self.entry_low.configure(state='normal')
-            self.entry_high.configure(state='normal')
+        #if 'disabled' not in str(self.adaptive_button.cget('state')):
+        #    self.entry_low.configure(state='normal')
+        #    self.entry_high.configure(state='normal')
         
         # Reset the entry boxes to have the current view
         self.on_axis_limits_changed()
 
         if self.adaptivecommands[1] is not None: self.adaptivecommands[1](*args, **kwargs)
+
+    def _on_adaptive_set(self,*args,**kwargs):
+        if globals.debug > 1: print("axislimits._on_adaptive_set")
+        if 'disabled' not in str(self.adaptive_button.cget('state')):
+            if self.adaptive.get():
+                self.entry_low.configure(state='disabled')
+                self.entry_high.configure(state='disabled')
+            else:
+                self.entry_low.configure(state='normal')
+                self.entry_high.configure(state='normal')

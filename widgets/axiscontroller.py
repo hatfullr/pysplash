@@ -256,8 +256,6 @@ class AxisController(LabelledFrame,object):
     def set_widgets_states(self, *args, **kwargs):
         widgets = [
             self.label_entry,
-            self.limits.entry_low,
-            self.limits.entry_high,
             self.limits.adaptive_button,
             self.scale.linear_button,
             self.scale.log_button,
