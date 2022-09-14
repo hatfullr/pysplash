@@ -1,10 +1,11 @@
 # The following function must take 1 input (float): u=r/h
 # and returns the value of the kernel function, times h^3.
+# h is the kernel radius
 
 # Wendland C4 kernel
 def kernel_function(u):
-    # Expecting u = r/h as input, so scale it to our compact support
-    q = u #u/compact_support
+    # Expecting u = r/h as input
+    q = u
     return 495./(256.*np.pi)*(1.-q)**6*(35./3.*q**2.+6.*q+1.)
 
 
@@ -20,7 +21,7 @@ import numpy as np
 # Set up the normal 3D kernel function (times h^3)
 def setupkernel():
     u = np.linspace(0,1,maxcoltable,dtype=np.double)
-    ctab = float(maxcoltable-1.)#/compact_support
+    ctab = float(maxcoltable-1.)
     kernel = np.empty(maxcoltable)
     for i in range(maxcoltable):
         kernel[i] = kernel_function(u[i])

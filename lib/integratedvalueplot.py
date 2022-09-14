@@ -17,7 +17,7 @@ except ImportError:
     has_jit = False
 
 class IntegratedValuePlot(CustomAxesImage,object):
-    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,**kwargs):
+    def __init__(self,ax,A,x,y,m,size,rho,physical_units,display_units,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
 
@@ -33,7 +33,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.x = np.ascontiguousarray(x,dtype=np.double)
         self.y = np.ascontiguousarray(y,dtype=np.double)
         self.m = np.ascontiguousarray(m,dtype=np.double)
-        self.h = np.ascontiguousarray(h,dtype=np.double)
+        self.size = np.ascontiguousarray(size,dtype=np.double)
         self.rho = np.ascontiguousarray(rho,dtype=np.double)
 
         # We are given all the quantities in display units. For now,
@@ -59,26 +59,14 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.wint, self.ctab = setupintegratedkernel()
         self.wint = np.ascontiguousarray(self.wint,dtype=np.double)
 
-        # Make everything in physical units and then just set the
-        # extent to display units later
-        """
-        self.A *= self.physical_units[0]
-        self.x *= self.physical_units[1]
-        self.y *= self.physical_units[2]
-        self.m *= self.physical_units[3]
-        self.h *= self.physical_units[4]
-        self.rho *= self.physical_units[5]
-        self.wint *= self.physical_units[4]**3
-        """
-
-        self.h2 = self.h**2
-        self.ctabinvh2 = self.ctab/self.h2
+        self.size2 = self.size**2
+        self.ctabinvsize2 = self.ctab/self.size2
         # Later we multiply by the integrated kernel function, which returns the quantity
         # int_0^1 W(u')*h^3 du' where u' is unitless and W(u')*h^3 is unitless. In
         # StarSmasher, when the density is calculated the final result is divided by h^3,
         # so we do that here too.
         self.quantity = np.ascontiguousarray(
-            self.m*self.A/(self.rho*self.h2*self.h),
+            self.m*self.A/(self.rho*self.size2*self.size),
             dtype=np.double,
         )
 
@@ -88,16 +76,16 @@ class IntegratedValuePlot(CustomAxesImage,object):
             self.device_x = cuda.device_array(N,dtype=np.double)
             self.device_y = cuda.device_array(N,dtype=np.double)
             self.device_quantity = cuda.device_array(N,dtype=np.double)
-            self.device_h = cuda.device_array(N,dtype=np.double)
-            self.device_h2 = cuda.device_array(N,dtype=np.double)
+            self.device_size = cuda.device_array(N,dtype=np.double)
+            self.device_size2 = cuda.device_array(N,dtype=np.double)
             self.device_ctabinvh2 = cuda.device_array(N,dtype=np.double)
             self.device_wint = cuda.device_array(len(self.wint),dtype=np.double)
 
             cuda.to_device(self.x,to=self.device_x,stream=self.stream)
             cuda.to_device(self.y,to=self.device_y,stream=self.stream)
             cuda.to_device(self.quantity,to=self.device_quantity,stream=self.stream)
-            cuda.to_device(self.h,to=self.device_h,stream=self.stream)
-            cuda.to_device(self.h2,to=self.device_h2,stream=self.stream)
+            cuda.to_device(self.size,to=self.device_size,stream=self.stream)
+            cuda.to_device(self.size2,to=self.device_size2,stream=self.stream)
             cuda.to_device(self.ctabinvh2,to=self.device_ctabinvh2,stream=self.stream)
             cuda.to_device(self.wint,to=self.device_wint,stream=self.stream)
 
@@ -117,10 +105,10 @@ class IntegratedValuePlot(CustomAxesImage,object):
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()
         
-        xpmin = self.x-self.h
-        xpmax = self.x+self.h
-        ypmin = self.y-self.h
-        ypmax = self.y+self.h
+        xpmin = self.x-self.size
+        xpmax = self.x+self.size
+        ypmin = self.y-self.size
+        ypmax = self.y+self.size
         
         """
         display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
@@ -148,21 +136,22 @@ class IntegratedValuePlot(CustomAxesImage,object):
     if has_jit:
         @staticmethod
         @cuda.jit('void(double[:,:], int64[:], double[:], double[:], double[:], double[:], double[:], double, double, double, double, int64, int64, double[:], double[:])') # Decorator parameters improve performance
-        def calculate_gpu(data,idx,x,y,quantity,h,h2,dx,dy,xmin,ymin,xpixels,ypixels,ctabinvh2,wint):
+        def calculate_gpu(data,idx,x,y,quantity,size,size2,dx,dy,xmin,ymin,xpixels,ypixels,ctabinvh2,wint):
             p = cuda.grid(1)
             if p < idx.size:
                 i = idx[p]
-                hi = h[i]
-                h2i = h2[i]
+                sizei = size[i]
+                size2i = size2[i]
+                invsize3i = 1. / (size2i*sizei)
                 xi = x[i]
                 yi = y[i]
                 quantityi = quantity[i]
                 ctabinvh2i = ctabinvh2[i]
 
-                imin = max(int((xi-hi-xmin)/dx),0)
-                imax = min(int((xi+hi-xmin)/dx)+1,xpixels)
-                jmin = max(int((yi-hi-ymin)/dy),0)
-                jmax = min(int((yi+hi-ymin)/dy)+1,ypixels)
+                imin = max(int((xi-sizei-xmin)/dx),0)
+                imax = min(int((xi+sizei-xmin)/dx)+1,xpixels)
+                jmin = max(int((yi-sizei-ymin)/dy),0)
+                jmax = min(int((yi+sizei-ymin)/dy)+1,ypixels)
                 
                 for ix in range(imin,imax):
                     xpos = xmin + (ix+0.5)*dx
@@ -170,8 +159,8 @@ class IntegratedValuePlot(CustomAxesImage,object):
                     for jy in range(jmin,jmax):
                         ypos = ymin + (jy+0.5)*dy
                         dr2 = dx2 + (ypos-yi)*(ypos-yi)
-                        if dr2 < h2i:
-                            cuda.atomic.add(data, (jy,ix), quantityi*wint[int(dr2*ctabinvh2i)])
+                        if dr2 < size2i:
+                            cuda.atomic.add(data, (jy,ix), quantityi*wint[int(dr2*ctabinvh2i)]*invsize3i)
         
         def calculate_data(self,idx): # On GPU
             if globals.debug > 1: print("integratedvalueplot.calculate_data")
@@ -192,8 +181,8 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 self.device_x,
                 self.device_y,
                 self.device_quantity,
-                self.device_h,
-                self.device_h2,
+                self.device_size,
+                self.device_size2,
                 self.dx,
                 self.dy,
                 xmin,
@@ -225,26 +214,27 @@ class IntegratedValuePlot(CustomAxesImage,object):
             indexes = np.arange(len(self.x))[idx]
             x = self.x[idx]
             y = self.y[idx]
-            h = self.h[idx]
-            h2 = self.h2[idx]
+            size = self.size[idx]
+            size2 = self.size2[idx]
+            invsize3 = 1./(self.size2*self.size)
             quantity = self.quantity[idx]
-            ctabinvh2 = self.ctabinvh2[idx]
+            ctabinvsize2 = self.ctabinvsize2[idx]
 
             dx = np.abs(xpos[:,None]-x)
-            idx_xs = dx < h
+            idx_xs = dx < size
 
             for i,(idx_x,dx_x) in enumerate(zip(idx_xs,dx)):
                 if not any(idx_x): continue
                 dx_x = dx_x[idx_x]
 
                 dy = np.abs(ypos[:,None]-y[idx_x])
-                idx_ys = dy < h[idx_x]
+                idx_ys = dy < size[idx_x]
                 for j,(idx_y,dy_y) in enumerate(zip(idx_ys,dy)):
                     if not any(idx_y): continue
                     dr2 = dx_x[idx_y]**2 + dy_y[idx_y]**2
 
-                    idx_r = dr2 < h2[idx_x][idx_y]
+                    idx_r = dr2 < size2[idx_x][idx_y]
                     if not any(idx_r): continue
 
-                    indices = (dr2[idx_r]*ctabinvh2[idx_x][idx_y][idx_r]).astype(int,copy=False)
-                    self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices])
+                    indices = (dr2[idx_r]*ctabinvsize2[idx_x][idx_y][idx_r]).astype(int,copy=False)
+                    self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices]*invsize3[idx_x][idx_y][idx_r])

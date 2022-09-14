@@ -344,7 +344,7 @@ class InteractivePlot(ResizableFrame,object):
                 raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
             
             m = self.gui.get_display_data('m')
-            h = self.gui.get_display_data('h')
+            size = self.gui.get_display_data('size')
             rho = self.gui.get_display_data('rho')
 
             idx = self.gui.get_data('u') != 0
@@ -356,14 +356,14 @@ class InteractivePlot(ResizableFrame,object):
                 x[idx],
                 y[idx],
                 m[idx],
-                h[idx],
+                size[idx],
                 rho[idx],
                 [ # physical units
                     A_physical_units,
                     x_physical_units,
                     y_physical_units,
                     self.gui.get_physical_units('m'),
-                    self.gui.get_physical_units('h'),
+                    self.gui.get_physical_units('size'),
                     self.gui.get_physical_units('rho'),
                 ],
                 [ # display units
@@ -371,7 +371,7 @@ class InteractivePlot(ResizableFrame,object):
                     x_display_units,
                     y_display_units,
                     self.gui.get_display_units('m'),
-                    self.gui.get_display_units('h'),
+                    self.gui.get_display_units('size'),
                     self.gui.get_display_units('rho'),
                 ],
             )

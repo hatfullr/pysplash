@@ -11,7 +11,7 @@ OrderedDict with the following keys:
         'y':  array-like  y positions
         'z':  array-like  z positions
         'm':  array-like  masses
-        'h':  array-like  smoothing lengths
+     'size':  array-like  kernel radii
     Optional:
         'u':  array-like  internal energy
         't':  float,int   time
@@ -121,7 +121,7 @@ def starsmasher(filename):
         1., # y
         1., # z
         1., # m
-        1., # h
+        1., # size
         munit/runit**3, # rho
         vunit, # vx
         vunit, # vy
@@ -148,7 +148,7 @@ def starsmasher(filename):
         runit, # y
         runit, # z
         munit, # m
-        runit, # h
+        runit, # size
         munit/runit**3., # rho
         vunit, # vx
         vunit, # vy
@@ -175,7 +175,7 @@ def starsmasher(filename):
     # Correct some common header names
     names = list(data._data.dtype.names)
     if "hp" in names:
-        names[names.index("hp")] = "h"
+        names[names.index("hp")] = "size"
     if "am" in names:
         names[names.index("am")] = "m"
     data._data.dtype.names = tuple(names)
@@ -187,7 +187,10 @@ def starsmasher(filename):
     }
     
     for i,dname in enumerate(data._data.dtype.names):
-        to_return['data'][dname] = data[dname]
+        if dname == 'size':
+            to_return['data'][dname] = 2 * data[dname] # StarSmasher has compact support 2h
+        else:
+            to_return['data'][dname] = data[dname]
         to_return['display_units'][dname] = display_units[i]
         to_return['physical_units'][dname] = physical_units[i]
     to_return['data']['t'] = header._data['t'][0]

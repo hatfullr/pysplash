@@ -374,7 +374,7 @@ class GUI(tk.Frame,object):
         # All these conditions are required to do integrations through space
         if not (sum([int(key in ckeys) for key in ['x','y','z']]) >= 2 and
             'm' in ckeys and
-            'h' in ckeys and
+            'size' in ckeys and
             'rho' in ckeys):
             colorbar_values.pop('rho')
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values)
@@ -460,9 +460,7 @@ class GUI(tk.Frame,object):
         if self.data is None: return None
         elif self.data.is_image: return self.data
         else:
-            data = self.data['data'][key]
-            if key == 'h': return data*globals.compact_support
-            else: return data
+            return self.data['data'][key]
 
     def get_display_units(self,key):
         if globals.debug > 1: print("gui.get_display_units")
