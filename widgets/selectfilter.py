@@ -24,7 +24,7 @@ class SelectFilter(tk.Frame,object):
         self.left = left
         self.right = right
 
-        for smode, lbox in zip(self.selectmode, [self.listbox_left,self.listbox_right]):#, [self._left, self._right]):
+        for smode, lbox in zip(self.selectmode, [self.listbox_left,self.listbox_right]):
             if smode == 'dragdrop':
                 lbox.bind("<<MovedSelected>>", lambda *args, **kwargs: self.event_generate("<<ValuesUpdated>>"), add = "+")
 
@@ -32,7 +32,7 @@ class SelectFilter(tk.Frame,object):
         self.listbox_right.bind("<<ListboxSelect>>", self._on_right_selected, add="+")
         self.listbox_left.container.bind("<FocusOut>", self._on_left_focus_out, add="+")
         self.listbox_right.container.bind("<FocusOut>", self._on_right_focus_out, add="+")
-                
+        
     @property
     def left(self): return self._left
 

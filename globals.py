@@ -37,6 +37,11 @@ tooltip_wraplength = 50
 # Adjusting this can significantly impact performance.
 plot_update_delay = 10
 
+# These will be overridden by the user's preferences
+# if those preferences have been set.
+default_particle_color = [0.,0.,0.,1.] # black
+neighbor_particle_color = [1.,0.,0.,1.] # red
+
 # The minimum allowed point size
 point_size_minimum = 0.5
 

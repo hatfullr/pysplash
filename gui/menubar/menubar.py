@@ -7,6 +7,7 @@ from gui.menubar.functionsmenubar import FunctionsMenuBar
 from gui.menubar.datamenubar import DataMenuBar
 from gui.menubar.plotmenubar import PlotMenuBar
 from gui.menubar.filemenubar import FileMenuBar
+from gui.menubar.particlemenubar import ParticleMenuBar
 from gui.menubar.about import About
 
 class MenuBar(Menu, object):
@@ -20,6 +21,7 @@ class MenuBar(Menu, object):
         self.functions = FunctionsMenuBar(self, gui)
         self.data = DataMenuBar(self, gui)
         self.plot = PlotMenuBar(self, gui)
+        self.particle = ParticleMenuBar(self,gui)
 
         self.add_cascade(
             label="File",
@@ -30,12 +32,16 @@ class MenuBar(Menu, object):
             menu=self.functions,
         )
         self.add_cascade(
+            label="Plot",
+            menu=self.plot,
+        )
+        self.add_cascade(
             label="Data",
             menu=self.data,
         )
         self.add_cascade(
-            label="Plot",
-            menu=self.plot,
+            label="Particle",
+            menu=self.particle,
         )
         self.add_command(
             label="About",

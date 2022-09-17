@@ -74,7 +74,8 @@ class SetStyle(PopupWindow,object):
 
     def set_style(self,*args,**kwargs):
         if globals.debug > 1: print("setstyle.set_style")
-        self.gui.interactiveplot.style.set(self.selectfilter.right)
+        style = self.selectfilter.listbox_right.get(0,'end')
+        self.gui.interactiveplot.style.set(style)
 
     def cancel(self,*args,**kwargs):
         if globals.debug > 1: print('setstyle.cancel')

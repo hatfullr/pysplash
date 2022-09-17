@@ -11,8 +11,10 @@ import globals
 
 
 class PopupWindow(tk.Toplevel, object):
-    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, width=None, height=None, **kwargs):
+    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, width=None, height=None, grab=True, **kwargs):
         if globals.debug > 1: print("popupwindow.__init__")
+        
+        self.grab = grab
         
         # Setup the window
         super(PopupWindow, self).__init__(master,**kwargs)
@@ -44,7 +46,7 @@ class PopupWindow(tk.Toplevel, object):
 
         self.title(title)
         self.configure(padx=pad,pady=pad)
-
+        
         center_x = int(self.root.winfo_rootx() + 0.5*self.root.winfo_width() - 0.5*self.width)
         center_y = int(self.root.winfo_rooty() + 0.5*self.root.winfo_height() - 0.5*self.height)
         # Adjust a little bit as a guess for the bar height of the window
@@ -55,7 +57,7 @@ class PopupWindow(tk.Toplevel, object):
             self.geometry("+%d+%d" % (center_x, center_y))
             self.minsize(self.width, 0)
             self.maxsize(self.width, self.winfo_screenheight())
-
+        
         # Create the contents frame
         self.contents = tk.Frame(self)
         
@@ -81,19 +83,28 @@ class PopupWindow(tk.Toplevel, object):
         # Now show the window
         if show: self.deiconify()
 
+    def center(self, *args, **kwargs):
+        if globals.debug > 1: print("popupwindow.center")
+        center_x = int(self.root.winfo_rootx() + 0.5*self.root.winfo_width() - 0.5*self.width)
+        center_y = int(self.root.winfo_rooty() + 0.5*self.root.winfo_height() - 0.5*self.height)
+        # Adjust a little bit as a guess for the bar height of the window
+        center_y -= int(self.winfo_screenheight() / 20.)
+        self.geometry("%dx%d+%d+%d" % (self.width, self.height, center_x, center_y))
+
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("popupwindow.close")
+        if self.grab: self.grab_release()
         close_window(self)
 
     def destroy(self,*args,**kwargs):
-        self.grab_release()
+        if self.grab: self.grab_release()
         super(PopupWindow,self).destroy(*args,**kwargs)
 
     def deiconify(self,*args,**kwargs):
         super(PopupWindow,self).deiconify(*args,**kwargs)
-        self.grab_set()
+        if self.grab: self.grab_set()
 
     def withdraw(self,*args,**kwargs):
         super(PopupWindow,self).withdraw(*args,**kwargs)
-        self.grab_release()
+        if self.grab: self.grab_release()
 

@@ -4,7 +4,6 @@ else: import Tkinter as tk
 
 from functions.importdata import ImportData
 from functions.downloaddatafromserver import DownloadDataFromServer
-from functions.findparticle import FindParticle
 from functions.maskdata import MaskData
 from gui.menubar.menu import Menu
 
@@ -22,12 +21,6 @@ class DataMenuBar(Menu, object):
             'Download from server',
             command=lambda *args,**kwargs: DownloadDataFromServer(gui),
             can_disable=False,
-        )
-        self.add_command(
-            "Find particle",
-            command=lambda *args,**kwargs: FindParticle(gui),
-            state='disabled',
-            hotkey="find particle",
         )
         self.add_command(
             "Import",

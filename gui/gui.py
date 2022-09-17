@@ -78,6 +78,8 @@ class GUI(tk.Frame,object):
 
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=[],extra=[''])
 
+        self.bind("<<PlotUpdate>>",self.menubar.particle.update_kernel,add="+")
+
         # When the user clicks on widgets etc, those widgets should acquire
         # the application focus... (why isn't this default?!)
         self.window.bind("<Button-1>", self.on_button1)
@@ -112,6 +114,7 @@ class GUI(tk.Frame,object):
             for axis_controller in self.controls.axis_controllers.values():
                 axis_controller.combobox.configure(state='disabled')
             self.menubar.data.disable()
+            self.menubar.particle.disable()
             self.menubar.functions.disable()
         else:
             value = Data(value,mask=mask)
@@ -119,6 +122,7 @@ class GUI(tk.Frame,object):
             for axis_controller in self.controls.axis_controllers.values():
                 axis_controller.combobox.configure(state='normal')
             self.menubar.data.enable()
+            self.menubar.particle.enable()
             self.menubar.functions.enable()
 
         if globals.time_mode: self._data_time_mode = value
@@ -470,6 +474,10 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.get_physical_units")
         return self.data['physical_units'][key]
 
+    def get_physical_data(self, key):
+        if globals.debug > 1: print("gui.get_physical_data")
+        return self.get_data(key) * self.get_physical_units(key)
+
     def get_display_data(self,key,raw=False,identifier=None,scaled=True):
         if globals.debug > 1: print("gui.get_display_data")
 
@@ -531,6 +539,7 @@ class GUI(tk.Frame,object):
         # Setup the controls
         self.controls.axis_controllers['Colorbar'].combobox.textvariable.set("Point Density")
         self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
+        self.menubar.particle.disable()
         
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
@@ -554,6 +563,7 @@ class GUI(tk.Frame,object):
         globals.time_mode = False
         
         self.controls.axis_controllers['Colorbar'].combobox.configure(state='enabled')
+        self.menubar.particle.enable()
 
         if self.previous_file is not None:
             self.filecontrols.current_file.set(self.previous_file)

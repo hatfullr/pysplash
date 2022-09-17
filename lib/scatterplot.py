@@ -23,38 +23,54 @@ try:
 except ImportError:
     has_jit = False
 
+def set_neighbor_color(color):
+    globals.neighbor_particle_color = color
+    update_cmap()
+
+def update_cmap():
+    # Get the current color cycle
+    color_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()['color'])
+
+    # Get any cmap and obtain the newcolors array
+    cmap = matplotlib.cm.get_cmap('binary', 256)
+    newcolors = cmap(np.linspace(0, 1, 256))
+
+    ncolors = ScatterPlot.Ncolors
+    
+    IDs = np.array_split(np.arange(len(newcolors)),ncolors+1) 
+    chunks = np.array_split(np.empty(newcolors.shape),ncolors+1)
+    chunks[0] = [1.,1.,1.,1.] # white
+    chunks[1] = [0.,0.,0.,1.] # black
+    chunks[ScatterPlot.default_color_index] = matplotlib.colors.to_rgba(globals.default_particle_color)
+    chunks[ScatterPlot.neighbor_color_index] = matplotlib.colors.to_rgba(globals.neighbor_particle_color)
+
+    # The new cmap will vary from 0 to 9 as integers, such that between 0 and 1
+    # is a single color, etc.
+    # 0 is white, 1 is black, then 2-9 are matplotlib colors
+    if sys.version_info.major < 3:
+        for i in range(2,ncolors):
+            if i == ScatterPlot.neighbor_color_index: continue
+            chunks[i] = matplotlib.colors.to_rgba(color_cycle.next())
+    else:
+        for i in range(2,ncolors-1):
+            if i == ScatterPlot.neighbor_color_index: continue
+            chunks[i] = matplotlib.colors.to_rgba(next(color_cycle))
+    
+    for i,chunk in zip(IDs,chunks):
+        newcolors[i] = chunk
+    ScatterPlot.cmap = matplotlib.colors.ListedColormap(newcolors)
+
 class ScatterPlot(CustomAxesImage,object):
     cmap = None
+    Ncolors = 11
+    default_color_index = 1
+    neighbor_color_index = 10
+    
     # s is size of markers in points**2
     def __init__(self,ax,x,y,s=1,c=None,**kwargs):
         if globals.debug > 1: print("scatterplot.__init__")
 
-        if ScatterPlot.cmap is None:
-            # Get the current color cycle
-            color_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()['color'])
-
-            # Get any cmap and obtain the newcolors array
-            cmap = matplotlib.cm.get_cmap('binary', 256)
-            newcolors = cmap(np.linspace(0, 1, 256))
-
-            IDs = np.array_split(np.arange(len(newcolors)),11)
-            chunks = np.array_split(np.empty(newcolors.shape),11)
-            chunks[0] = [1.,1.,1.,1.] # white
-            chunks[1] = [0.,0.,0.,1.] # black
-
-            # The new cmap will vary from 0 to 9 as integers, such that between 0 and 1
-            # is a single color, etc.
-            # 0 is white, 1 is black, then 2-9 are matplotlib colors
-            if sys.version_info.major < 3:
-                for i in range(2,len(chunks)):
-                    chunks[i] = matplotlib.colors.to_rgba(color_cycle.next())
-            else:
-                for i in range(2,len(chunks)):
-                    chunks[i] = matplotlib.colors.to_rgba(next(color_cycle))
-
-            for i,chunk in zip(IDs,chunks):
-                newcolors[i] = chunk
-            ScatterPlot.cmap = matplotlib.colors.ListedColormap(newcolors)
+        if ScatterPlot.cmap is None: update_cmap()
         
         self.ax = ax
         self.x = x
@@ -62,7 +78,7 @@ class ScatterPlot(CustomAxesImage,object):
         self.s = s
         self.c = c
 
-        if self.c is None: self.c = np.ones(len(x))
+        if self.c is None: self.c = np.full(len(x),Scatterplot.default_color_index,dtype=int)
 
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
@@ -70,7 +86,7 @@ class ScatterPlot(CustomAxesImage,object):
         cmap = kwargs.pop('cmap',ScatterPlot.cmap)
         norm = None
         if cmap == ScatterPlot.cmap:
-            norm = matplotlib.colors.Normalize(vmin=0,vmax=10)
+            norm = matplotlib.colors.Normalize(vmin=0,vmax=ScatterPlot.Ncolors)
         
         super(ScatterPlot,self).__init__(
             self.ax,
@@ -112,7 +128,7 @@ class ScatterPlot(CustomAxesImage,object):
                 self.calculate_data_gpu(self.x[idx],self.y[idx],self.c[idx])
             else:
                 self.calculate_data_cpu(self.x[idx],self.y[idx],self.c[idx])
-            
+
             if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time()-start))
 
     if has_jit:

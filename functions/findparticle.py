@@ -44,7 +44,7 @@ class FindParticle(PopupWindow,object):
         if globals.debug > 1: print("findparticle.create_widgets")
         self.description = ttk.Label(
             self.contents,
-            text="Enter the ID number of a particle you would like to locate on the current plot. Tracking will then be turned on for that particle and an annotation will be placed next to it as though you had pressed "+hotkeys_to_string("track and annotate particle")+" with your mouse over it. To stop tracking the particle, press "+hotkeys_to_string("track and annotate particle")+" anywhere outside the plot.",
+            text="Enter the zero'th-indexed ID number of a particle you would like to locate on the current plot. Tracking will then be turned on for that particle and an annotation will be placed next to it as though you had pressed "+hotkeys_to_string("track and annotate particle")+" with your mouse over it. To stop tracking the particle, press "+hotkeys_to_string("track and annotate particle")+" anywhere outside the plot.",
             wraplength=self.width-2*self.cget('padx'),
             justify='left',
         )

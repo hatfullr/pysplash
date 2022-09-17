@@ -8,6 +8,7 @@ else:
 from widgets.popupwindow import PopupWindow
 from widgets.button import Button
 from widgets.selectfilter import SelectFilter
+from widgets.multiartisteditor import MultiArtistEditor
 import matplotlib.artist
 import traceback
 import globals
@@ -42,23 +43,30 @@ class ManageArtists(PopupWindow,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.selectfilter.bind("<<ValuesUpdated>>", self.update_artists,add="+")
+        #self.selectfilter.bind("<<ValuesUpdated>>", self.update_artists,add="+")
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.create_variables")
 
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.create_widgets")
-        self.selectfilter = SelectFilter(
+        self.editor = MultiArtistEditor(
+            self.gui,
             self.contents,
-            left=self.visible_artists,
-            right=self.hidden_artists,
-            labels=("Visible Artists", "Hidden Artists"),
+            {str(artist):artist for artist in self.artists},
         )
+        
+        #self.selectfilter = SelectFilter(
+        #    self.contents,
+        #    left=self.visible_artists,
+        #    right=self.hidden_artists,
+        #    labels=("Visible Artists", "Hidden Artists"),
+        #)
 
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.place_widgets")
-        self.selectfilter.pack(fill='both',expand=True)
+        self.editor.pack(fill='both',expand=True)
+        #self.selectfilter.pack(fill='both',expand=True)
         
     def update_artists(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.update_artists")
@@ -68,9 +76,9 @@ class ManageArtists(PopupWindow,object):
 
     def cancel(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.cancel")
-        self.selectfilter.update_values(
-            left=self.initial_visible,
-            right=self.initial_hidden,
-        )
+        #self.selectfilter.update_values(
+        #    left=self.initial_visible,
+        #    right=self.initial_hidden,
+        #)
         self.close()
 

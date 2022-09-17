@@ -65,6 +65,8 @@ class InteractivePlot(ResizableFrame,object):
         self.create_widgets()
         self.place_widgets()
         self.create_hotkeys()
+
+        self.tracking = self.track_id.get() >= 0
         
         self.previous_args = None
         self.previous_kwargs = None
@@ -74,7 +76,6 @@ class InteractivePlot(ResizableFrame,object):
 
         self.origin = np.zeros(2)
         self.origin_cid = None
-        self.track_id = None
         self.colors = None
 
         self._select_info = None
@@ -83,7 +84,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.particle_annotation_cid = None
         self.particle_annotation = self.ax.text(0,0,"")
-        self.track_and_annotate = False
+        self.track_and_annotate = self.tracking
 
         # Create an annotation which asks the user to import data if there isn't any
         self.import_data_annotation = self.fig.text(
@@ -141,6 +142,7 @@ class InteractivePlot(ResizableFrame,object):
         self.xycoords = tk.StringVar()
         self.time = DoubleVar(self,None,'time')
         self.style = StringVar(self,["default"],'style')
+        self.track_id = IntVar(self, -1, 'track')
         
         self.time.trace('w',lambda *args, **kwargs: self.set_time_text())
         self.style.trace('w', self._set_style)
@@ -260,14 +262,14 @@ class InteractivePlot(ResizableFrame,object):
             return
 
         self.origin = np.zeros(2)
-        if self.track_id is not None and self.track_id in np.arange(len(x)):
-            self.origin = np.array([x[self.track_id],y[self.track_id]])
+        if self.tracking and self.track_id.get() in np.arange(len(x)):
+            self.origin = np.array([x[self.track_id.get()],y[self.track_id.get()]])
 
         if self.colors is None:
             if isinstance(x, (np.ndarray, list, tuple)):
-                self.colors = np.ones(len(x))
+                self.colors = np.full(len(x), ScatterPlot.default_color_index)
             else:
-                self.colors = np.ones(1)
+                self.colors = np.full(1, ScatterPlot.default_color_index)
 
         if (xaxis.value.get() in ['x','y','z'] and
             yaxis.value.get() in ['x','y','z']):
@@ -280,6 +282,7 @@ class InteractivePlot(ResizableFrame,object):
             self.after_calculate()
             return
 
+        self.gui.event_generate("<<BeforePlotUpdate>>")
         
         kwargs = {}
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
@@ -307,7 +310,7 @@ class InteractivePlot(ResizableFrame,object):
                 kwargs['aspect'] = aspect
                 kwargs['aftercalculate'] = self.after_scatter_calculate
 
-                if self.track_id is not None:
+                if self.tracking:
                     xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
                     dx = 0.5*(xlim[1]-xlim[0])
                     dy = 0.5*(ylim[1]-ylim[0])
@@ -385,7 +388,7 @@ class InteractivePlot(ResizableFrame,object):
             self.colorbar.show()
 
         if self.drawn_object is None: kwargs['initialize'] = True
-        
+
         self.drawn_object = method(*args,**kwargs)
 
         if globals.use_multiprocessing_on_scatter_plots:
@@ -407,13 +410,13 @@ class InteractivePlot(ResizableFrame,object):
         #    self.canvas.blit_artists.append(self.drawn_object)
         
         self.update_help_text()
+
+        self.gui.event_generate("<<PlotUpdate>>")
         
         self.draw()
         
         self.previous_xlim = self.ax.get_xlim()
         self.previous_ylim = self.ax.get_ylim()
-
-        self.gui.event_generate("<<PlotUpdate>>")
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
@@ -587,12 +590,12 @@ class InteractivePlot(ResizableFrame,object):
         curr_xlim = self.gui.controls.axis_controllers['XAxis'].limits.get()
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
 
-        if self.track_id is None:
+        if self.tracking:
+            x = self.gui.controls.axis_controllers['XAxis'].data[self.track_id.get()]
+            y = self.gui.controls.axis_controllers['YAxis'].data[self.track_id.get()]
+        else:
             x,y = self.mouse
             if None in [x,y]: return
-        else:
-            x = self.gui.controls.axis_controllers['XAxis'].data[self.track_id]
-            y = self.gui.controls.axis_controllers['YAxis'].data[self.track_id]
 
         new_width = (curr_xlim[1]-curr_xlim[0])*factor
         new_height= (curr_ylim[1]-curr_ylim[0])*factor
@@ -653,35 +656,45 @@ class InteractivePlot(ResizableFrame,object):
         self.hotkeys.enable('zoom x')
         self.hotkeys.enable('zoom y')
 
-    def color_particles(self, event):
+    def color_particles(self, event, particles=None, index=None, update=True):
         if globals.debug > 1: print("interactiveplot.color_particles")
-        if not event_in_axis(self.ax, event): return
 
+        if event is not None and not event_in_axis(self.ax, event): return
+        
         if self.colorbar.visible:
             self.gui.message("Cannot change particle colors while using a colorbar")
             return
 
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
-            # We need to have a selection set before continuing
-            if self.selection is None:
-                self.gui.message("Click and drag on the plot to select particles, then try again",duration=5000)
-                return
-
             x = self.gui.controls.axis_controllers['XAxis'].data
             y = self.gui.controls.axis_controllers['YAxis'].data
-
-            xlim = self.selection[:2]
-            ylim = self.selection[2:]
-
-            IDs = np.logical_and(
-                np.logical_and(xlim[0] <= x, x <= xlim[1]),
-                np.logical_and(ylim[0] <= y, y <= ylim[1]),
-            )
+            IDs = None
             
-            self.colors[IDs] = int(event.keysym)
+            if particles is None:
+                # We need to have a selection set before continuing
+                if self.selection is None:
+                    self.gui.message("Click and drag on the plot to select particles, then try again")
+                    return
+
+                xlim = self.selection[:2]
+                ylim = self.selection[2:]
+
+                IDs = np.logical_and(
+                    np.logical_and(xlim[0] <= x, x <= xlim[1]),
+                    np.logical_and(ylim[0] <= y, y <= ylim[1]),
+                )
+            else:
+                IDs = particles
             
-            self._update()
+            if IDs is not None:
+                self.colors[IDs] = int(event.keysym) if index is None else index
+                if update: self._update()
+        elif particles is not None and index is not None:
+            x = self.gui.controls.axis_controllers['XAxis'].data
+            y = self.gui.controls.axis_controllers['YAxis'].data
+            self.colors[particles] = index
+            if update: self._update()
 
     # This method sets the origin to be at the particle closest to the mouse
     # position
@@ -692,51 +705,57 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.message("Cannot track particles while in time mode")
             return
         
-        # We should always clear the old tracking no matter what
-        self.clear_tracking()
+        if None in self.mouse: # Mouse is outside the axis
+            self.clear_tracking()
+            return
+        else:
+            self.clear_particle_annotation()
         
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
             data = np.column_stack((self.drawn_object.x,self.drawn_object.y))
+
+            self.tracking = event is not None or index is not None
             
             # Only get the mouse coordinates if this method was called by pressing the hotkey
             # Find the particle closest to the mouse position
-            if None in self.mouse: return
             if event is not None:
                 # If we don't do this transformation then if one axis has much larger numbers than
                 # the other, the result is incorrect.
                 screen_mouse = self.ax.transData.transform(self.mouse)
                 screen_data = self.ax.transData.transform(data)
-                self.track_id = self.get_closest_particle(screen_data, screen_mouse[0], screen_mouse[1])
+                self.track_id.set(self.get_closest_particle(screen_data, screen_mouse[0], screen_mouse[1]))
             else:
                 if index is None:
                     raise ValueError("Method track_particle must be called with keyword 'index' != None when keyword 'event' is not specified or is None")
-                self.track_id = index
-
-            if self.track_id is not None:
-                # We are not allowed to have adaptive limits while tracking
-                xlimits = self.gui.controls.axis_controllers['XAxis'].limits
-                ylimits = self.gui.controls.axis_controllers['YAxis'].limits
-                xlimits.adaptive_off()
-                ylimits.adaptive_off()
-                xlimits.adaptive_button.state(['disabled'])
-                ylimits.adaptive_button.state(['disabled'])
+                self.track_id.set(index)
+            
+            # We are not allowed to have adaptive limits while tracking
+            xlimits = self.gui.controls.axis_controllers['XAxis'].limits
+            ylimits = self.gui.controls.axis_controllers['YAxis'].limits
+            xlimits.adaptive_off()
+            ylimits.adaptive_off()
+            xlimits.adaptive_button.state(['disabled'])
+            ylimits.adaptive_button.state(['disabled'])
                 
                 
-                # Update the origin
-                self.origin = data[self.track_id]
+            # Update the origin
+            self.origin = data[self.track_id.get()]
             
-                self.gui.message("Started tracking particle "+str(self.track_id),duration=5000)
+            self.gui.message("Started tracking particle "+str(self.track_id.get()))
             
-                self.canvas.draw_idle()
-                self.update()
-
+            self.update()
+                
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
-        if self.track_id is not None:
-            self.gui.message("Stopped tracking particle "+str(self.track_id),duration=5000)
-        self.track_id = None
+        
         self.clear_particle_annotation()
+        
+        if self.tracking:
+            self.gui.message("Stopped tracking particle "+str(self.track_id.get()))
+        
+        self.tracking = False
+        self.track_id.set(-1)
         self.track_and_annotate = False
 
         # Re-allow adaptive limits
@@ -752,12 +771,12 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.message("Cannot track particles in time mode")
             return
         
-        if self.track_id is None: return
+        if not self.tracking: return
         if isinstance(self.drawn_object, ScatterPlot):
             if event is not None: self.track_and_annotate = True
-            x = self.drawn_object.x[self.track_id]
-            y = self.drawn_object.y[self.track_id]
-            self.particle_annotation.set_text(str(self.track_id))
+            x = self.drawn_object.x[self.track_id.get()]
+            y = self.drawn_object.y[self.track_id.get()]
+            self.particle_annotation.set_text(str(self.track_id.get()))
             #self.particle_annotation.set_transform(self.ax.transData)
             self.particle_annotation.set_position((x,y))
 

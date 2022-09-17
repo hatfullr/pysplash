@@ -37,7 +37,7 @@ class OrientationArrows:
         canvas = self.ax.get_figure().canvas
         self.cid = canvas.mpl_connect("draw_event", self.draw)
         self.draw()
-        canvas.draw_idle()
+        self.gui.interactiveplot.draw()
     
     def disconnect(self,*args,**kwargs):
         if self.cid is not None:
@@ -45,7 +45,7 @@ class OrientationArrows:
             canvas.mpl_disconnect(self.cid)
             self.clear()
             self.cid = None
-            canvas.draw_idle()
+            self.gui.interactiveplot.draw()
         
     def draw(self,*args,**kwargs):
         # This function gets called only when the Update button gets pressed

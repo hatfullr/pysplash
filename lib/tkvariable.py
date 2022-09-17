@@ -24,6 +24,17 @@ def save():
     with open(TkVariable.preferences_path, 'w') as f:
         json.dump(preferences, f, indent=4)
 
+# Get the value of a saved variable by its name, returning the first name match
+# among all widgets if widget is None
+def get(name,widget=None):
+    if widget is None:
+        for w in TkVariable.preferences.values():
+            if name in w.keys(): return w[name]
+        return None
+    elif str(widget) in TkVariable.preferences.keys():
+        return TkVariable.preferences[str(widget)].get(name, None)
+    return None
+
 class TkVariable(tk.Variable, object):
     preferences_path = os.path.join(globals.profile_path,"preferences.json")
     variables = []
@@ -81,7 +92,6 @@ class StringVar(TkVariable, object):
 class IntVar(TkVariable, object):
     _default = tk.IntVar._default
     def __init__(self, master, value, name):
-        #if value is None: value = 0
         super(IntVar, self).__init__(master, value, name)
     def get(self): # Copied from tk.IntVar
         """Return the value of the variable as an integer."""
