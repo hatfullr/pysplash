@@ -8,6 +8,7 @@ import matplotlib
 import lib.tkvariable as tkvariable
 from lib.tkvariable import BooleanVar
 from functions.findparticle import FindParticle
+from functions.annotateparticle import AnnotateParticle
 from gui.menubar.menu import Menu
 from gui.menubar.particlesettings import ParticleSettings
 from lib.scatterplot import ScatterPlot
@@ -47,8 +48,15 @@ class ParticleMenuBar(Menu, object):
             hotkey="find particle",
         )
 
+        self.add_command(
+            "Annotate",
+            command=lambda *args,**kwargs: AnnotateParticle(self.gui),
+            state='disabled',
+            hotkey="annotate particle",
+            bind=False,
+        )
+
         self.show_kernel = BooleanVar(self, None, "show_kernel")
-        
         self.add_checkbutton(
             "Show kernel",
             variable=self.show_kernel,
@@ -63,11 +71,21 @@ class ParticleMenuBar(Menu, object):
             command=self.on_show_neighbors,
             state='disabled',
         )
+
+        self.annotate_neighbors = BooleanVar(self, None, "annotate_neighbors")
+        self.add_checkbutton(
+            "Annotate neighbors",
+            variable=self.annotate_neighbors,
+            command=self.update_neighbor_annotations,
+            state='disabled',
+        )
         
         self.add_command(
             "Settings",
             command=self.settings.deiconify,
         )
+
+        self.neighbor_annotations = []
         
         self.gui.interactiveplot.track_id.trace('w', self.on_track_id_set)
         self.gui.interactiveplot.ax.add_artist(self.kernel)
@@ -78,16 +96,20 @@ class ParticleMenuBar(Menu, object):
         
         self.after_id = None
 
+        self.gui.bind("<<PlotUpdate>>",self.update_kernel,add="+")
         self.gui.bind("<<BeforePlotUpdate>>", self.update_neighbors, add="+")
         self.gui.bind("<<BeforePlotUpdate>>", self.update_kernel, add="+")
+        self.gui.bind("<<PlotUpdate>>", self.update_neighbor_annotations, add="+")
         self._clearing_neighbors = False
 
     def on_track_id_set(self, *args, **kwargs):
         state = 'normal' if self.gui.interactiveplot.tracking else 'disabled'
         self.set_state(state, label="Show kernel")
         self.set_state(state, label="Show neighbors")
+        self.set_state(state, label="Annotate neighbors")
         self.update_kernel()
         self.update_neighbors()
+        self.update_neighbor_annotations()
 
     def on_show_kernel(self,*args,**kwargs):
         self.update_kernel()
@@ -111,20 +133,14 @@ class ParticleMenuBar(Menu, object):
 
     def on_show_neighbors(self,*args,**kwargs):
         self.gui.interactiveplot.update()
+        #if self.show_neighbors.get(): self.set_state('normal', label="Annotate neighbors")
+        #else: self.set_state('disabled', label="Annotate neighbors")
 
     def update_neighbors(self, *args, **kwargs):
         if self.gui.interactiveplot.tracking and self.show_neighbors.get() and self.gui.data is not None:
-            x = self.gui.get_physical_data('x')
-            y = self.gui.get_physical_data('y')
-            z = self.gui.get_physical_data('z')
-            size = self.gui.get_physical_data('size')
+
+            neighbors = self.get_neighbors(self.gui.interactiveplot.track_id.get())
             
-            xyz = np.column_stack((x,y,z))
-            
-            track_id = self.gui.interactiveplot.track_id.get()
-            dr2 = np.sum((xyz - xyz[track_id])**2,axis=-1)
-            
-            neighbors = dr2 <= size[track_id]**2
             if self.neighbors is None: self.neighbors = neighbors
             elif not np.array_equal(neighbors,self.neighbors):
                 toblack = np.logical_and(self.neighbors, ~neighbors)
@@ -139,4 +155,35 @@ class ParticleMenuBar(Menu, object):
                     self.neighbors = None
                     self._clearing_neighbors = False
 
-            
+    def get_neighbors(self, particle):
+        x = self.gui.get_physical_data('x')
+        y = self.gui.get_physical_data('y')
+        z = self.gui.get_physical_data('z')
+        size = self.gui.get_physical_data('size')
+        xyz = np.column_stack((x,y,z))
+        dr2 = np.sum((xyz - xyz[particle])**2,axis=-1)
+        return dr2 <= size[particle]**2
+
+    def update_neighbor_annotations(self,*args,**kwargs):
+        if self.neighbors is None:
+            self.neighbors = self.get_neighbors(self.gui.interactiveplot.track_id.get())
+
+        particles = []
+        annotations = []
+        for particle, annotation in self.gui.interactiveplot.particle_annotations.items():
+            particles.append(particle)
+            annotations.append(annotation)
+        track_id = self.gui.interactiveplot.track_id.get()
+        for particle, annotation in zip(particles,annotations):
+            if particle == track_id: continue
+            if particle not in self.neighbors:
+                self.gui.interactiveplot.clear_particle_annotation(particle,draw=False)
+
+        if self.annotate_neighbors.get():
+            keys = self.gui.interactiveplot.particle_annotations.keys()
+            for neighbor in np.arange(len(self.neighbors))[self.neighbors]:
+                if neighbor == track_id: continue
+                if neighbor not in keys:
+                    self.gui.interactiveplot.annotate_particle(ID=neighbor,draw=False)
+        self.gui.interactiveplot.draw()
+

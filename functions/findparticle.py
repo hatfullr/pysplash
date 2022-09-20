@@ -58,9 +58,8 @@ class FindParticle(PopupWindow,object):
         self.description.pack(side='top',fill='both')
         self.entry.pack(side='top',fill='x')
 
-    def find(self,*args,**kwargs):
-        if globals.debug > 1: print("findparticle.find")
-
+    def find_particle(self, *args, **kwargs):
+        if globals.debug > 1: print("findparticle.find_particle")
         # See if the particle ID is in the data set
         data = self.gui.data
 
@@ -70,11 +69,21 @@ class FindParticle(PopupWindow,object):
         
         if (data is not None and
             value in np.arange(len(data['data'][list(data['data'].keys())[0]]))):
-            # We should only get here if check_id has returned True
-            self.gui.interactiveplot.track_particle(index=value)
-            self.gui.interactiveplot.annotate_tracked_particle()
-            self.gui.interactiveplot.track_and_annotate = True
-            self.close()
+            return value
         else:
             self.gui.message("Failed to find particle "+str(value),duration=5000)
             self.entry.event_generate("<<ValidateFail>>")
+            return None
+
+    def find(self,*args,**kwargs):
+        if globals.debug > 1: print("findparticle.find")
+
+        particle = self.find_particle()
+        if particle is not None and particle != self.gui.interactiveplot.track_id.get():
+            # We should only get here if check_id has returned True
+            self.gui.interactiveplot.track_particle(index=particle)
+            self.gui.interactiveplot.annotate_tracked_particle()
+            self.gui.interactiveplot.track_and_annotate = True
+        self.close()
+        
+        

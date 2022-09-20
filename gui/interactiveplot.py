@@ -33,6 +33,7 @@ from functions.eventinaxis import event_in_axis
 from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseevent
 from functions.getallchildren import get_all_children
 from functions.hotkeystostring import hotkeys_to_string
+from functions.annotateparticle import AnnotateParticle
 
 from widgets.resizableframe import ResizableFrame
 
@@ -82,8 +83,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.selection = None
 
-        self.particle_annotation_cid = None
-        self.particle_annotation = self.ax.text(0,0,"")
+        self.particle_annotations = {}
         self.track_and_annotate = self.tracking
 
         # Create an annotation which asks the user to import data if there isn't any
@@ -178,6 +178,7 @@ class InteractivePlot(ResizableFrame,object):
             lambda event: self.annotate_tracked_particle(event),
         ))
         self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
+        self.hotkeys.bind("annotate particle", lambda *args,**kwargs: self.annotate_particle())
         for i in range(10):
             self.hotkeys.bind("particle color "+str(i), self.color_particles)
             
@@ -704,27 +705,22 @@ class InteractivePlot(ResizableFrame,object):
         if globals.time_mode:
             self.gui.message("Cannot track particles while in time mode")
             return
-        
-        if None in self.mouse: # Mouse is outside the axis
-            self.clear_tracking()
-            return
-        else:
-            self.clear_particle_annotation()
+
+        if index is None:
+            if None in self.mouse: # Mouse is outside the axis
+                self.clear_tracking()
+                return
+            else:
+                self.clear_particle_annotation(self.track_id.get())
         
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
-            data = np.column_stack((self.drawn_object.x,self.drawn_object.y))
-
             self.tracking = event is not None or index is not None
             
             # Only get the mouse coordinates if this method was called by pressing the hotkey
             # Find the particle closest to the mouse position
             if event is not None:
-                # If we don't do this transformation then if one axis has much larger numbers than
-                # the other, the result is incorrect.
-                screen_mouse = self.ax.transData.transform(self.mouse)
-                screen_data = self.ax.transData.transform(data)
-                self.track_id.set(self.get_closest_particle(screen_data, screen_mouse[0], screen_mouse[1]))
+                self.track_id.set(self.get_closest_particle_to_mouse())
             else:
                 if index is None:
                     raise ValueError("Method track_particle must be called with keyword 'index' != None when keyword 'event' is not specified or is None")
@@ -737,10 +733,9 @@ class InteractivePlot(ResizableFrame,object):
             ylimits.adaptive_off()
             xlimits.adaptive_button.state(['disabled'])
             ylimits.adaptive_button.state(['disabled'])
-                
-                
+            
             # Update the origin
-            self.origin = data[self.track_id.get()]
+            self.origin = self.get_xy_data()[self.track_id.get()]
             
             self.gui.message("Started tracking particle "+str(self.track_id.get()))
             
@@ -748,8 +743,7 @@ class InteractivePlot(ResizableFrame,object):
                 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
-        
-        self.clear_particle_annotation()
+        self.clear_particle_annotation(self.track_id.get())
         
         if self.tracking:
             self.gui.message("Stopped tracking particle "+str(self.track_id.get()))
@@ -774,20 +768,71 @@ class InteractivePlot(ResizableFrame,object):
         if not self.tracking: return
         if isinstance(self.drawn_object, ScatterPlot):
             if event is not None: self.track_and_annotate = True
-            x = self.drawn_object.x[self.track_id.get()]
-            y = self.drawn_object.y[self.track_id.get()]
-            self.particle_annotation.set_text(str(self.track_id.get()))
-            #self.particle_annotation.set_transform(self.ax.transData)
-            self.particle_annotation.set_position((x,y))
+            self.annotate_particle(ID=self.track_id.get())
 
-    def clear_particle_annotation(self, *args, **kwargs):
+    def annotate_particle(self, ID=None, draw=True):
+        if globals.debug > 1: print("interactiveplot.annotate_particle")
+
+        if globals.time_mode:
+            self.gui.message("Cannot annotate particles in time mode")
+            return
+        
+        if isinstance(self.drawn_object, ScatterPlot):
+            ID_orig = ID
+            if ID is None:
+                ID = self.get_closest_particle_to_mouse()
+                # Mouse is outside the axis
+                if ID is None:
+                    AnnotateParticle(self.gui)
+                    return
+                
+            xy = self.get_xy_data()[ID]
+            # Make a new annotation
+            if ID not in self.particle_annotations.keys():
+                self.particle_annotations[ID] = self.ax.annotate(
+                    str(ID),
+                    xy,
+                    clip_on=True
+                )
+                if draw: self.draw()
+                return self.particle_annotations[ID]
+            elif ID_orig is None: # User chose an already-annotated particle, so clear that annotation
+                self.clear_particle_annotation(ID)
+                if draw: self.draw()
+        return None
+
+    def clear_particle_annotation(self, ID, draw=True):
         if globals.debug > 1: print("interactiveplot.clear_particle_annotation")
-        self.particle_annotation.set_text("")
-        self.canvas.draw_idle()
+        if ID in self.particle_annotations.keys():
+            self.particle_annotations[ID].remove()
+            self.particle_annotations.pop(ID)
+        if draw: self.canvas.draw_idle()
 
     def get_closest_particle(self, data, x, y):
         if globals.debug > 1: print("interactiveplot.get_closest_particle")
         return find_nearest_2d(data,np.array([x,y]))
+
+    def get_closest_particle_to_mouse(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.get_closest_particle_to_mouse")
+
+        # If the mouse is outside the axis
+        if None in self.mouse: return None
+        
+        data = self.get_xy_data()
+        screen_mouse = self.ax.transData.transform(self.mouse)
+        screen_data = self.ax.transData.transform(data)
+        ID = self.get_closest_particle(screen_data, screen_mouse[0], screen_mouse[1])
+        return ID
+
+    def get_xy_data(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.get_xy_data")
+        if self.drawn_object is not None:
+            return np.column_stack((self.drawn_object.x,self.drawn_object.y))
+        else:
+            return np.column_stack((
+                self.gui.controls.axis_controllers['XAxis'].data,
+                self.gui.controls.axis_controllers['YAxis'].data,
+            ))
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):

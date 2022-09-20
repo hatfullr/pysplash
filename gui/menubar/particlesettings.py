@@ -36,6 +36,9 @@ class ParticleSettings(PopupWindow,object):
         self.create_widgets()
         self.place_widgets()
 
+        self.multi_artist_editor.update_artists()
+        globals.neighbor_particle_color = self.neighbor_colors_colorpicker.color.get()
+
     def create_widgets(self,*args,**kwargs):
         self.multi_artist_editor = MultiArtistEditor(
             self.gui,

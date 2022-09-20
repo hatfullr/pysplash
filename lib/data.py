@@ -33,6 +33,13 @@ class Data(collections.OrderedDict,object):
         self._mask = mask
         if mask is not None: self.mask(self._mask)
 
+    @property
+    def n(self):
+        for name,column in self['data'].items():
+            if name not in ['t','time']:
+                return len(column)
+        return 0
+
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")
         if not self.is_image: self.__init__(self._original,**kwargs)

@@ -118,11 +118,6 @@ class ArtistEditor(VerticalScrolledFrame, object):
         return False
 
     def initialize(self, *args, **kwargs):
-        for name, value in self.properties.items():
-            if name in self.variables.keys():
-                if isinstance(self.variables[name], (list,tuple,np.ndarray)):
-                    for v,val in zip(self.variables[name],value): v.set(val)
-                else: self.variables[name].set(value)
         self.initialized = True
         self.update_artist()
     
@@ -137,7 +132,11 @@ class ArtistEditor(VerticalScrolledFrame, object):
 
     def on_variable_changed(self, name):
         if not self.initialized: return
-        self.update_artist()
+        if isinstance(self.widgets[name], Entry):
+            try: self.update_artist()
+            except ValueError: pass
+        else:
+            self.update_artist()
 
     def make(self, name, value, master=None):
         if master is None: master = self.interior
@@ -167,7 +166,7 @@ class ArtistEditor(VerticalScrolledFrame, object):
             pref = tkvariable.get(name,widget=self)
             if pref is None: pref = value
             variable = StringVar(self,pref,name)
-            
+
             widget = Entry(
                 master,
                 textvariable=variable,

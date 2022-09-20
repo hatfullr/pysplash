@@ -78,8 +78,6 @@ class GUI(tk.Frame,object):
 
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=[],extra=[''])
 
-        self.bind("<<PlotUpdate>>",self.menubar.particle.update_kernel,add="+")
-
         # When the user clicks on widgets etc, those widgets should acquire
         # the application focus... (why isn't this default?!)
         self.window.bind("<Button-1>", self.on_button1)

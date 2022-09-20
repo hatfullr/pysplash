@@ -22,7 +22,6 @@ class MultiArtistEditor(tk.Frame, object):
             raise TypeError("artists must be a dict")
         super(MultiArtistEditor,self).__init__(master,*args,**kwargs)
         
-        self.create_variables()
         self.create_widgets()
         self.place_widgets()
 
@@ -38,9 +37,6 @@ class MultiArtistEditor(tk.Frame, object):
         
         self.listbox.bind("<<ListboxSelect>>", self.on_listbox_select)
 
-    def create_variables(self,*args,**kwargs):
-        pass
-    
     def create_widgets(self,*args,**kwargs):
         self.left_frame = tk.Frame(self)
         self.left_label = ttk.Label(self.left_frame,text="Artists",anchor='c')
@@ -69,3 +65,6 @@ class MultiArtistEditor(tk.Frame, object):
                 self.current_editor = self.artist_editors[curselection[0]]
                 self.current_editor.pack(side='right',expand=True,fill='both')
         
+    def update_artists(self,*args,**kwargs):
+        for editor in self.artist_editors:
+            editor.update_artist()

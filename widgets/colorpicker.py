@@ -23,10 +23,8 @@ class ColorPicker(tk.Button,object):
         kwargs['image'] = self.photo
         super(ColorPicker,self).__init__(master,*args,**kwargs)
 
-        self.color = StringVar(self, None, "color")
-        if self.color.get() == "": # No preference set by the user, so fallback to any provided default
-            if default is None: self.color.set(self.rgbt2k('k')) # black fallback
-            else: self.color.set(self.rgb2tk(default))
+        if default is None: default = 'k'
+        self.color = StringVar(self, self.rgb2tk(default), "color")
             
         fontsize_px = gui.fontsize_px
         self.configure(height=fontsize_px,width=fontsize_px,background=self.color.get())

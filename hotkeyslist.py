@@ -53,6 +53,12 @@ hotkeyslist = {
         "modifiers": ["<Control>"],
         "type" : "global",
     },
+    "annotate particle" : {
+        "keylist" : ["a"],
+        "display" : "Ctrl+a",
+        "modifiers": ["<Control>"],
+        "type" : "global",
+    },
     "save" : {
         "keylist" : ["<s>"],
         "display" : "Ctrl+s",

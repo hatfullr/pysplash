@@ -17,9 +17,10 @@ class Menu(tk.Menu, object):
     def add_command(self,label,*args,**kwargs):
         hotkey = kwargs.pop('hotkey',None)
         command = kwargs.get('command', None)
+        bind = kwargs.pop('bind',True)
 
         if hotkey is not None and command is not None:
-            self.hotkeys.bind(hotkey, command)
+            if bind: self.hotkeys.bind(hotkey, command)
             kwargs['accelerator'] = hotkeys_to_string(hotkey).replace("(","").replace(")","")
         
         state = kwargs.get('state','normal')
@@ -28,7 +29,7 @@ class Menu(tk.Menu, object):
         if kwargs.pop('can_disable', True):
             self.states[label] = {'state':state, 'hotkey':hotkey}
             if state == 'disabled' and hotkey is not None:
-                self.hotkeys.disable(hotkey)
+                if self.hotkeys.is_bound(hotkey): self.hotkeys.disable(hotkey)
 
         kwargs['label'] = label
         super(Menu,self).add_command(*args,**kwargs)
@@ -37,9 +38,10 @@ class Menu(tk.Menu, object):
     def add_checkbutton(self, label, *args, **kwargs):
         hotkey = kwargs.pop('hotkey',None)
         command = kwargs.get('command', None)
+        bind = kwargs.pop('bind',True)
 
         if hotkey is not None and command is not None:
-            self.hotkeys.bind(hotkey, command)
+            if bind: self.hotkeys.bind(hotkey, command)
             kwargs['accelerator'] = hotkeys_to_string(hotkey).replace("(","").replace(")","")
         
         state = kwargs.get('state','normal')
@@ -48,7 +50,7 @@ class Menu(tk.Menu, object):
         if kwargs.pop('can_disable', True):
             self.states[label] = {'state':state, 'hotkey':hotkey}
             if state == 'disabled' and hotkey is not None:
-                self.hotkeys.disable(hotkey)
+                if self.hotkeys.is_bound(hotkey): self.hotkeys.disable(hotkey)
 
         kwargs['label'] = label
         super(Menu,self).add_checkbutton(*args,**kwargs)
@@ -63,13 +65,13 @@ class Menu(tk.Menu, object):
             for l, s in self.states.items():
                 self.states[l]['state'] = state
                 self.entryconfig(l,state=state)
-                if s['hotkey'] is not None:
+                if s['hotkey'] is not None and self.hotkeys.is_bound(s['hotkey']):
                     if state == 'disabled': self.hotkeys.disable(s['hotkey'])
                     elif state == 'normal' : self.hotkeys.enable(s['hotkey'])
         else:
             self.states[label]['state'] = state
             self.entryconfig(label,state=state)
-            if self.states[label]['hotkey'] is not None:
+            if self.states[label]['hotkey'] is not None and self.hotkeys.is_bound(s['hotkey']):
                 if state == 'disabled': self.hotkeys.disable(self.states[label]['hotkey'])
                 elif state == 'normal' : self.hotkeys.enable(self.states[label]['hotkey'])
                 
