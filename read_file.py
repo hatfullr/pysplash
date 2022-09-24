@@ -2,19 +2,23 @@
 Modify the function below to read in your own data
 files of any format. The function must take as input
 only one file name and provide as output a
-dictionary object. The dictionary object will have 3
-keys: 'data', 'display_units', and 'physical_units'.
-The values for each of the keys will be an
+dictionary object. The dictionary object will have at
+least 3 keys: 'data', 'display_units', and
+'physical_units'. The values for 'data',
+'display_units', and 'physical_units' will be an
 OrderedDict with the following keys:
     Required:
         'x':  array-like  x positions
         'y':  array-like  y positions
         'z':  array-like  z positions
         'm':  array-like  masses
-     'size':  array-like  kernel radii
+        'h':  array-like  smoothing length
     Optional:
         'u':  array-like  internal energy
         't':  float,int   time
+You can also optionally supply key 'compact_support',
+for example, 'compact_support' : 2 for a code which
+uses compact support of 2h.
 All particle arrays must have the same length. For
 column density plots, 'u' is required. Any other keys
 that you specify that contain array-like objects of
@@ -56,6 +60,7 @@ to_return = {
         'x': 6.9599e10, # Solar radius in cm
         'y': 6.9599e10, # Solar radius in cm
     ),
+    'compact_support' : 2,
 }
 
 If I had a data file with x and y data only, in units
@@ -75,6 +80,7 @@ to_return = {
         'x': 1., # Already in cgs units
         'y': 1., # Already in cgs units
     ),
+    'compact_support' : 2,
 }
 
 """
@@ -121,7 +127,7 @@ def starsmasher(filename):
         1., # y
         1., # z
         1., # m
-        1., # size
+        1., # h
         munit/runit**3, # rho
         vunit, # vx
         vunit, # vy
@@ -148,7 +154,7 @@ def starsmasher(filename):
         runit, # y
         runit, # z
         munit, # m
-        runit, # size
+        runit, # h
         munit/runit**3., # rho
         vunit, # vx
         vunit, # vy
@@ -175,22 +181,20 @@ def starsmasher(filename):
     # Correct some common header names
     names = list(data._data.dtype.names)
     if "hp" in names:
-        names[names.index("hp")] = "size"
+        names[names.index("hp")] = "h"
     if "am" in names:
         names[names.index("am")] = "m"
     data._data.dtype.names = tuple(names)
     
     to_return = {
-        'data'           : OrderedDict(),
-        'display_units'  : OrderedDict(),
-        'physical_units' : OrderedDict(),
+        'data'            : OrderedDict(),
+        'display_units'   : OrderedDict(),
+        'physical_units'  : OrderedDict(),
+        'compact_support' : 2,
     }
     
     for i,dname in enumerate(data._data.dtype.names):
-        if dname == 'size':
-            to_return['data'][dname] = 2 * data[dname] # StarSmasher has compact support 2h
-        else:
-            to_return['data'][dname] = data[dname]
+        to_return['data'][dname] = data[dname]
         to_return['display_units'][dname] = display_units[i]
         to_return['physical_units'][dname] = physical_units[i]
     to_return['data']['t'] = header._data['t'][0]
@@ -209,9 +213,10 @@ def starsmasher_energy(filename):
     eunit = gravconst*munit**2/runit
     
     to_return = {
-        'data'           : OrderedDict(),
-        'display_units'  : OrderedDict(),
-        'physical_units' : OrderedDict(),
+        'data'            : OrderedDict(),
+        'display_units'   : OrderedDict(),
+        'physical_units'  : OrderedDict(),
+        'compact_support' : 2,
     }
 
     d = np.loadtxt(filename)
@@ -244,9 +249,10 @@ def starsmasher_parent(filename):
     eunit = gravconst*munit**2/runit
     
     to_return = {
-        'data'           : OrderedDict(),
-        'display_units'  : OrderedDict(),
-        'physical_units' : OrderedDict(),
+        'data'            : OrderedDict(),
+        'display_units'   : OrderedDict(),
+        'physical_units'  : OrderedDict(),
+        'compact_support' : 2,
     }
 
     data = np.loadtxt(filename)
@@ -315,9 +321,10 @@ def fluxcal_track(filename):
     data._data.dtype.names = tuple(names)
     
     to_return = {
-        'data'           : OrderedDict(),
-        'display_units'  : OrderedDict(),
-        'physical_units' : OrderedDict(),
+        'data'            : OrderedDict(),
+        'display_units'   : OrderedDict(),
+        'physical_units'  : OrderedDict(),
+        'compact_support' : 2,
     }
     
     for i,key in enumerate(header):

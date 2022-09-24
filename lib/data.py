@@ -3,10 +3,12 @@ import copy
 import numpy as np
 import globals
 from functions.rotate import rotate
+import kernel
 
 class Data(collections.OrderedDict,object):
     def __init__(self,data,mask=None):
         if globals.debug > 1: print("data.__init__")
+        kernel.compact_support = data.pop('compact_support',kernel.compact_support)
         super(Data,self).__init__(data)
 
         self.is_image = False

@@ -25,9 +25,11 @@ from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from widgets.autosizelabel import AutoSizeLabel
+from widgets.message import Message
 
 from read_file import read_file
 import globals
+import kernel
 import copy
 import os.path
 import json
@@ -86,8 +88,12 @@ class GUI(tk.Frame,object):
 
         self.message_after_id = None
 
+        if not globals.time_mode: self.time_mode.set(False)
+
         self.previous_file = None
         self.time_mode.trace('w',self.toggle_time_mode)
+
+        self.compact_support_set = False
         
         #self.xy_controls_initialized = False
         self.initialize(first=True)
@@ -122,7 +128,7 @@ class GUI(tk.Frame,object):
             self.menubar.data.enable()
             self.menubar.particle.enable()
             self.menubar.functions.enable()
-
+            
         if globals.time_mode: self._data_time_mode = value
         else: self._data = value
 
@@ -137,13 +143,11 @@ class GUI(tk.Frame,object):
     def initialize(self, first=False, *args, **kwargs):
         if globals.debug > 1: print("gui.initialize")
 
-        # Disable the colorbar axis for now because it isn't working right now
-        #self.controls.axis_controllers['Colorbar'].disable()
-
         # Setup the limits on the interactive plot using user's preferences
         if first:
             self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
             self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
+            self.interactiveplot.colorbar.set_clim(self.controls.axis_controllers['Colorbar'].limits.get())
         
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
@@ -155,7 +159,7 @@ class GUI(tk.Frame,object):
             #if globals.time_mode: self.read_time_mode()
             #else: self.read()
             self.read()
-
+            
             # Don't allow the axis controllers to start out in time mode (for now)
             for axis_controller in self.controls.axis_controllers.values():
                 values = axis_controller.combobox['values']
@@ -166,7 +170,7 @@ class GUI(tk.Frame,object):
                             # Set the label too, if the user hasn't typed their own label
                             if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
                             break
-
+            
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
             
@@ -184,7 +188,9 @@ class GUI(tk.Frame,object):
                     self.interactiveplot.ax.set_xlim(xlimits.get())
                 if all(np.isfinite(ylim)):
                     self.interactiveplot.ax.set_ylim(ylimits.get())
-            
+
+            self.controls.update_colorbar_controller()
+                    
             self.interactiveplot.update()
         else:
             self.filecontrols.current_file.set("")
@@ -194,8 +200,15 @@ class GUI(tk.Frame,object):
             for controller in self.controls.axis_controllers.values():
                 controller.combobox.textvariable.set("")
                 controller.label.set("")
-
+        
         self.controls.plotcontrols.update_rotations_controls()
+        self.controls.update_xaxis_controller()
+        self.controls.update_yaxis_controller()
+
+        # Show the orientation arrows if the user's preferences have them set on
+        if self.controls.plotcontrols.show_orientation.get():
+            self.interactiveplot.orientation.switch_on()
+
 
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
@@ -236,7 +249,7 @@ class GUI(tk.Frame,object):
         )
         
         self.menubar = MenuBar(self.window,self)
-        self.message_label = tk.Label(self,textvariable=self.message_text,bg='white')
+        self.message_label = Message(self,"se",textvariable=self.message_text,bg='white')
 
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
@@ -251,7 +264,6 @@ class GUI(tk.Frame,object):
         self.controls.pack(side='right',fill='both')
         self.left_frame.pack(side='right',fill='both',expand=True)
 
-        self.message_label.place(rely=1,relx=1,anchor="se")
         self.pack(fill='both',expand=True)
 
         # Make the controls have a fixed width
@@ -273,6 +285,7 @@ class GUI(tk.Frame,object):
         # Display a message on the bottom-right hand corner of the window
         # If duration is None then the message will persist forever
         self.message_text.set(text)
+        self.message_label.show()
         #if duration is not None:
         if self.message_after_id is not None:
             self.after_cancel(self.message_after_id)
@@ -280,6 +293,7 @@ class GUI(tk.Frame,object):
     def clear_message(self,*args,**kwargs):
         if globals.debug > 1: print("gui.clear_message")
         self.message_text.set("")
+        self.message_label.hide()
         if self.message_after_id is not None:
             self.after_cancel(self.message_after_id)
         self.message_after_id = None
@@ -367,18 +381,8 @@ class GUI(tk.Frame,object):
         
         colorbar_values = [
             'Point Density',
-            'rho',
         ]
         
-        # Check for requisite keys for colorbar plots
-        values = ['']
-        ckeys = self.data['data'].keys()
-        # All these conditions are required to do integrations through space
-        if not (sum([int(key in ckeys) for key in ['x','y','z']]) >= 2 and
-            'm' in ckeys and
-            'size' in ckeys and
-            'rho' in ckeys):
-            colorbar_values.pop('rho')
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=colorbar_values)
         
         # Update the axis controllers
@@ -388,11 +392,10 @@ class GUI(tk.Frame,object):
         # Update the time text in the plot, if time data is available
         if not globals.time_mode:
             for name in ['t','time']:
-                if name in ckeys:
-                    time = self.get_data(name)
-                    if time is not None:
-                        self.interactiveplot.time.set(time*self.get_display_units(name))
-                    break
+                time = self.get_data(name)
+                if time is not None:
+                    self.interactiveplot.time.set(time*self.get_display_units(name))
+                break
     
     def read_time_mode(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read_time_mode")
@@ -412,6 +415,13 @@ class GUI(tk.Frame,object):
                 self.message_text.set("Reading data (%3d%%)..." % int(i/total*100))
                 d = read_file(filename)
 
+                if 'compact_support' in data.keys():
+                    if d.get('compact_support',data['compact_support']) != data['compact_support']:
+                        raise ValueError("compact_support value mismatch")
+                elif 'compact_support' in d.keys():
+                    if 'compact_support' not in data.keys():
+                        data['compact_support'] = d['compact_support']
+                
                 # Figure out how long the data is
                 length = 0
                 for key,val in d['data'].items():
@@ -461,8 +471,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.get_data")
         if self.data is None: return None
         elif self.data.is_image: return self.data
-        else:
-            return self.data['data'][key]
+        else: return self.data['data'][key]
 
     def get_display_units(self,key):
         if globals.debug > 1: print("gui.get_display_units")

@@ -12,8 +12,22 @@ else:
 # a frame when its width is set to 0.
     
 class Entry(ttk.Entry, object):
+    style_initialized = False
     def __init__(self, master, width=0, *args, **kwargs):
+        if not Entry.style_initialized:
+            style = ttk.Style()
+            style.map(
+                "Entry.TEntry",
+                fieldbackground=[
+                    ('readonly',style.lookup("TEntry", "fieldbackground", state=['!disabled'])),
+                    ('disabled',style.lookup("TEntry", "fieldbackground", state=['disabled'])),
+                    ('!disabled',style.lookup("TEntry", "fieldbackground", state=['!disabled'])),
+                ],
+            )
+            Entry.style_initialized = True
+        
         kwargs['exportselection'] = kwargs.get('exportselection',False)
+        kwargs['style'] = kwargs.get('style',"Entry.TEntry")
 
         if isinstance(master, (tk.Frame,tk.LabelFrame)):
             super(Entry, self).__init__(master, width=width, *args, **kwargs)
@@ -36,7 +50,22 @@ class Entry(ttk.Entry, object):
         # These should be defaults but they aren't for some reason
         self.bind("<FocusOut>", lambda *args,**kwargs: self.select_clear(), add="+")
         self.bind("<FocusIn>", lambda *args,**kwargs: self.select_clear(), add="+")
-        
+
+    def configure(self,*args,**kwargs):
+        if 'state' in kwargs.keys():
+            if kwargs['state'] == 'readonly':
+                if 'readonly' not in str(self.cget('state')):
+                    self.previous_cursor = self.cget('cursor')
+                    kwargs['cursor'] = kwargs.get('cursor', self.master.cget('cursor'))
+            else:
+                if hasattr(self,"previous_cursor") and self.previous_cursor is not None:
+                    kwargs['cursor'] = kwargs.get('cursor', self.previous_cursor)
+                    self.previous_cursor = None
+                
+        return super(Entry,self).configure(*args,**kwargs)
+    def config(self,*args,**kwargs):
+        return self.configure(*args,**kwargs)
+    
     def on_map(self, *args, **kwargs):
         # If it's 0 do nothing and let the widget auto-fit its surroundings.
         # Otherwise, give it a minimum required width

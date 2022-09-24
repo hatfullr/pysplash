@@ -109,7 +109,7 @@ class AxisLimits(tk.LabelFrame,object):
 
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
-        if not self.allowadaptive: return
+        if not self.allowadaptive or self.adaptive.get(): return
         
         self.adaptive.set(True)
         
@@ -121,7 +121,7 @@ class AxisLimits(tk.LabelFrame,object):
 
     def adaptive_off(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_off")
-        if not self.allowadaptive: return
+        if not self.allowadaptive or not self.adaptive.get(): return
         
         self.adaptive.set(False)
         

@@ -23,7 +23,7 @@ debug = 0
 # on a few factors, one of which is the hardware
 # that is being used. On my hardware, setting this
 # value to False gives ~10x performance increase.
-use_multiprocessing_on_scatter_plots = False
+use_multiprocessing = False
 
 # The width of a tooltip to determine text wrapping
 tooltip_wraplength = 50
@@ -35,7 +35,7 @@ tooltip_wraplength = 50
 # image. Lower values decrease performance and
 # higher values put a hard limit on the fps.
 # Adjusting this can significantly impact performance.
-plot_update_delay = 10
+plot_update_delay = 100
 
 # These will be overridden by the user's preferences
 # if those preferences have been set.
@@ -77,6 +77,9 @@ hotkey_pressed = False
 # allow starting in time mode if True. Also used to
 # control time mode at runtime
 time_mode = False
+
+# Never edit this value in this file.
+gpu_busy = False
 
 def init():
     global state_variables

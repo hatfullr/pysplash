@@ -6,7 +6,7 @@ else:
 
 import numpy as np
 import math
-from kernel import setupkernel,setupintegratedkernel
+import kernel
 import globals
 if globals.debug > 0: from time import time
 
@@ -17,7 +17,7 @@ except ImportError:
     has_jit = False
 
 class IntegratedValuePlot(CustomAxesImage,object):
-    def __init__(self,ax,A,x,y,m,size,rho,physical_units,display_units,**kwargs):
+    def __init__(self,ax,A,x,y,m,h,rho,physical_units,display_units,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.__init__")
         self.ax = ax
 
@@ -33,7 +33,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self.x = np.ascontiguousarray(x,dtype=np.double)
         self.y = np.ascontiguousarray(y,dtype=np.double)
         self.m = np.ascontiguousarray(m,dtype=np.double)
-        self.size = np.ascontiguousarray(size,dtype=np.double)
+        self.h = np.ascontiguousarray(h,dtype=np.double)
         self.rho = np.ascontiguousarray(rho,dtype=np.double)
 
         # We are given all the quantities in display units. For now,
@@ -48,25 +48,18 @@ class IntegratedValuePlot(CustomAxesImage,object):
         display_mass_unit = display_units[3]
         display_density_unit = display_units[5]
 
-        physical_unit = physical_mass_unit * physical_quantity_unit / physical_density_unit * physical_length_unit / physical_length_unit**3
-        display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**3
+        physical_unit = physical_mass_unit * physical_quantity_unit / physical_density_unit * physical_length_unit / physical_length_unit**2
+        display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**2
         
         self.units = physical_unit / display_unit
-        
-        #self.physical_units = physical_units
-        #self.display_units = display_units
 
-        self.wint, self.ctab = setupintegratedkernel()
+        self.wint, self.ctab = kernel.setupintegratedkernel()
         self.wint = np.ascontiguousarray(self.wint,dtype=np.double)
 
-        self.size2 = self.size**2
-        self.ctabinvsize2 = self.ctab/self.size2
-        # Later we multiply by the integrated kernel function, which returns the quantity
-        # int_0^1 W(u')*h^3 du' where u' is unitless and W(u')*h^3 is unitless. In
-        # StarSmasher, when the density is calculated the final result is divided by h^3,
-        # so we do that here too.
+        self.h2 = self.h**2
+        self.ctabinvh2 = self.ctab/self.h2
         self.quantity = np.ascontiguousarray(
-            self.m*self.A/(self.rho*self.size2*self.size),
+            self.m*self.A/self.rho,
             dtype=np.double,
         )
 
@@ -76,20 +69,22 @@ class IntegratedValuePlot(CustomAxesImage,object):
             self.device_x = cuda.device_array(N,dtype=np.double)
             self.device_y = cuda.device_array(N,dtype=np.double)
             self.device_quantity = cuda.device_array(N,dtype=np.double)
-            self.device_size = cuda.device_array(N,dtype=np.double)
-            self.device_size2 = cuda.device_array(N,dtype=np.double)
+            self.device_h = cuda.device_array(N,dtype=np.double)
+            self.device_h2 = cuda.device_array(N,dtype=np.double)
             self.device_ctabinvh2 = cuda.device_array(N,dtype=np.double)
             self.device_wint = cuda.device_array(len(self.wint),dtype=np.double)
 
             cuda.to_device(self.x,to=self.device_x,stream=self.stream)
             cuda.to_device(self.y,to=self.device_y,stream=self.stream)
             cuda.to_device(self.quantity,to=self.device_quantity,stream=self.stream)
-            cuda.to_device(self.size,to=self.device_size,stream=self.stream)
-            cuda.to_device(self.size2,to=self.device_size2,stream=self.stream)
+            cuda.to_device(self.h,to=self.device_h,stream=self.stream)
+            cuda.to_device(self.h2,to=self.device_h2,stream=self.stream)
             cuda.to_device(self.ctabinvh2,to=self.device_ctabinvh2,stream=self.stream)
             cuda.to_device(self.wint,to=self.device_wint,stream=self.stream)
 
+            globals.gpu_busy = True
             cuda.synchronize()
+            globals.gpu_busy = False
 
         super(IntegratedValuePlot,self).__init__(
             self.ax,
@@ -105,10 +100,10 @@ class IntegratedValuePlot(CustomAxesImage,object):
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()
         
-        xpmin = self.x-self.size
-        xpmax = self.x+self.size
-        ypmin = self.y-self.size
-        ypmax = self.y+self.size
+        xpmin = self.x-kernel.compact_support*self.h
+        xpmax = self.x+kernel.compact_support*self.h
+        ypmin = self.y-kernel.compact_support*self.h
+        ypmax = self.y+kernel.compact_support*self.h
         
         """
         display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
@@ -135,23 +130,23 @@ class IntegratedValuePlot(CustomAxesImage,object):
     
     if has_jit:
         @staticmethod
-        @cuda.jit('void(double[:,:], int64[:], double[:], double[:], double[:], double[:], double[:], double, double, double, double, int64, int64, double[:], double[:])') # Decorator parameters improve performance
-        def calculate_gpu(data,idx,x,y,quantity,size,size2,dx,dy,xmin,ymin,xpixels,ypixels,ctabinvh2,wint):
+        @cuda.jit('void(double[:,:], int64[:], double[:], double[:], double[:], double[:], double[:], double, double, double, double, int64, int64, double[:], double[:], double)') # Decorator parameters improve performance
+        def calculate_gpu(data,idx,x,y,quantity,h,h2,dx,dy,xmin,ymin,xpixels,ypixels,ctabinvh2,wint,compact_support):
             p = cuda.grid(1)
             if p < idx.size:
                 i = idx[p]
-                sizei = size[i]
-                size2i = size2[i]
-                invsize3i = 1. / (size2i*sizei)
+                hi = h[i]
+                h2i = h2[i]
+                invh2i = 1. / h2i
                 xi = x[i]
                 yi = y[i]
                 quantityi = quantity[i]
                 ctabinvh2i = ctabinvh2[i]
 
-                imin = max(int((xi-sizei-xmin)/dx),0)
-                imax = min(int((xi+sizei-xmin)/dx)+1,xpixels)
-                jmin = max(int((yi-sizei-ymin)/dy),0)
-                jmax = min(int((yi+sizei-ymin)/dy)+1,ypixels)
+                imin = max(int((xi-compact_support*hi-xmin)/dx),0)
+                imax = min(int((xi+compact_support*hi-xmin)/dx)+1,xpixels)
+                jmin = max(int((yi-compact_support*hi-ymin)/dy),0)
+                jmax = min(int((yi+compact_support*hi-ymin)/dy)+1,ypixels)
                 
                 for ix in range(imin,imax):
                     xpos = xmin + (ix+0.5)*dx
@@ -159,82 +154,82 @@ class IntegratedValuePlot(CustomAxesImage,object):
                     for jy in range(jmin,jmax):
                         ypos = ymin + (jy+0.5)*dy
                         dr2 = dx2 + (ypos-yi)*(ypos-yi)
-                        if dr2 < size2i:
-                            cuda.atomic.add(data, (jy,ix), quantityi*wint[int(dr2*ctabinvh2i)]*invsize3i)
+                        if dr2 < compact_support*compact_support*h2i:
+                            cuda.atomic.add(data, (jy,ix), quantityi*wint[int(dr2*ctabinvh2i)]*invh2i)
         
-        def calculate_data(self,idx): # On GPU
-            if globals.debug > 1: print("integratedvalueplot.calculate_data")
+    def calculate_data_gpu(self,idx): # On GPU
+        if globals.debug > 1: print("integratedvalueplot.calculate_data")
 
-            device_idx = cuda.to_device(np.where(idx)[0])
-            device_data = cuda.to_device(self._data)
+        device_idx = cuda.to_device(np.where(idx)[0])
+        device_data = cuda.to_device(self._data)
 
-            #display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
-            
-            xmin = self.ax.get_xlim()[0]#*display_to_physical[1]
-            ymin = self.ax.get_ylim()[0]#*display_to_physical[2]
-            
-            blockspergrid = len(idx) // globals.threadsperblock + 1
-            
-            self.calculate_gpu[blockspergrid,globals.threadsperblock](
-                device_data,
-                device_idx,
-                self.device_x,
-                self.device_y,
-                self.device_quantity,
-                self.device_size,
-                self.device_size2,
-                self.dx,
-                self.dy,
-                xmin,
-                ymin,
-                self.xpixels,
-                self.ypixels,
-                self.device_ctabinvh2,
-                self.device_wint,
-            )
-            cuda.synchronize()
-            self._data = device_data.copy_to_host()
-    else:
-        def calculate_data(self,idx): # On CPU
-            if globals.debug > 1: print("integratedvalueplot.calculate_data")
+        #display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
 
-            xmin,xmax = self.ax.get_xlim()
-            ymin,ymax = self.ax.get_ylim()
+        xmin = self.ax.get_xlim()[0]#*display_to_physical[1]
+        ymin = self.ax.get_ylim()[0]#*display_to_physical[2]
 
-            #display_to_physical = [pu/du for pu,du in zip(self.physical_units,self.display_units)]
+        blockspergrid = len(idx) // globals.threadsperblock + 1
 
-            #xmin *= display_to_physical[1]
-            #xmax *= display_to_physical[1]
-            #ymin *= display_to_physical[2]
-            #ymax *= display_to_physical[2]
+        self.calculate_gpu[blockspergrid,globals.threadsperblock](
+            device_data,
+            device_idx,
+            self.device_x,
+            self.device_y,
+            self.device_quantity,
+            self.device_h,
+            self.device_h2,
+            self.dx,
+            self.dy,
+            xmin,
+            ymin,
+            self.xpixels,
+            self.ypixels,
+            self.device_ctabinvh2,
+            self.device_wint,
+            kernel.compact_support,
+        )
+        globals.gpu_busy = True
+        cuda.synchronize()
+        globals.gpu_busy = False
+        self._data = device_data.copy_to_host()
 
-            xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*self.dx
-            ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*self.dy
+    def calculate_data_cpu(self,idx): # On CPU
+        if globals.debug > 1: print("integratedvalueplot.calculate_data")
 
-            indexes = np.arange(len(self.x))[idx]
-            x = self.x[idx]
-            y = self.y[idx]
-            size = self.size[idx]
-            size2 = self.size2[idx]
-            invsize3 = 1./(self.size2*self.size)
-            quantity = self.quantity[idx]
-            ctabinvsize2 = self.ctabinvsize2[idx]
+        xmin,xmax = self.ax.get_xlim()
+        ymin,ymax = self.ax.get_ylim()
 
-            dx = np.abs(xpos[:,None]-x)
-            idx_xs = dx < size
+        xpos = np.linspace(xmin,xmax,self.xpixels+1)[:-1] + 0.5*self.dx
+        ypos = np.linspace(ymin,ymax,self.ypixels+1)[:-1] + 0.5*self.dy
 
-            for i,(idx_x,dx_x) in enumerate(zip(idx_xs,dx)):
-                if not any(idx_x): continue
-                dx_x = dx_x[idx_x]
+        x = self.x[idx]
+        y = self.y[idx]
+        h = self.h[idx]
+        h2 = self.h2[idx]
+        invh2 = 1./self.h2
+        quantity = self.quantity[idx]
+        ctabinvh2 = self.ctabinvh2[idx]
+        size2 = (kernel.compact_support*h)**2
 
-                dy = np.abs(ypos[:,None]-y[idx_x])
-                idx_ys = dy < size[idx_x]
-                for j,(idx_y,dy_y) in enumerate(zip(idx_ys,dy)):
-                    if not any(idx_y): continue
-                    dr2 = dx_x[idx_y]**2 + dy_y[idx_y]**2
+        dx2 = (xpos[:,None]-x)**2
+        idx_xs = dx2 < size2
 
-                    idx_r = dr2 < size2[idx_x][idx_y]
-                    if not any(idx_r): continue
+        for i,(idx_x,dx2_x) in enumerate(zip(idx_xs,dx2)):
+            if not any(idx_x): continue
+            dx2_x = dx2_x[idx_x]
 
-                    indices = (dr2[idx_r]*ctabinvsize2[idx_x][idx_y][idx_r]).astype(int,copy=False)
-                    self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices]*invsize3[idx_x][idx_y][idx_r])
+            dy2 = (ypos[:,None]-y[idx_x])**2
+            idx_ys = dy2 < size2[idx_x]
+            for j,(idx_y,dy2_y) in enumerate(zip(idx_ys,dy2)):
+                if not any(idx_y): continue
+                dr2 = dx2_x[idx_y] + dy2_y[idx_y]
+
+                idx_r = dr2 < size2[idx_x][idx_y]
+                if not any(idx_r): continue
+
+                indices = (ctabinvh2[idx_x][idx_y][idx_r] * dr2[idx_r]).astype(int,copy=False)
+                self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices]*invh2[idx_x][idx_y][idx_r])
+
+    def calculate_data(self,*args,**kwargs):
+        if not has_jit or globals.gpu_busy: return self.calculate_data_cpu(self,*args,**kwargs)
+        else: return self.calculate_data_gpu(self,*args,**kwargs)

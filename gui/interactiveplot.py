@@ -25,6 +25,7 @@ from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 from lib.pointdensityplot import PointDensityPlot
+from lib.surfacevalueplot import SurfaceValuePlot
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 
 from functions.findnearest2d import find_nearest_2d
@@ -36,6 +37,7 @@ from functions.hotkeystostring import hotkeys_to_string
 from functions.annotateparticle import AnnotateParticle
 
 from widgets.resizableframe import ResizableFrame
+from widgets.loadingwheel import LoadingWheel
 
 import warnings
 import inspect
@@ -137,6 +139,8 @@ class InteractivePlot(ResizableFrame,object):
             wspace=self.wspace.get(),
         )
 
+        self._updating = False
+        
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
@@ -162,6 +166,7 @@ class InteractivePlot(ResizableFrame,object):
         #self.canvas = CustomCanvas(self.fig, master=self)
         self.canvas = FigureCanvasTkAgg(self.fig,master=self)
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
+        self.loading_wheel = LoadingWheel(self, 'sw', bg='white')
 
     def create_hotkeys(self):
         if globals.debug > 1: print("interactiveplot.create_hotkeys")
@@ -183,7 +188,9 @@ class InteractivePlot(ResizableFrame,object):
             self.hotkeys.bind("particle color "+str(i), self.color_particles)
             
     def destroy(self, *args, **kwargs):
-        if self._after_id_update is not None: self.after_cancel(self._after_id_update)
+        if hasattr(self, "_after_id_update") and self._after_id_update is not None:
+            self.after_cancel(self._after_id_update)
+            self._after_id_update = None
         # The artists we drew onto the plot need to be removed so that
         # their "after" methods get cancelled properly before we
         # destroy this widget
@@ -223,13 +230,18 @@ class InteractivePlot(ResizableFrame,object):
     # Draw the figure
     def draw(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.draw")
+        #self.loading_wheel.show()
         self.canvas.draw_idle()
         self.canvas.flush_events()
+        #self.loading_wheel.hide()
         
     def update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update")
         # If we are waiting to update, then make sure the controls' update button is disabled
         #self.gui.controls.update_button.state(['disabled'])
+        self.loading_wheel.show()
+        #if self._updating: return
+        
         if globals.plot_update_delay > 0:
             if self._after_id_update is not None:
                 self.after_cancel(self._after_id_update)
@@ -241,6 +253,9 @@ class InteractivePlot(ResizableFrame,object):
             print("interactiveplot._update")
             print("    self.ax = ",self.ax)
 
+        self._updating = True
+        self.loading_wheel.show()
+            
         if self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
@@ -285,7 +300,10 @@ class InteractivePlot(ResizableFrame,object):
 
         self.gui.event_generate("<<BeforePlotUpdate>>")
         
-        kwargs = {}
+        kwargs = {
+            'aftercalculate' : self.after_calculate, # Overwritten for some plot types
+            'aspect' : aspect,
+        }
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
         # Scatter plot
@@ -297,7 +315,6 @@ class InteractivePlot(ResizableFrame,object):
                     self.gui.data,
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
-                kwargs['aspect'] = aspect
                 self.colorbar.show()
             else:
                 method = ScatterPlot
@@ -308,7 +325,6 @@ class InteractivePlot(ResizableFrame,object):
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['c'] = self.colors
-                kwargs['aspect'] = aspect
                 kwargs['aftercalculate'] = self.after_scatter_calculate
 
                 if self.tracking:
@@ -333,7 +349,6 @@ class InteractivePlot(ResizableFrame,object):
             )
             
             kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
-            kwargs['aspect'] = aspect
             kwargs['aftercalculate'] = self.after_scatter_calculate
             kwargs['cmap'] = self.colorbar.cmap
             kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
@@ -341,14 +356,14 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['colorbar'] = self.colorbar
                 
             self.colorbar.show()
-        else:
+        elif self.gui.controls.colorbar_integrated_surface.get() == 'integrated':
             caxis = self.gui.controls.axis_controllers['Colorbar']
             A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
             if A is None or A_display_units is None or A_physical_units is None:
                 raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
             
             m = self.gui.get_display_data('m')
-            size = self.gui.get_display_data('size')
+            h = self.gui.get_display_data('h')
             rho = self.gui.get_display_data('rho')
 
             idx = self.gui.get_data('u') != 0
@@ -360,14 +375,14 @@ class InteractivePlot(ResizableFrame,object):
                 x[idx],
                 y[idx],
                 m[idx],
-                size[idx],
+                h[idx],
                 rho[idx],
                 [ # physical units
                     A_physical_units,
                     x_physical_units,
                     y_physical_units,
                     self.gui.get_physical_units('m'),
-                    self.gui.get_physical_units('size'),
+                    self.gui.get_physical_units('h'),
                     self.gui.get_physical_units('rho'),
                 ],
                 [ # display units
@@ -375,7 +390,7 @@ class InteractivePlot(ResizableFrame,object):
                     x_display_units,
                     y_display_units,
                     self.gui.get_display_units('m'),
-                    self.gui.get_display_units('size'),
+                    self.gui.get_display_units('h'),
                     self.gui.get_display_units('rho'),
                 ],
             )
@@ -383,41 +398,98 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['cmap'] = self.colorbar.cmap
             kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
             kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
-            kwargs['aspect'] = aspect
+            kwargs['colorbar'] = self.colorbar
+            
+            self.colorbar.show()
+            
+        elif self.gui.controls.colorbar_integrated_surface.get() == 'surface':
+            caxis = self.gui.controls.axis_controllers['Colorbar']
+            A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
+            if A is None or A_display_units is None or A_physical_units is None:
+                raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
+            
+            h = self.gui.get_display_data('h')
+            
+            idx = self.gui.get_data('u') != 0
+
+            # We need z information (direction into the screen)
+            xvalue = self.gui.controls.axis_controllers['XAxis'].value.get()
+            yvalue = self.gui.controls.axis_controllers['YAxis'].value.get()
+            vals = (xvalue,yvalue)
+            if   vals in [('x','y'), ('y','x')]: z = self.gui.get_data('z')
+            elif vals in [('x','z'), ('z','x')]: z = self.gui.get_data('y')
+            elif vals in [('y','z'), ('z','y')]: z = self.gui.get_data('x')
+            else:
+                raise Exception("expected the xaxis and yaxis to each be one of 'x', 'y', or 'z', but found xaxis='"+xvalue+"' and yaxis='"+yvalue+"' instead")
+            
+            method = SurfaceValuePlot
+            args = (
+                self.ax,
+                A[idx],
+                x[idx],
+                y[idx],
+                z[idx],
+                h[idx],
+                [ # physical units
+                    A_physical_units,
+                    x_physical_units,
+                    y_physical_units,
+                    self.gui.get_physical_units('h'),
+                ],
+                [ # display units
+                    A_display_units,
+                    x_display_units,
+                    y_display_units,
+                    self.gui.get_display_units('h'),
+                ],
+            )
+
+            
+            kwargs['cmap'] = self.colorbar.cmap
+            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
 
             self.colorbar.show()
 
         if self.drawn_object is None: kwargs['initialize'] = True
+        else:
+            self.drawn_object.cancel()
+            self.drawn_object = None
 
         self.drawn_object = method(*args,**kwargs)
 
-        if globals.use_multiprocessing_on_scatter_plots:
+        if globals.use_multiprocessing:
             if self.drawn_object.thread is None:
                 raise RuntimeError("Failed to spawn thread to draw the plot")
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
 
-        if self.track_and_annotate: self.annotate_tracked_particle()
+        if self.drawn_object is not None and self.drawn_object.calculating:
+            self.draw()
+        else:
+            if self.track_and_annotate: self.annotate_tracked_particle()
 
-        # Make absolutely sure that the only drawn object on the axis is
-        # the one we just created
-        for child in self.ax.get_children():
-            if isinstance(child,CustomAxesImage) and child is not self.drawn_object:
-                child.remove()
+            # Make absolutely sure that the only drawn object on the axis is
+            # the one we just created
+            for child in self.ax.get_children():
+                if isinstance(child,CustomAxesImage) and child is not self.drawn_object:
+                    child.remove()
 
-        #if self.drawn_object not in self.canvas.blit_artists:
-        #    self.canvas.blit_artists.append(self.drawn_object)
-        
-        self.update_help_text()
+            #if self.drawn_object not in self.canvas.blit_artists:
+            #    self.canvas.blit_artists.append(self.drawn_object)
 
-        self.gui.event_generate("<<PlotUpdate>>")
-        
-        self.draw()
-        
-        self.previous_xlim = self.ax.get_xlim()
-        self.previous_ylim = self.ax.get_ylim()
+            self.update_help_text()
+
+            self.gui.event_generate("<<PlotUpdate>>")
+
+            self.draw()
+
+            self.previous_xlim = self.ax.get_xlim()
+            self.previous_ylim = self.ax.get_ylim()
+            self.loading_wheel.hide()
+            self._updating = False
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
@@ -574,7 +646,7 @@ class InteractivePlot(ResizableFrame,object):
         if not event_in_axis(self.ax, event): return
         
         event = tkevent_to_matplotlibmouseevent(self.ax, event)
-        
+
         # Cancel any queued zoom
         self.gui.plottoolbar.cancel_queued_zoom()
 
@@ -743,20 +815,21 @@ class InteractivePlot(ResizableFrame,object):
                 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
-        self.clear_particle_annotation(self.track_id.get())
+        if self.track_id.get() != -1:
+            self.clear_particle_annotation(self.track_id.get())
         
-        if self.tracking:
-            self.gui.message("Stopped tracking particle "+str(self.track_id.get()))
+            if self.tracking:
+                self.gui.message("Stopped tracking particle "+str(self.track_id.get()))
         
-        self.tracking = False
-        self.track_id.set(-1)
-        self.track_and_annotate = False
+            self.tracking = False
+            self.track_id.set(-1)
+            self.track_and_annotate = False
 
-        # Re-allow adaptive limits
-        xlimits = self.gui.controls.axis_controllers['XAxis'].limits
-        ylimits = self.gui.controls.axis_controllers['YAxis'].limits
-        xlimits.adaptive_button.state(['!disabled'])
-        ylimits.adaptive_button.state(['!disabled'])
+            # Re-allow adaptive limits
+            xlimits = self.gui.controls.axis_controllers['XAxis'].limits
+            ylimits = self.gui.controls.axis_controllers['YAxis'].limits
+            xlimits.adaptive_button.state(['!disabled'])
+            ylimits.adaptive_button.state(['!disabled'])
 
     def annotate_tracked_particle(self, event=None):
         if globals.debug > 1: print("interactiveplot.annotate_tracked_particle")
@@ -1094,4 +1167,5 @@ class InteractivePlot(ResizableFrame,object):
             self.canvas.motion_notify_event(self.canvas_motion_event)
 
         self.update_help_text()
+    
     

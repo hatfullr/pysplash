@@ -78,7 +78,7 @@ class ScatterPlot(CustomAxesImage,object):
         self.s = s
         self.c = c
 
-        if self.c is None: self.c = np.full(len(x),Scatterplot.default_color_index,dtype=int)
+        if self.c is None: self.c = np.full(len(x),ScatterPlot.default_color_index,dtype=int)
 
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
@@ -124,7 +124,7 @@ class ScatterPlot(CustomAxesImage,object):
             self.dy = (ymax-ymin)/float(self.ypixels)
 
             self._data[:] = 0
-            if has_jit:
+            if has_jit and not globals.gpu_busy:
                 self.calculate_data_gpu(self.x[idx],self.y[idx],self.c[idx])
             else:
                 self.calculate_data_cpu(self.x[idx],self.y[idx],self.c[idx])
@@ -163,18 +163,21 @@ class ScatterPlot(CustomAxesImage,object):
                 1./self.dx,
                 1./self.dy,
             )
+            globals.gpu_busy = True
             try:
                 cuda.synchronize()
             except Exception:
                 print("Unexpected error encountered while copying data from the gpu to the host")
                 print(traceback.format_exc())
                 cuda.get_current_device().reset()
+                globals.gpu_busy = False
                 return
+            globals.gpu_busy = False
             self._data = device_data.copy_to_host()
 
     def calculate_data_cpu(self,x,y,c):
         if globals.debug > 1: print("scatterplot.calculate_data_cpu")
-        if globals.use_multiprocessing_on_scatter_plots:
+        if globals.use_multiprocessing:
             self.calculate_data_cpu_mp(x,y,c)
         else:
             self.calculate_data_cpu_serial(x,y,c)

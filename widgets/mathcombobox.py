@@ -76,6 +76,14 @@ class MathCombobox(ComboboxExtraOptions, object):
     def configure(self, *args, **kwargs):
         if 'state' in kwargs.keys():
             self.mathentry.configure(state=kwargs['state'])
+            if kwargs['state'] == 'readonly':
+                self.readonly_bid = self.mathentry.bind("<Button-1>", lambda *args,**kwargs: self.event_generate("<Button-1>"), add="+")
+                self.previous_validate = self.mathentry.cget('validate')
+                self.mathentry.configure(validate='none')
+            else:
+                if hasattr(self, 'readonly_bid') and self.readonly_bid is not None:
+                    self.mathentry.unbind("<Button-1>", self.readonly_bid)
+                    self.mathentry.configure(validate=self.previous_validate)
+                    self.readonly_bid = None
         self.mathentry.allowed_values = kwargs.get('values', self.mathentry.allowed_values)
         super(MathCombobox,self).configure(*args, **kwargs)
-        

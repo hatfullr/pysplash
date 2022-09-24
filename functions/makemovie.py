@@ -130,7 +130,13 @@ class MakeMovie(PopupWindow, object):
             self.gui.controls.update_button.invoke()
             
             # We need to wait until the plot has finished calculating
-            while self.gui.interactiveplot.drawn_object.calculating:
+            calculating = True
+            def didit(*args,**kwargs):
+                calculating = False
+                self.gui.unbind("<<PlotUpdate>>", cid)
+            cid = self.gui.bind("<<PlotUpdate>>", didit, add="+")
+            
+            while calculating:
                 self.gui.update()
 
             progress = float(i)/float(nframes) * 100

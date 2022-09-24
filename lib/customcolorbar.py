@@ -29,19 +29,16 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     def set_clim(self, cminmax):
         if globals.debug > 1: print("customcolorbar.set_clim")
 
-        axesimage = self.find_axesimage()
-        if axesimage is not None:
-            if None not in cminmax:
-                lim = self.get_cax_limits()
-                if any(np.abs((np.array(cminmax)-lim[lim != 0])/lim[lim != 0]) > 0.001):
-                    self.vmin = cminmax[0]
-                    self.vmax = cminmax[1]
-                    self.norm = matplotlib.colors.Normalize(
-                        vmin=self.vmin,
-                        vmax=self.vmax,
-                    )
-                    
-                    self.draw_all()
+        if None not in cminmax:
+            lim = self.get_cax_limits()
+            self.vmin = cminmax[0]
+            self.vmax = cminmax[1]
+            self.norm = matplotlib.colors.Normalize(
+                vmin=self.vmin,
+                vmax=self.vmax,
+            )
+            
+            self.draw_all()
     
     def find_axesimage(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.find_axesimage")

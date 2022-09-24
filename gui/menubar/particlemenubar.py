@@ -12,6 +12,7 @@ from functions.annotateparticle import AnnotateParticle
 from gui.menubar.menu import Menu
 from gui.menubar.particlesettings import ParticleSettings
 from lib.scatterplot import ScatterPlot
+import kernel
 
 class ParticleMenuBar(Menu, object):
     def __init__(self, master, gui, tearoff=0, *args, **kwargs):
@@ -128,7 +129,7 @@ class ParticleMenuBar(Menu, object):
             track_id = self.gui.interactiveplot.track_id.get()
             self.kernel.set(
                 center = self.gui.interactiveplot.origin,
-                radius = self.gui.get_display_data('size')[track_id],
+                radius = kernel.compact_support*self.gui.get_display_data('h')[track_id],
             )
 
     def on_show_neighbors(self,*args,**kwargs):
@@ -159,12 +160,14 @@ class ParticleMenuBar(Menu, object):
         x = self.gui.get_physical_data('x')
         y = self.gui.get_physical_data('y')
         z = self.gui.get_physical_data('z')
-        size = self.gui.get_physical_data('size')
+        h = kernel.compact_support*self.gui.get_physical_data('h')
         xyz = np.column_stack((x,y,z))
         dr2 = np.sum((xyz - xyz[particle])**2,axis=-1)
-        return dr2 <= size[particle]**2
+        return dr2 <= h[particle]**2
 
     def update_neighbor_annotations(self,*args,**kwargs):
+        if not self.gui.interactiveplot.tracking or self.gui.data is None: return
+        
         if self.neighbors is None:
             self.neighbors = self.get_neighbors(self.gui.interactiveplot.track_id.get())
 

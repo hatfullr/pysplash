@@ -17,8 +17,7 @@ class OrientationArrows:
         self.length_includes_head = length_includes_head
         self.kwargs = kwargs
 
-        self.visible = True
-        self.cid = None
+        self.bid = None
 
         self.artists = []
 
@@ -28,25 +27,24 @@ class OrientationArrows:
         self.artists = []
 
     def switch_on(self,*args,**kwargs):
-        if self.cid is None: self.connect()
+        self.connect()
+        self.draw()
 
     def switch_off(self,*args,**kwargs):
-        if self.cid is not None: self.disconnect()
-        
+        self.disconnect()
+        self.clear()
+        self.gui.interactiveplot.canvas.draw_idle()
+        #self.gui.interactiveplot.draw()
+            
     def connect(self,*args,**kwargs):
-        canvas = self.ax.get_figure().canvas
-        self.cid = canvas.mpl_connect("draw_event", self.draw)
-        self.draw()
-        self.gui.interactiveplot.draw()
+        if self.bid is None:
+            self.bid = self.gui.bind("<<PlotUpdate>>", self.draw, add="+")
     
     def disconnect(self,*args,**kwargs):
-        if self.cid is not None:
-            canvas = self.ax.get_figure().canvas
-            canvas.mpl_disconnect(self.cid)
-            self.clear()
-            self.cid = None
-            self.gui.interactiveplot.draw()
-        
+        if self.bid is not None:
+            self.gui.unbind("<<PlotUpdate>>", self.bid)
+            self.bid = None
+
     def draw(self,*args,**kwargs):
         # This function gets called only when the Update button gets pressed
         
@@ -145,5 +143,11 @@ class OrientationArrows:
                     )
                 self.artists.append(artist)
                 self.ax.add_artist(artist)
+        self.gui.interactiveplot.canvas.draw_idle()
+        #self.disconnect()
+        #self.gui.interactiveplot.canvas.draw_idle()
+        #self.gui.interactiveplot.canvas.draw()
+        #self.gui.interactiveplot.canvas.flush_events()
+        #self.connect()
                         
                 

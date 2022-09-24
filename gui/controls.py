@@ -9,7 +9,6 @@ else:
     from gui.plotcontrols import PlotControls
 from collections import OrderedDict
 
-from lib.integratedvalueplot import IntegratedValuePlot
 from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
@@ -20,6 +19,9 @@ from widgets.button import Button
 from widgets.labelledframe import LabelledFrame
 from widgets.axiscontroller import AxisController
 from widgets.verticalscrolledframe import VerticalScrolledFrame
+
+from lib.tkvariable import StringVar
+from widgets.radiobutton import RadioButton
 
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
@@ -48,11 +50,6 @@ class Controls(tk.Frame,object):
         
         self.gui = gui
         super(Controls,self).__init__(self.gui,*args,**kwargs)
-        
-        style.map('TCombobox', fieldbackground=[('readonly','white')])
-        style.map('TCombobox', selectbackground=[('readonly', 'white')])
-        style.map('TCombobox', selectforeground=[('readonly', 'black')])
-        style.map('TCombobox', fieldbackground=[('disabled',self.gui["bg"])])
 
         self.create_variables()
         self.create_widgets()
@@ -74,6 +71,13 @@ class Controls(tk.Frame,object):
         self.saved_state = None
         
         self.bid = self.winfo_toplevel().bind("<Visibility>", self.on_visible, add="+")
+
+        self.axis_controllers['XAxis'].combobox.bind("<<ComboboxSelected>>", self.update_colorbar_controller, add="+")
+        self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_colorbar_controller, add="+")
+        self.axis_controllers['XAxis'].combobox.bind("<<ComboboxSelected>>", self.update_yaxis_controller, add="+")
+        self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
+
+        self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
         
         self.initialized = False
 
@@ -87,6 +91,7 @@ class Controls(tk.Frame,object):
         
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
+        self.colorbar_integrated_surface = StringVar(self, "integrated", "colorbar_integrated_surface")
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -125,6 +130,29 @@ class Controls(tk.Frame,object):
             relief='sunken',
         )
 
+        self.colorbar_integrated_surface_frame = tk.Frame(colorbar)
+        self.colorbar_integrated_button = RadioButton(
+            self.colorbar_integrated_surface_frame,
+            text="Integrated",
+            variable=self.colorbar_integrated_surface,
+            value="integrated"
+        )
+        ToolTip.createToolTip(
+            self.colorbar_integrated_button,
+            "Show the quantity as the value integrated through all particle kernels along the line of sight for each pixel (into the screen)",
+        )
+        self.colorbar_surface_button = RadioButton(
+            self.colorbar_integrated_surface_frame,
+            text="Surface",
+            variable=self.colorbar_integrated_surface,
+            value="surface",
+        )
+        ToolTip.createToolTip(
+            self.colorbar_surface_button,
+            "Show the quantity as the central value of the particle whose kernel is closest to the line of sight for each pixel (into the screen)",
+        )
+        
+
         self.axis_controllers = {
             'XAxis' : xaxis,
             'YAxis' : yaxis,
@@ -140,6 +168,9 @@ class Controls(tk.Frame,object):
         self.update_button.pack(side='top',fill='x',padx=5,pady=5)
         
         # Axis controls
+        self.colorbar_integrated_button.pack(side='left',fill='both',expand=True)
+        self.colorbar_surface_button.pack(side='left',fill='both',expand=True)
+        self.colorbar_integrated_surface_frame.pack(side='top',fill='both',expand=True,pady=(5,0))
         for axis_name,axis_controller in self.axis_controllers.items():
             axis_controller.pack(side='top',fill='x')
 
@@ -273,26 +304,21 @@ class Controls(tk.Frame,object):
             need_full_redraw=True
 
         # Check if the user changed any of the x or y axis limits (changing units also changes limits)
-        if self.is_limits_changed(('XAxis','YAxis','Colorbar')):
+        if self.is_limits_changed(('XAxis','YAxis')):
             # Cancel any queued zoom
-            if self.is_limits_changed(('XAxis','YAxis')):
-                self.gui.plottoolbar.cancel_queued_zoom()
+            self.gui.plottoolbar.cancel_queued_zoom()
             
             user_xlims = self.axis_controllers['XAxis'].limits.get()
             user_ylims = self.axis_controllers['YAxis'].limits.get()
-            user_clims = self.axis_controllers['Colorbar'].limits.get()
             
             if np.isnan(user_xlims[0]): user_xlims = (None, user_xlims[1])
             if np.isnan(user_xlims[1]): user_xlims = (user_xlims[0], None)
             if np.isnan(user_ylims[0]): user_ylims = (None, user_ylims[1])
             if np.isnan(user_ylims[1]): user_ylims = (user_ylims[0], None)
-            if np.isnan(user_clims[0]): user_clims = (None, user_clims[1])
-            if np.isnan(user_clims[1]): user_clims = (user_clims[0], None)
             
             # Now set the new axis limits
             self.gui.interactiveplot.ax.set_xlim(user_xlims)
             self.gui.interactiveplot.ax.set_ylim(user_ylims)
-            self.gui.interactiveplot.colorbar.set_clim(user_clims)
 
             # Check if any of the plot's data is outside these limits
             xlim, ylim = self.gui.interactiveplot.calculate_xylim(which='both')
@@ -314,13 +340,19 @@ class Controls(tk.Frame,object):
                 if (min(exlim) > min(xlim) or max(exlim) < max(xlim) or
                     min(eylim) > min(ylim) or max(eylim) < max(ylim)):
                     need_full_redraw = True
-
+                    
             # Check if the scale has changed
             for key,axis_controller in self.axis_controllers.items():
                 if axis_controller.scale.get() != self.previous_axis_scales[key]:
                     need_full_redraw = True
                     break
-            
+
+        if self.is_limits_changed(('Colorbar')):
+            user_clims = self.axis_controllers['Colorbar'].limits.get()
+            if np.isnan(user_clims[0]): user_clims = (None, user_clims[1])
+            if np.isnan(user_clims[1]): user_clims = (user_clims[0], None)
+            self.gui.interactiveplot.colorbar.set_clim(user_clims)
+            need_quick_redraw = True
         
         # Perform the queued zoom if there is one
         if self.gui.plottoolbar.queued_zoom:
@@ -354,8 +386,6 @@ class Controls(tk.Frame,object):
 
         # Set the focus to the canvas
         self.gui.interactiveplot.canvas.get_tk_widget().focus_set()
-
-
         
         # After the update, enable/disable rotations as needed
         self.plotcontrols.update_rotations_controls()
@@ -380,3 +410,43 @@ class Controls(tk.Frame,object):
         self.previous_yaxis_limits = self.gui.interactiveplot.ax.get_ylim()
         self.previous_caxis_limits = self.gui.interactiveplot.colorbar.get_cax_limits()
         self.save_state()
+
+    def update_colorbar_controller(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.on_xy_combobox_selected")
+
+        if (self.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
+            self.axis_controllers['YAxis'].value.get() in ['x','y','z']):
+            self.axis_controllers['Colorbar'].combobox.configure(state='normal')
+        else:
+            self.axis_controllers['Colorbar'].combobox.configure(state='readonly')
+            if self.axis_controllers['Colorbar'].value.get() not in ['Point Density','','None',None]:
+                self.axis_controllers['Colorbar'].value.set("")
+            
+            for choice in list(self.axis_controllers['Colorbar'].combobox['values']):
+                if choice not in ['',None,'None','Point Density']:
+                    self.axis_controllers['Colorbar'].combobox.disable_choice(choice)
+
+    # When the YAxis combobox is selected, disable the option in the XAxis combobox
+    def update_xaxis_controller(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.update_xaxis_controller")
+        xaxis = self.axis_controllers['XAxis']
+        yaxis = self.axis_controllers['YAxis']
+        value = yaxis.value.get()
+        xvalues = list(xaxis.combobox['values'])
+        yvalues = list(yaxis.combobox['values'])
+        if value in xvalues: xaxis.combobox.disable_choice(value)
+        if hasattr(self,"previous_yaxis_value") and self.previous_yaxis_value != value:
+            if self.previous_yaxis_value in xvalues: xaxis.combobox.enable_choice(self.previous_yaxis_value)
+        self.previous_yaxis_value = value
+        
+    def update_yaxis_controller(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.update_yaxis_controller")
+        xaxis = self.axis_controllers['XAxis']
+        yaxis = self.axis_controllers['YAxis']
+        value = xaxis.value.get()
+        xvalues = list(xaxis.combobox['values'])
+        yvalues = list(yaxis.combobox['values'])
+        if value in yvalues: yaxis.combobox.disable_choice(value)
+        if hasattr(self,"previous_xaxis_value") and self.previous_xaxis_value != value:
+            if self.previous_xaxis_value in yvalues: yaxis.combobox.enable_choice(self.previous_xaxis_value)
+        self.previous_xaxis_value = value
