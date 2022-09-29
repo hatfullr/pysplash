@@ -17,6 +17,8 @@ import numpy as np
 import sys
 import os
 
+from lib.scatterplot import ScatterPlot
+
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self,master,gui,canvas,**kwargs):
         self.toolitems = (
@@ -151,7 +153,10 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()
 
-        self.gui.controls.update_button.invoke()
+        if isinstance(self.gui.interactiveplot.drawn_object, ScatterPlot):
+            self.gui.controls.update_button.invoke()
+        else:
+            self.gui.controls.update_button.configure(state='!disabled')
         
     def remove_rubberband(self,event=None):
         # We have to override this function because for some reason it does

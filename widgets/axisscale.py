@@ -67,7 +67,6 @@ class AxisScale(tk.LabelFrame, object):
 
     def connect(self, axis, *args, **kwargs):
         if globals.debug > 1: print("axisscale.connect")
-        # data is what we have control of
         self.axis = axis
 
     def disable(self, *args, **kwargs):

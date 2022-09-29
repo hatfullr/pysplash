@@ -61,15 +61,23 @@ class AxisController(LabelledFrame,object):
         self._physical_units = None
         self._display_units = None
         self._setting_label = True
+        self._pow10_bid = None
 
     @property
     def data(self):
         if self.stale:
             self._data, self._physical_units, self._display_units = self.combobox.get()
+
+            # Enable/disable scaling options based on if overflows occur
+            self.update_scale_buttons()
+            
             # Apply the scaling to the resulting data
             scale = self.scale.get()
             if scale == 'log10': self._data = np.log10(self._data)
-            elif scale == '^10': self._data = 10.**data
+            elif scale == '^10':
+                if self.data_can_overflow(self._data): self.scale.set('linear')
+                else: self._data = 10.**self._data
+            
             self.stale = False
         return self._data
     @property
@@ -80,6 +88,12 @@ class AxisController(LabelledFrame,object):
     def display_units(self):
         if self.stale: self.data
         return self._display_units
+
+    @property
+    def is_colorbar(self):
+        return self.axis is not None and self.axis._axes is self.gui.interactiveplot.colorbar.cax
+
+    
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
@@ -147,7 +161,7 @@ class AxisController(LabelledFrame,object):
                             self.scale.linear_button.invoke()
                             self.on_scale_changed()
 
-                self.set_adaptive_limits()
+                    self.set_adaptive_limits()
 
                 if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
 
@@ -187,11 +201,18 @@ class AxisController(LabelledFrame,object):
 
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
+
+        # Let CustomColorbar handle this
+        if self.is_colorbar:
+            self.event_generate("<<OnScaleChanged>>")
+            return
         
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             # First reset the units so that things don't get mucked up
             self.units.reset()
+
+            previously_stale = self.stale
 
             self.stale = True
             
@@ -203,7 +224,22 @@ class AxisController(LabelledFrame,object):
                 low = self.limits.low.get()
                 high = self.limits.high.get()
 
-                if current_scale == 'log10': low = max(low, 1.e-6)
+                if current_scale == 'log10':
+                    low = max(low, 1.e-6)
+                    """
+                    lowset = False
+                    print("Hello")
+                    if low < 0:
+                        # Try obtaining new limits using the data
+                        if not previously_stale:
+                            data = self._data # The data before the scale has been changed
+                            log10data = np.log10(data)
+                            low = np.nanmin(data[np.isfinite(data)])
+                            print("I'm here")
+                            lowset = True
+                    if not lowset:
+                        low = max(low, 1.e-6)
+                    """
 
                 if self.previous_scale == 'linear':
                     if current_scale == 'log10':
@@ -226,6 +262,21 @@ class AxisController(LabelledFrame,object):
                     else: # Must be log10
                         self.limits.low.set(np.log10(np.log10(low)))
                         self.limits.high.set(np.log10(np.log10(high)))
+            """
+            # If we changed scales on the colorbar, then modify the image data
+            if (self.gui.interactiveplot.drawn_object is not None and self.is_colorbar):
+                if not hasattr(self.gui.interactiveplot.drawn_object, 'linear_data'):
+                    self.gui.interactiveplot.drawn_object.linear_data = self.gui.interactiveplot.drawn_object._data
+                    
+                d = self.gui.interactiveplot.drawn_object.linear_data
+                t = (current_scale, self.previous_scale)
+                if t == ('log10', 'linear') or ('linear', '^10'): d = np.log10(d)
+                elif t == ('linear', 'log10') or t == ('^10', 'linear'): d = 10**d
+                d[~np.isfinite(d)] = np.nan
+                #else: d = self.gui.interactiveplot.drawn_object.linear_data
+                self.gui.interactiveplot.drawn_object.set_data(d)
+            """
+                
             self.previous_scale = current_scale
     
     def update_limits(self, *args, **kwargs):
@@ -242,8 +293,11 @@ class AxisController(LabelledFrame,object):
         # Set the limit entries to be the data's true, total limits
         if self.axis is not None:
             # Check if this axis is the colorbar
-            if self.axis._axes is self.gui.interactiveplot.colorbar.cax:
-                newlim = self.gui.interactiveplot.colorbar.calculate_limits()
+            if self.is_colorbar:
+                pass # Let CustomColorbar handle this
+                #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
+                #if self.scale.get() == 'log10': newlim = np.log10(np.array(newlim))
+                #elif self.scale.get() == '^10': newlim = 10**np.array(newlim)
                 # This axis is either the x or y axes of the main plot (not the colorbar)
             elif isinstance(self.axis, XAxis):
                 newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
@@ -259,7 +313,7 @@ class AxisController(LabelledFrame,object):
             self.limits.adaptive_button,
             self.scale.linear_button,
             self.scale.log_button,
-            self.scale.pow10_button,
+            #self.scale.pow10_button,
             self.units.entry,
         ]
 
@@ -270,5 +324,25 @@ class AxisController(LabelledFrame,object):
         else:
             for widget in widgets: widget.configure(state=state)
 
+        if self.data_can_overflow(self._data):
+            self.scale.pow10_button.configure(state='disabled')
+        else:
+            self.scale.pow10_button.configure(state='normal')
 
+    def data_can_overflow(self, data):
+        if globals.debug > 1: print("axiscontroller.data_can_overflow")
+        if not isinstance(data, np.ndarray): return False
+        if np.issubdtype(data.dtype, np.floating):
+            maxvalue = np.finfo(data.dtype).max
+        elif np.issubdtype(data.dtype, np.integer):
+            maxvalue = np.iinfo(data.dtype).max
+        else:
+            raise Exception("unknown dtype '"+str(data.dtype)+"' in data")
+        return np.any(data > np.log10(maxvalue))
     
+    def update_scale_buttons(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
+        if self.data_can_overflow(self._data):
+            self.scale.pow10_button.configure(state='disabled')
+
+            

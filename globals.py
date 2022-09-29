@@ -78,6 +78,9 @@ hotkey_pressed = False
 # control time mode at runtime
 time_mode = False
 
+# Never edit this
+threaded_tasks = []
+
 # Never edit this value in this file.
 gpu_busy = False
 

@@ -92,6 +92,7 @@ class Controls(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
         self.colorbar_integrated_surface = StringVar(self, "integrated", "colorbar_integrated_surface")
+        globals.state_variables.append(self.colorbar_integrated_surface)
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -341,17 +342,23 @@ class Controls(tk.Frame,object):
                     min(eylim) > min(ylim) or max(eylim) < max(ylim)):
                     need_full_redraw = True
                     
-            # Check if the scale has changed
-            for key,axis_controller in self.axis_controllers.items():
-                if axis_controller.scale.get() != self.previous_axis_scales[key]:
+            # Check if the scale has changed for x and y axes only
+            for key in ['XAxis','YAxis']:
+                if self.axis_controllers[key].scale.get() != self.previous_axis_scales[key]:
                     need_full_redraw = True
                     break
+            
 
         if self.is_limits_changed(('Colorbar')):
             user_clims = self.axis_controllers['Colorbar'].limits.get()
             if np.isnan(user_clims[0]): user_clims = (None, user_clims[1])
             if np.isnan(user_clims[1]): user_clims = (user_clims[0], None)
             self.gui.interactiveplot.colorbar.set_clim(user_clims)
+            need_quick_redraw = True
+
+        # Check if the colorbar's scale has changed
+        if (self.gui.interactiveplot.colorbar.visible and
+            self.axis_controllers['Colorbar'].scale.get() != self.previous_axis_scales['Colorbar']):
             need_quick_redraw = True
         
         # Perform the queued zoom if there is one

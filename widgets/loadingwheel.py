@@ -84,6 +84,10 @@ class LoadingWheel(Message, object):
                 self.after_cancel(self._after_id)
             self._after_id = self.after(self.rate, self._spin)
 
+    def destroy(self,*args,**kwargs):
+        if self._after_id is not None: self.after_cancel(self._after_id)
+        super(LoadingWheel,self).destroy(*args,**kwargs)
+
     def show(self,*args,**kwargs):
         if not self._spinning:
             self._spinning = True

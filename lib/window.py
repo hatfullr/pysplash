@@ -27,8 +27,7 @@ class Window(tk.Tk):
     # before printing traceback whenever an error occurs
     def handleException(self, excType, excValue, trace):
         if globals.debug > 1: print("window.handleException")
-        self.close()
-        self.original_excepthook(excType,excValue,trace)
+        self.close(error=(excType,excValue,trace))
 
     def launch(self):
         if globals.debug > 1: print("window.launch")
@@ -36,6 +35,11 @@ class Window(tk.Tk):
 
     def close(self,*args,**kwargs):
         if globals.debug > 1: print("window.close")
+
+        # Stop all running threads
+        tasks = globals.threaded_tasks
+        for threaded_task in tasks:
+            threaded_task.stop()
         
         # Remove all files from the "tmp" directory
         tmp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),"tmp")
@@ -43,3 +47,9 @@ class Window(tk.Tk):
         os.mkdir(tmp_path)
         
         close_window(self)
+
+        error = kwargs.get('error', None)
+        if error is not None:
+            self.original_excepthook(error[0], error[1], error[2])
+        
+        quit()

@@ -32,6 +32,7 @@ class MakeMovie(PopupWindow, object):
             title="Make movie",
             oktext="Save",
             okcommand=self.create,
+            cancelcommand=self.cancel,
             name='makemovie',
         )
 
@@ -46,6 +47,8 @@ class MakeMovie(PopupWindow, object):
         self.path_entry.bind("<<ValidateSuccess>>", self.validate, add = "+")
         self.start_combobox.bind("<<ComboboxSelected>>", self.validate, add = "+")
         self.stop_combobox.bind("<<ComboboxSelected>>", self.validate, add = "+")
+
+        self.canceled = False
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("makemovie.create_variables")
@@ -112,6 +115,16 @@ class MakeMovie(PopupWindow, object):
         
     def create(self, *args, **kwargs):
         if globals.debug > 1: print("makemovie.create")
+
+        self.gui.interactiveplot.making_movie = True
+        
+        self.okbutton.configure(state='disabled')
+        self.path_entry.configure(state='disabled')
+        self.delay_entry.configure(state='disabled')
+        self.step_entry.configure(state='disabled')
+        self.start_combobox.configure(state='disabled')
+        self.stop_combobox.configure(state='disabled')
+        
         self.gui.set_user_controlled(False)
         
         start = self.gui.filenames.index(self.startfile.get())
@@ -123,20 +136,17 @@ class MakeMovie(PopupWindow, object):
         nframes = len(filenames)
         
         self.progressbar.configure(value=0)
+
+        self.already_did_it = False
         
         def update(i):
+            if not self.already_did_it: self.already_did_it = i == nframes-1
+            if self.already_did_it or self.canceled: return None,
             self.gui.filecontrols.current_file.set(filenames[i])
-            #self.gui.controls.on_update_button_pressed()
+            
             self.gui.controls.update_button.invoke()
             
-            # We need to wait until the plot has finished calculating
-            calculating = True
-            def didit(*args,**kwargs):
-                calculating = False
-                self.gui.unbind("<<PlotUpdate>>", cid)
-            cid = self.gui.bind("<<PlotUpdate>>", didit, add="+")
-            
-            while calculating:
+            while self.gui.interactiveplot.drawn_object.calculating:
                 self.gui.update()
 
             progress = float(i)/float(nframes) * 100
@@ -148,14 +158,26 @@ class MakeMovie(PopupWindow, object):
         anim = FuncAnimation(
             self.gui.interactiveplot.fig,
             update,
-            frames=nframes,
+            frames=range(len(filenames)),
             interval=self.delay.get(),
             blit=True,
         )
-        
-        anim.save(self.path.get())
 
-        self.progressbar.set_text("Done")
-        self.progressbar.configure(value=0)
+        if not self.canceled:
+            anim.save(self.path.get())
+            self.progressbar.set_text("Done")
+            self.progressbar.configure(value=0)
+        
+        self.gui.set_user_controlled(True)
+
+        self.okbutton.configure(state='normal')
+        self.path_entry.configure(state='normal')
+        self.delay_entry.configure(state='normal')
+        self.step_entry.configure(state='normal')
+        self.start_combobox.configure(state='readonly')
+        self.stop_combobox.configure(state='readonly')
 
         
+    def cancel(self,*args,**kwargs):
+        self.canceled = True
+        self.close()

@@ -124,7 +124,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
             
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
             self.calculate_data(idx)
-            self._data *= self.units / self.cunits
+            #self._data *= self.units / self.cunits
         if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
 
     
@@ -231,5 +231,5 @@ class IntegratedValuePlot(CustomAxesImage,object):
                 self._data[j,i] = sum(quantity[idx_x][idx_y][idx_r]*self.wint[indices]*invh2[idx_x][idx_y][idx_r])
 
     def calculate_data(self,*args,**kwargs):
-        if not has_jit or globals.gpu_busy: return self.calculate_data_cpu(self,*args,**kwargs)
-        else: return self.calculate_data_gpu(self,*args,**kwargs)
+        if not has_jit or globals.gpu_busy: return self.calculate_data_cpu(*args,**kwargs)
+        else: return self.calculate_data_gpu(*args,**kwargs)

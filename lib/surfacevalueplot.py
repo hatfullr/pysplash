@@ -20,7 +20,7 @@ except ImportError:
 
 class SurfaceValuePlot(CustomAxesImage,object):
     def __init__(self,ax,A,x,y,z,h,physical_units,display_units,**kwargs):
-        if globals.debug > 1: print("integratedvalueplot.__init__")
+        if globals.debug > 1: print("surfacevalueplot.__init__")
         self.ax = ax
 
         # We are calculating integral sum(m * A / rho * W) dz where
@@ -29,7 +29,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
         # x and y axes or else this calculation makes no sense.
         #print(physical_units)
         if physical_units[1] != physical_units[2]:
-            raise ValueError("Cannot calculate an integrated value plot that has different units on the x and y axes")
+            raise ValueError("Cannot calculate a surface value plot that has different units on the x and y axes")
 
         self.A = np.ascontiguousarray(A,dtype=np.double)
         self.x = np.ascontiguousarray(x,dtype=np.double)
@@ -38,9 +38,6 @@ class SurfaceValuePlot(CustomAxesImage,object):
         self.size = np.ascontiguousarray(kernel.compact_support*h,dtype=np.double)
         self.size2 = self.size**2
 
-        # We are given all the quantities in display units. For now,
-        # we want to show integrated value plots only in physical units.
-        
         physical_quantity_unit = physical_units[0]
         display_quantity_unit = display_units[0]
 
@@ -57,7 +54,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
 
 
     def calculate(self,*args,**kwargs):
-        if globals.debug > 1: print("integratedvalueplot.calculate")
+        if globals.debug > 1: print("surfacevalueplot.calculate")
         if globals.debug > 0: start = time()
 
         xmin,xmax = self.ax.get_xlim()
@@ -79,15 +76,15 @@ class SurfaceValuePlot(CustomAxesImage,object):
             
             self._data = np.full(np.shape(self._data),np.nan,dtype=np.double)
             self.calculate_data(idx)
-            self._data *= self.units / self.cunits
-        if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
+            #self._data *= self.units / self.cunits
+        if globals.debug > 0: print("surfacevalueplot.calculate took %f seconds" % (time()-start))
 
     
     if has_jit:
         @staticmethod
         @cuda.jit('void(double[:,:], double[:], double[:], double[:], double[:], double[:], double, double, double, double, int64, int64)') # Decorator parameters improve performance
         def calculate_gpu(data,A,x,y,z,size2,xmin,ymin,dx,dy,xpixels,ypixels):
-            i,j = cuda.grid(2)
+            j,i = cuda.grid(2)
             if i < xpixels and j < ypixels:
                 xpos = xmin + (i+0.5) * dx
                 ypos = ymin + (j+0.5) * dy
@@ -104,7 +101,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
                             zmin = zminp
 
     def calculate_data_gpu(self,idx): # On GPU
-        if globals.debug > 1: print("integratedvalueplot.calculate_data")
+        if globals.debug > 1: print("surfacevalueplot.calculate_data_gpu")
 
         device_idx = cuda.to_device(np.where(idx)[0])
         device_data = cuda.to_device(np.ascontiguousarray(self._data))
@@ -122,7 +119,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
         ndims = len(self._data.shape)
         threadsperblock = np.full(ndims, int(globals.threadsperblock**(1./ndims)), dtype=int)
         blockspergrid = np.array(self._data.shape,dtype=int) // threadsperblock + 1
-
+        
         self.calculate_gpu[tuple(blockspergrid),tuple(threadsperblock)](
             device_data,
             device_A,
@@ -143,7 +140,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
         self._data = device_data.copy_to_host()
 
     def calculate_data_cpu(self,idx): # On CPU
-        if globals.debug > 1: print("integratedvalueplot.calculate_data")
+        if globals.debug > 1: print("surfacevalueplot.calculate_data_cpu")
 
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()

@@ -38,10 +38,18 @@ class PathEntry(tk.Frame, object):
         self._entry = FlashingEntry(self,textvariable=self.textvariable,**kwargs)
         self._entry.configure(validate='focusout',validatecommand=(self._entry.register(self._validatecommand),'%P'))
         self._entry.pack(side='left',fill='both',expand=True,padx=(0,pad))
-        Button(self,text='Browse',command=self._browse).pack(side='left',anchor='e',fill='y')
+        self._browse_button = Button(self,text='Browse',command=self._browse)
+        self._browse_button.pack(side='left',anchor='e',fill='y')
 
         self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
         self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
+
+    def configure(self,*args,**kwargs):
+        self._browse_button.configure(*args,**kwargs)
+        self._entry.configure(*args,**kwargs)
+        
+    def config(self,*args,**kwargs):
+        return self.configure(*args,**kwargs)
 
     def get(self, *args, **kwargs):
         paths = self.textvariable.get()

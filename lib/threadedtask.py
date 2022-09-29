@@ -1,4 +1,11 @@
 import globals
+
+try:
+    from numba import cuda, types
+    has_jit = True
+except ImportError:
+    has_jit = False
+
 if globals.support_threading:
     from multiprocessing import Queue
     from sys import version_info
@@ -12,6 +19,7 @@ if globals.support_threading:
                      callback=None,callback_args=[],callback_kwargs={},
                      update=None,update_args=[],update_kwargs={}):
             if globals.debug > 1: print("threadedtask.__init__")
+
             if master is not None:
                 self.root = master.winfo_toplevel()
             else: self.root = None
@@ -26,49 +34,52 @@ if globals.support_threading:
             self.update_args = update_args
             self.update_kwargs = update_kwargs
             super(ThreadedTask,self).__init__(target=self.target,args=self.args,kwargs=self.kwargs)
+            self.daemon = True # Needed so that we can kill the thread mid-execution
             self.queue = Queue()
             self.started = False
             self._after_id = None
-            self.isStop = True
+            self.isStop = False
             if start: self.start()
 
         def stop(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.stop")
-            if self.root is not None:
-                if self._after_id is not None:
-                    self.root.after_cancel(self._after_id)
             self.isStop = True
-
+            if self in globals.threaded_tasks: globals.threaded_tasks.remove(self)
+        
         def start(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.start")
             self.started = True
             self.isStop = False
             super(ThreadedTask,self).start(*args,**kwargs)
-            
+
         def run(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.run")
+            if self not in globals.threaded_tasks: globals.threaded_tasks.append(self)
             self.queue.put(self.target(*self.args,**self.kwargs),timeout=1)
             self._after_id = None
             self.process_queue()
             
         def process_queue(self,*args,**kwargs):
             if globals.debug > 1: print("threadedtask.process_queue")
-            if self.queue.empty() and not self.isStop: # Not finished yet
-                if self.update is not None:
-                    self.update(*self.update_args,**self.update_kwargs)
-                if self.root is not None:
-                    if self._after_id is not None:
-                        self.root.after_cancel(self._after_id)
-                    self._after_id = self.root.after(10, self.process_queue)
-            else: # Finished
-                if self.root is not None:
-                    if self._after_id is not None:
-                        self.root.after_cancel(self._after_id)
-                if self.isStop: return
-                self.queue.get(0)
-                if globals.debug > 1: print("threadedtask finished")
-                if self.callback is not None:
-                    self.callback(*self.callback_args,**self.callback_kwargs)
+
+            # Have only 1 instance of process_queue running at any given time
+            if None not in [self.root, self._after_id]:
+                self.root.after_cancel(self._after_id)
+
+            if self.isStop:
+                if self in globals.threaded_tasks: globals.threaded_tasks.remove(self)
+            else:
+                if self.queue.empty(): # Not finished yet
+                    if self.update is not None:
+                        self.update(*self.update_args,**self.update_kwargs)
+                    if self.root is not None:
+                        self._after_id = self.root.after(10, self.process_queue)
+                else: # Finished
+                    self.queue.get(0)
+                    if globals.debug > 1: print("threadedtask finished")
+                    if self.callback is not None:
+                        self.callback(*self.callback_args,**self.callback_kwargs)
+                    if self in globals.threaded_tasks: globals.threaded_tasks.remove(self)
         
         def isAlive(self,*args,**kwargs):
             try: return super(ThreadedTask, self).isAlive(*args,**kwargs)

@@ -88,6 +88,8 @@ class InteractivePlot(ResizableFrame,object):
         self.particle_annotations = {}
         self.track_and_annotate = self.tracking
 
+        self.making_movie = False
+
         # Create an annotation which asks the user to import data if there isn't any
         self.import_data_annotation = self.fig.text(
             0.5,0.5,
@@ -315,7 +317,6 @@ class InteractivePlot(ResizableFrame,object):
                     self.gui.data,
                 )
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
-                self.colorbar.show()
             else:
                 method = ScatterPlot
                 args = (
@@ -350,12 +351,11 @@ class InteractivePlot(ResizableFrame,object):
             
             kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
             kwargs['aftercalculate'] = self.after_scatter_calculate
-            kwargs['cmap'] = self.colorbar.cmap
-            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
+            #kwargs['cmap'] = self.colorbar.cmap
+            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
                 
-            self.colorbar.show()
         elif self.gui.controls.colorbar_integrated_surface.get() == 'integrated':
             caxis = self.gui.controls.axis_controllers['Colorbar']
             A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
@@ -395,12 +395,10 @@ class InteractivePlot(ResizableFrame,object):
                 ],
             )
 
-            kwargs['cmap'] = self.colorbar.cmap
-            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
+            #kwargs['cmap'] = self.colorbar.cmap
+            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
-            
-            self.colorbar.show()
             
         elif self.gui.controls.colorbar_integrated_surface.get() == 'surface':
             caxis = self.gui.controls.axis_controllers['Colorbar']
@@ -445,18 +443,26 @@ class InteractivePlot(ResizableFrame,object):
             )
 
             
-            kwargs['cmap'] = self.colorbar.cmap
-            kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
+            #kwargs['cmap'] = self.colorbar.cmap
+            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
-
-            self.colorbar.show()
 
         if self.drawn_object is None: kwargs['initialize'] = True
         else:
             self.drawn_object.cancel()
             self.drawn_object = None
 
+        # Make sure there is only 1 drawn object at any given time
+        for child in self.ax.get_children():
+            if isinstance(child,CustomAxesImage):
+                child.remove()
+
+        if self.making_movie:
+            kwargs["resolution_steps"] = tuple([1])
+
+        if method is not ScatterPlot: self.disable()
+        self.gui.message("Drawing plot",duration=None)
         self.drawn_object = method(*args,**kwargs)
 
         if globals.use_multiprocessing:
@@ -467,6 +473,8 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.after_calculate")
 
         if self.drawn_object is not None and self.drawn_object.calculating:
+            if not isinstance(self.drawn_object, ScatterPlot): self.colorbar.show()
+            else: self.colorbar.hide()
             self.draw()
         else:
             if self.track_and_annotate: self.annotate_tracked_particle()
@@ -490,6 +498,8 @@ class InteractivePlot(ResizableFrame,object):
             self.previous_ylim = self.ax.get_ylim()
             self.loading_wheel.hide()
             self._updating = False
+            self.gui.clear_message()
+            self.enable()
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
@@ -692,8 +702,12 @@ class InteractivePlot(ResizableFrame,object):
             self.ax.set_ylim(ylim)
             self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
 
-        self.canvas.draw_idle()
-        self.update()
+        self.draw()
+        #self.canvas.draw_idle()
+        if isinstance(self.drawn_object, ScatterPlot):
+            self.update()
+        else:
+            self.gui.controls.update_button.configure(state='!disabled')
 
     def start_pan(self, event):
         if globals.debug > 1: print("interactiveplot.start_pan")
@@ -719,7 +733,10 @@ class InteractivePlot(ResizableFrame,object):
         self.gui.plottoolbar.drag_pan(event)
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
-        self.update()
+        if isinstance(self.drawn_object, ScatterPlot):
+            self.update()
+        else:
+            self.gui.controls.update_button.configure(state='!disabled')
         
     def stop_pan(self, event):
         if globals.debug > 1: print("interactiveplot.stop_pan")
@@ -810,8 +827,11 @@ class InteractivePlot(ResizableFrame,object):
             self.origin = self.get_xy_data()[self.track_id.get()]
             
             self.gui.message("Started tracking particle "+str(self.track_id.get()))
-            
-            self.update()
+
+            if isinstance(self.drawn_object, ScatterPlot):
+                self.update()
+            else:
+                self.gui.controls.update_button.configure(state='!disabled')
                 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
@@ -1168,4 +1188,19 @@ class InteractivePlot(ResizableFrame,object):
 
         self.update_help_text()
     
+
+    # Enable and Disable are used to prevent the user from starting a new plot calculation
+    # while there already is one underway. This is because we are not able to cancel the
+    # execution of a calculation which is being done on the GPU.
     
+    def disable(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.disable")
+        if not isinstance(self.drawn_object, ScatterPlot):
+            self.gui.set_user_controlled(False)
+            self.hotkeys.disable()
+        
+    def enable(self,*args,**kwargs):
+        if globals.debug > 1: print("interactiveplot.enable")
+        if not isinstance(self.drawn_object, ScatterPlot):
+            self.gui.set_user_controlled(True)
+            self.hotkeys.enable()

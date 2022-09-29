@@ -1,3 +1,9 @@
+from sys import version_info
+if version_info.major < 3:
+    import Tkinter as tk
+else:
+    import tkinter as tk
+
 from functions.getallchildren import get_all_children
 from lib.tkvariable import save
 

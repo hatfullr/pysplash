@@ -12,15 +12,14 @@ from lib.customcolorbar import CustomColorbar
 
 # interpolation 'nearest' is significantly faster than interpolation 'none'
 class CustomAxesImage(matplotlib.image.AxesImage,object):
-    def __init__(self,ax,data,cscale='linear',aspect=None,initialize=True,extent=None,interpolation='nearest',colorbar=None,cunits=1.,xunits=1.,yunits=1.,aftercalculate=None,resolution_steps=(0.01, 0.1, 0.5, 1),**kwargs):
+    def __init__(self,ax,data,aspect=None,initialize=True,extent=None,interpolation='nearest',colorbar=None,xunits=1.,yunits=1.,aftercalculate=None,resolution_steps=(0.01, 0.1, 0.5, 1),**kwargs):
         if globals.debug > 1: print("customaxesimage.__init__")
         self.ax = ax
         self.fig = self.ax.get_figure()
         self.widget = self.fig.canvas.get_tk_widget()
-        self.cscale = cscale
+        #self.cscale = cscale
         self.xunits = xunits
         self.yunits = yunits
-        self.cunits = cunits
         self.aspect = aspect
         self.aftercalculate = aftercalculate
         self.resolution_steps = resolution_steps
@@ -126,7 +125,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.calculating = True
 
         for self.resolution_step in self.resolution_steps:
-            if self._interrupt: return
+            if self._interrupt:
+                self.cancel()
+                return
             self.calculate_xypixels()
 
             #print(self.xpixels, self.ypixels)
@@ -136,17 +137,17 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                 self._data = np.resize(self._data,(self.ypixels,self.xpixels)) # Fills new entries with 0
 
             if self.threaded:
-                # Block until the thread has finished
+                
+                
+                #if self.thread is not None:
+                #    self.wait_to_calculate(*args,**kwargs)
+                #    return
 
                 while self.thread is not None:
                     self.widget.update()
                     if self._interrupt:
                         self.cancel()
                         return
-                
-                #if self.thread is not None:
-                #    self.wait_to_calculate(*args,**kwargs)
-                #    return
 
                 self.thread = ThreadedTask(
                     self.widget,
@@ -155,10 +156,22 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                     kwargs=kwargs,
                     callback=self._after_calculate,
                 )
+                
             else:
                 self.calculate(*args,**kwargs)
                 self._after_calculate()
-        self.calculating = False
+
+
+        # Block until the previous thread has finished
+        while self.thread is not None:
+            self.widget.update()
+            if self._interrupt:
+                self.cancel()
+                return
+        #self.calculating = False
+        #if self.aftercalculate is not None:
+        #    self.aftercalculate()
+        
 
     def _after_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._after_calculate")
@@ -167,8 +180,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.set_data(self._data)
         
         # Update this image's colors based on the colorbar's limits
-        if self.colorbar is not None:
-            self.set_clim(self.colorbar.get_cax_limits())
+        #if self.colorbar is not None:
+        #    self.set_clim(self.colorbar.get_cax_limits())
 
         if self.after_id_calculate is not None:
             self.widget.after_cancel(self.after_id_calculate)
@@ -176,6 +189,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.after_calculate()
         if self.aftercalculate is not None:
             self.aftercalculate(*args,**kwargs)
+
+        if self.resolution_step == self.resolution_steps[-1]:
+            self.calculating = False
     
     # Allow a calculation to happen only once every 10 miliseconds
     # Prevents double calculation when both x and y limits change
@@ -190,11 +206,12 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
     def set_data(self,new_data,raw=False):
         if globals.debug > 1: print("customaxesimage.set_data")
-        if not raw:
-            if new_data.dtype != 'bool':
-                if self.cscale == 'log10': new_data = np.log10(new_data)
-                elif self.cscale == '^10': new_data = 10.**new_data
-        self._data = new_data.astype('uint8')
+        #if not raw:
+        #    if new_data.dtype != 'bool':
+        #        if self.cscale == 'log10': new_data = np.log10(new_data)
+        #        elif self.cscale == '^10': new_data = 10.**new_data
+        self._data = new_data
+        #self._data = new_data.astype('uint8')
         super(CustomAxesImage,self).set_data(new_data)
 
     def cancel(self,*args,**kwargs):

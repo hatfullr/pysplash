@@ -142,12 +142,11 @@ class GUI(tk.Frame,object):
 
     def initialize(self, first=False, *args, **kwargs):
         if globals.debug > 1: print("gui.initialize")
-
-        # Setup the limits on the interactive plot using user's preferences
+        
         if first:
+            # Setup the limits on the interactive plot using user's preferences
             self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
             self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
-            self.interactiveplot.colorbar.set_clim(self.controls.axis_controllers['Colorbar'].limits.get())
         
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
@@ -208,6 +207,10 @@ class GUI(tk.Frame,object):
         # Show the orientation arrows if the user's preferences have them set on
         if self.controls.plotcontrols.show_orientation.get():
             self.interactiveplot.orientation.switch_on()
+
+        if first:
+            # Connect the colorbar to its axis controller
+            self.interactiveplot.colorbar.connect_controller(self.controls.axis_controllers['Colorbar'])
 
 
     def create_variables(self):
@@ -286,10 +289,10 @@ class GUI(tk.Frame,object):
         # If duration is None then the message will persist forever
         self.message_text.set(text)
         self.message_label.show()
-        #if duration is not None:
-        if self.message_after_id is not None:
-            self.after_cancel(self.message_after_id)
-        self.message_after_id = self.after(duration, self.clear_message)
+        if duration is not None:
+            if self.message_after_id is not None:
+                self.after_cancel(self.message_after_id)
+            self.message_after_id = self.after(duration, self.clear_message)
     def clear_message(self,*args,**kwargs):
         if globals.debug > 1: print("gui.clear_message")
         self.message_text.set("")
@@ -331,11 +334,12 @@ class GUI(tk.Frame,object):
         def get_data(*args,**kwargs):
             self._temp = read_file(current_file)
         
-        self.message("Reading data")
+        self.message("Reading data",duration=None)
         thread = ThreadedTask(target=get_data)
         root = self.winfo_toplevel()
         while thread.isAlive():
             root.update()
+        thread.stop()
         self.clear_message()
         
         # We can't update the data property of this class from the spawned thread,

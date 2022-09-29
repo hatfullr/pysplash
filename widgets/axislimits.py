@@ -77,6 +77,15 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low.pack(side='left',fill='both',expand=True,padx=(2,0),pady=(0,2))
         self.entry_high.pack(side='left',fill='both',expand=True,pady=(0,2))
         if self.allowadaptive: self.adaptive_button.pack(side='left',padx=2,pady=(0,2))
+
+    def configure(self,*args,**kwargs):
+        if globals.debug > 1: print("axislimits.configure")
+        self.adaptivecommands = kwargs.pop("adaptivecommands",self.adaptivecommands)
+        super(AxisLimits,self).configure(*args,**kwargs)
+
+    def config(self,*args,**kwargs):
+        if globals.debug > 1: print("axislimits.config")
+        return self.configure(*args,**kwargs)
                         
     def connect(self,axis):
         if globals.debug > 1: print("axislimits.connect")
@@ -109,28 +118,13 @@ class AxisLimits(tk.LabelFrame,object):
 
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")
-        if not self.allowadaptive or self.adaptive.get(): return
+        if not self.allowadaptive: return
         
-        self.adaptive.set(True)
-        
-        # Disable the limit entries
-        #self.entry_low.configure(state='disabled')
-        #self.entry_high.configure(state='disabled')
-
         if self.adaptivecommands[0] is not None: self.adaptivecommands[0](*args, **kwargs)
 
     def adaptive_off(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_off")
-        if not self.allowadaptive or not self.adaptive.get(): return
-        
-        self.adaptive.set(False)
-        
-        # Enable the limit entries only if the adaptive button is not disabled. This could
-        # be the case such as when the user zooms or pans while the adaptive button is
-        # disabled.
-        #if 'disabled' not in str(self.adaptive_button.cget('state')):
-        #    self.entry_low.configure(state='normal')
-        #    self.entry_high.configure(state='normal')
+        if not self.allowadaptive: return
         
         # Reset the entry boxes to have the current view
         self.on_axis_limits_changed()
