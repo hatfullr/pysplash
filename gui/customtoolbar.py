@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 from functions.hotkeystostring import hotkeys_to_string
 from functions.configuresubplots import ConfigureSubplots
+from gui.interactiveplot import InteractivePlot
 import matplotlib
 import numpy as np
 import sys
@@ -20,6 +21,7 @@ import os
 from lib.scatterplot import ScatterPlot
 
 class CustomToolbar(NavigationToolbar2Tk):
+    matplotlib_default_cursor = matplotlib.backend_tools.Cursors.POINTER
     def __init__(self,master,gui,canvas,**kwargs):
         self.toolitems = (
             (u'Home', u'Reset original view', u'home', u'home'),
@@ -32,6 +34,12 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.canvas = canvas
         self.toolbar = NavigationToolbar2Tk
         self.toolbar.__init__(self,self.canvas,master)
+
+        # Set the cursor to a + sign when the mouse is inside the axes and
+        # a regular pointer arrow when outside the axes
+        self.canvas.mpl_connect('axes_enter_event', self.on_axes_enter_event)
+        self.canvas.mpl_connect('axes_leave_event', self.on_axes_leave_event)
+        self._mouse_in_axes = False
 
         self.queued_zoom = None
         self.zoom_event = None
@@ -145,11 +153,18 @@ class CustomToolbar(NavigationToolbar2Tk):
 
     def press_pan(self,*args,**kwargs):
         self.cancel_queued_zoom()
+        
         super(CustomToolbar,self).press_pan(*args,**kwargs)
+        
+        # Press the pan button in the toolbar
+        self.mode = matplotlib.backend_bases._Mode.PAN
+        self._update_buttons_checked()
+        # Set the cursor
+        self.set_cursor(matplotlib.backend_tools.Cursors.MOVE)
 
     def release_pan(self, *args, **kwargs):
         super(CustomToolbar, self).release_pan(*args, **kwargs)
-
+        
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()
 
@@ -157,6 +172,13 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.gui.controls.update_button.invoke()
         else:
             self.gui.controls.update_button.configure(state='!disabled')
+
+        # Unpress the pan button in the toolbar
+        self.mode = matplotlib.backend_bases._Mode.NONE
+        self._update_buttons_checked()
+        
+        # Reset the cursor
+        self.set_cursor(InteractivePlot.default_cursor_inside_axes if self._mouse_in_axes else InteractivePlot.default_cursor_outside_axes)
         
     def remove_rubberband(self,event=None):
         # We have to override this function because for some reason it does
@@ -232,3 +254,16 @@ class CustomToolbar(NavigationToolbar2Tk):
     def configure_subplots(self,*args,**kwargs):
         ConfigureSubplots(self.gui)
 
+    def on_axes_enter_event(self, *args, **kwargs):
+        self._mouse_in_axes = True
+        # If the cursor was previously just the regular cursor, change it to the
+        # default inside the axes
+        if str(self.canvas.get_tk_widget().cget('cursor')) == matplotlib.backends._backend_tk.cursord[InteractivePlot.default_cursor_outside_axes]:
+            self.set_cursor(InteractivePlot.default_cursor_inside_axes)
+        
+    def on_axes_leave_event(self, *args, **kwargs):
+        self._mouse_in_axes = False
+        # if the cursor was previously the default for inside the axes, change it
+        # to the default outside the axes
+        if str(self.canvas.get_tk_widget().cget('cursor')) == matplotlib.backends._backend_tk.cursord[InteractivePlot.default_cursor_inside_axes]:
+            self.set_cursor(InteractivePlot.default_cursor_outside_axes)

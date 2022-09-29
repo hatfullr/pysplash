@@ -45,6 +45,9 @@ import traceback
 import ast
 
 class InteractivePlot(ResizableFrame,object):
+    default_cursor_inside_axes = matplotlib.backend_tools.Cursors.SELECT_REGION
+    default_cursor_outside_axes = matplotlib.backend_tools.Cursors.POINTER
+    
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
         self.gui = gui
@@ -108,10 +111,10 @@ class InteractivePlot(ResizableFrame,object):
         # If the user clicks anywhere on the plot, focus the plot.
         for child in self.winfo_children():
             child.bind("<Button-1>", lambda *args, **kwargs: self.canvas.get_tk_widget().focus_set(), add="+")
-
-        self._id_select_press = self.canvas.mpl_connect('button_press_event', self.press_select)
-        self._id_select_release = self.canvas.mpl_connect('button_release_event', self.release_select)
-
+        
+        self.canvas.mpl_connect('button_press_event', self.press_select)
+        self.canvas.mpl_connect('button_release_event', self.release_select)
+        
         self.mouse = np.array([None,None])
         self.canvas.mpl_connect("axes_leave_event", self.clear_mouse)
         self.canvas.mpl_connect("motion_notify_event", self.update_mouse)
@@ -1204,3 +1207,4 @@ class InteractivePlot(ResizableFrame,object):
         if not isinstance(self.drawn_object, ScatterPlot):
             self.gui.set_user_controlled(True)
             self.hotkeys.enable()
+
