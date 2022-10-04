@@ -40,7 +40,9 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     def visible(self, value):
         if value != self.cax.get_visible():
             self.cax.set_visible(value)
-            if self.connected_canvas is not None: self.connected_canvas.draw_idle()
+            if self.connected: self.connected_canvas.draw_idle()
+    @property
+    def connected(self): return self.connected_canvas is not None
 
     @property
     def data(self):
@@ -124,7 +126,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.connect_canvas")
         self.connected_canvas = self._ax.get_figure().canvas
         self.connect_resize()
-        #self.connect_draw()
+        self.connect_draw()
 
     def disconnect_canvas(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_canvas")
@@ -132,6 +134,20 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         self.disconnect_axesimage()
         #self.disconnect_draw()
         self.connected_canvas = None
+
+    
+    def connect_draw(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.connect_draw")
+        self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.on_draw)
+    def disconnect_draw(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.disconnect_draw")
+        if self.draw_cid is not None:
+            self.connected_canvas.mpl_disconnect(self.draw_cid)
+        self.draw_cid = None
+
+    def on_draw(self,*args,**kwargs):
+        if globals.debug > 1: print("customcolorbar.on_draw")
+        self.update_position()
 
     def connect_resize(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.connect_resize")
@@ -205,23 +221,9 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         self._axesimage_cid = None
         self.axesimage = None
 
-    """
-    def connect_draw(self, *args, **kwargs):
-        if globals.debug > 1: print("customcolorbar.connect_draw")
-        self.draw_cid = self.connected_canvas.mpl_connect("draw_event",self.on_draw)
-    def disconnect_draw(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.disconnect_draw")
-        if self.draw_cid is not None:
-            self.connected_canvas.mpl_disconnect(self.draw_cid)
-        self.draw_cid = None
-
-    def on_draw(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.on_draw")
-        self.update_position()
-    """
-
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")
+        if not self.connected: return
         pos = self._ax.get_position()
 
         y0 = pos.y0

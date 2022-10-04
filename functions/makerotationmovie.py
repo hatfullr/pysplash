@@ -59,7 +59,7 @@ def make_rotation_movie(gui):
     )
     
     anim.save(savefile)
-    gui.clear_message()
+    gui.message.clear(check="Creating rotations movie...")
     
     gui.set_user_controlled(True)
     

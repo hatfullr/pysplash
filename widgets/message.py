@@ -9,10 +9,22 @@ else:
 class Message(tk.Label, object):
     def __init__(self, master, anchor, *args, **kwargs):
         self.anchor = anchor
+        if 'textvariable' in kwargs.keys():
+            raise Exception("textvariable keyword is not allowed for Message objects")
         super(Message,self).__init__(master,*args,**kwargs)
         self.visible = False
         self.show()
+        self.persist = False
+        self._after_id = None
 
+    def set(self, value, *args, **kwargs):
+        self.configure(text=value)
+    def get(self, *args, **kwargs):
+        return str(self.cget('text'))
+
+    # If persist is True, then this message will not be overwritten by
+    # other messages until its duration has ended, even if another
+    # persistant message is created.
     def show(self, *args, **kwargs):
         if not self.visible:
             relxy = (1,1) # se default
@@ -31,3 +43,36 @@ class Message(tk.Label, object):
         if self.visible:
             self.place_forget()
             self.visible = False
+
+    # When check != None, then only clear the message if check is equal
+    # to the current message text
+    def clear(self, check=None):
+        if check is not None and check != self.get(): return
+        
+        if self._after_id is not None:
+            self.after_cancel(self._after_id)
+            self._after_id = None
+        self.hide()
+        self.persist = False
+
+    # Give duration=None for an infinite duration. If persist=True, then the
+    # message will not be overwitten by any subsequent messages unless if
+    # any of those subsequent messages are called with force=True.
+    def __call__(self, value, duration=2000, persist=False, force=False):
+        if self.persist and not force: return
+        self.configure(text=value)
+        self.persist = persist
+        
+        self.show()
+
+        if self._after_id is not None:
+            self.after_cancel(self._after_id)
+            self._after_id = None
+        
+        if duration is not None:
+            self._after_id = self.after(duration, self.clear)
+
+    def destroy(self, *args, **kwargs):
+        if self._after_id is not None:
+            self.after_cancel(self._after_id)
+        super(Message, self).destroy(*args, **kwargs)

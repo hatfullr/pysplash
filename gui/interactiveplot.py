@@ -85,7 +85,7 @@ class InteractivePlot(ResizableFrame,object):
         self.previous_ylim = None
         self.previous_time_mode = globals.time_mode
 
-        self.origin = np.zeros(2)
+        self._origin = np.zeros(2)
         self.origin_cid = None
         self._colors = None
 
@@ -94,7 +94,6 @@ class InteractivePlot(ResizableFrame,object):
         self.selection = None
 
         self.particle_annotations = {}
-        self.track_and_annotate = self.tracking
 
         self.making_movie = False
 
@@ -157,6 +156,19 @@ class InteractivePlot(ResizableFrame,object):
     def colors(self, value):
         self._colors = value
         set_preference(self, "colors", value if value is None else value.tolist())
+
+    @property
+    def origin(self): return self._origin
+    @origin.setter
+    def origin(self, value):
+        # If the origin is trying to be set to a non-finite value then it
+        # means that e.g. the user is looking at log10 data of some quantity
+        # and that the tracked particle has a linear value of <= 0, such that
+        # its log value is not finite. Thus, we need to clear the tracking.
+        if np.any(~np.isfinite(value)):
+            self.clear_tracking(reason="the particle has a non-finite value on the plot")
+        else:
+            self._origin = value
         
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -195,10 +207,10 @@ class InteractivePlot(ResizableFrame,object):
         self.hotkeys.bind("zoom x", lambda event: self.zoom(event, which='x'))
         self.hotkeys.bind("zoom y", lambda event: self.zoom(event, which='y'))
         self.hotkeys.bind("track particle", lambda event: self.track_particle(event))
-        self.hotkeys.bind("track and annotate particle", (
-            lambda event: self.track_particle(event),
-            lambda event: self.annotate_tracked_particle(event),
-        ))
+        self.hotkeys.bind("track and annotate particle", self.track_and_annotate)#(
+        #lambda event: self.track_particle(event),
+        #    lambda event: self.annotate_tracked_particle(event),
+        #))
         self.hotkeys.bind("annotate time", lambda event: self.set_time_text(event))
         self.hotkeys.bind("annotate particle", lambda *args,**kwargs: self.annotate_particle())
         for i in range(10):
@@ -464,6 +476,9 @@ class InteractivePlot(ResizableFrame,object):
 
         if method is not ScatterPlot: self.disable()
         self.gui.message("Drawing plot",duration=None)
+        self._first_after_calculate = True
+
+        
         self.drawn_object = method(*args,**kwargs)
 
         if globals.use_multiprocessing:
@@ -473,13 +488,21 @@ class InteractivePlot(ResizableFrame,object):
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
 
+        if self._first_after_calculate:
+            xydata = self.get_xy_data()
+            renderer = self.canvas.get_renderer()
+            for ID, annotation in self.particle_annotations.items():
+                annotation.set_position(xydata[ID])
+                annotation.draw(renderer)
+        
+        self._first_after_calculate = False
+
         if self.drawn_object is not None and self.drawn_object.calculating:
             if not isinstance(self.drawn_object, ScatterPlot): self.colorbar.show()
             else: self.colorbar.hide()
+            
             self.draw()
         else:
-            if self.track_and_annotate: self.annotate_tracked_particle()
-
             # Make absolutely sure that the only drawn object on the axis is
             # the one we just created
             for child in self.ax.get_children():
@@ -499,7 +522,7 @@ class InteractivePlot(ResizableFrame,object):
             self.previous_ylim = self.ax.get_ylim()
             self.loading_wheel.hide()
             self._updating = False
-            self.gui.clear_message()
+            self.gui.message.clear(check="Drawing plot")
             self.enable()
 
     def after_scatter_calculate(self, *args, **kwargs):
@@ -670,7 +693,8 @@ class InteractivePlot(ResizableFrame,object):
         
         # Make the limits not be adaptive
         for axis_controller in self.gui.controls.axis_controllers.values():
-            axis_controller.limits.adaptive_off()
+            if axis_controller.limits.adaptive.get():
+                axis_controller.limits.adaptive_button.invoke()
         
         factor = 0.9
         if event.button == 'down': factor = 1./factor
@@ -765,8 +789,7 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.color_particles")
 
         if event is not None and not event_in_axis(self.ax, event): return
-        
-        if event is None and None in [particles,index]: return
+        if event is None and (particles is None or index is None): return
         
         if self.colorbar.visible:
             self.gui.message("Cannot change particle colors while using a colorbar")
@@ -823,8 +846,8 @@ class InteractivePlot(ResizableFrame,object):
             if None in self.mouse: # Mouse is outside the axis
                 self.clear_tracking()
                 return
-            else:
-                self.clear_particle_annotation(self.track_id.get())
+            #else:
+            #    self.clear_particle_annotation(self.track_id.get())
         
         # Only do this if we are in either a scatter plot or a surface value plot
         if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
@@ -856,19 +879,31 @@ class InteractivePlot(ResizableFrame,object):
                 self.update()
             else:
                 self.gui.controls.update_button.configure(state='!disabled')
+
+    def track_and_annotate(self, event):
+        if globals.debug > 1: print("interactiveplot.track_and_annotate")
+        if None in self.mouse: # Mouse is outside axis
+            self.clear_particle_annotation(self.track_id.get())
+            self.clear_tracking()
+        else:
+            self.track_particle(event=event)
+            self.annotate_tracked_particle(event=event)
                 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
         if self.track_id.get() != -1:
-            self.clear_particle_annotation(self.track_id.get())
+            #self.clear_particle_annotation(self.track_id.get())
         
             if self.tracking:
-                self.gui.message("Stopped tracking particle "+str(self.track_id.get()))
+                message = "Stopped tracking particle "+str(self.track_id.get())
+                reason = kwargs.get('reason',None)
+                if reason is not None:
+                    message += " because "+reason
+                self.gui.message(message, persist=reason is not None)
         
             self.tracking = False
             self.track_id.set(-1)
-            self.track_and_annotate = False
-
+            
             # Re-allow adaptive limits
             xlimits = self.gui.controls.axis_controllers['XAxis'].limits
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
@@ -886,12 +921,11 @@ class InteractivePlot(ResizableFrame,object):
         
         if not self.tracking: return
         if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
-            if event is not None: self.track_and_annotate = True
             self.annotate_particle(ID=self.track_id.get())
 
     def annotate_particle(self, ID=None, draw=True):
         if globals.debug > 1: print("interactiveplot.annotate_particle")
-
+        
         if globals.time_mode:
             self.gui.message("Cannot annotate particles in time mode")
             return
@@ -922,6 +956,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def clear_particle_annotation(self, ID, draw=True):
         if globals.debug > 1: print("interactiveplot.clear_particle_annotation")
+        
         if ID in self.particle_annotations.keys():
             self.particle_annotations[ID].remove()
             self.particle_annotations.pop(ID)
@@ -1230,4 +1265,3 @@ class InteractivePlot(ResizableFrame,object):
         if not isinstance(self.drawn_object, ScatterPlot):
             self.gui.set_user_controlled(True)
             self.hotkeys.enable()
-

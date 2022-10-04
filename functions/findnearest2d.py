@@ -13,10 +13,13 @@ def find_nearest_2d(array, value, kind='cdist', output='index'):
         except ImportError:
             print("Warning (find_nearest_2d): Could not import cdist. Reverting to simpler distance calculation")
             kind = 'euclidean'
+    array = np.array(array)
+    value = np.array(value)
+    array[~np.isfinite(array)] = np.nan
     index = np.where(array == value)[0] # Make sure the value isn't in the array
     if index.size == 0:
-        if kind == 'cdist': index = np.argmin(cdist([value],array)[0])
-        elif kind == 'euclidean': index = np.argmin(np.sum((np.array(array)-np.array(value))**2.,axis=1))
+        if kind == 'cdist': index = np.nanargmin(cdist([value],array)[0])
+        elif kind == 'euclidean': index = np.nanargmin(np.sum((array-value)**2.,axis=1))
         else: raise ValueError("Keyword 'kind' must be one of 'cdist' or 'euclidean'")
     if output == 'index': return index
     elif output == 'value': return array[index]

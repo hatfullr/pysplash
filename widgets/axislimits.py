@@ -66,7 +66,7 @@ class AxisLimits(tk.LabelFrame,object):
             command=(self.adaptive_on, self.adaptive_off),
             state='disabled',
         )
-        ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible.")
+        ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible. Disabled while tracking a particle.")
 
     def get(self, *args, **kwargs):
         return (self.low.get(), self.high.get())

@@ -88,7 +88,7 @@ class GUI(tk.Frame,object):
         
         self.create_hotkeys()
 
-        self.message_after_id = None
+        #self.message_after_id = None
 
         if not globals.time_mode: self.time_mode.set(False)
 
@@ -235,7 +235,7 @@ class GUI(tk.Frame,object):
 
     def create_variables(self):
         if globals.debug > 1: print("gui.create_variables")
-        self.message_text = tk.StringVar()
+        #self.message_text = tk.StringVar()
         self.time_mode = BooleanVar(self,globals.time_mode,"time mode")
         
     def create_widgets(self):
@@ -272,7 +272,7 @@ class GUI(tk.Frame,object):
         )
         
         self.menubar = MenuBar(self.window,self)
-        self.message_label = Message(self,"se",textvariable=self.message_text,bg='white')
+        self.message = Message(self,"se",bg='white')
 
     def place_widgets(self):
         if globals.debug > 1: print("gui.place_widgets")
@@ -296,30 +296,6 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
-
-    def destroy(self, *args, **kwargs):
-        if hasattr(self, "message_after_id") and self.message_after_id is not None:
-            self.after_cancel(self.message_after_id)
-        self.message_after_id = None
-        super(GUI,self).destroy(*args, **kwargs)
-        
-    def message(self,text,duration=2000):
-        if globals.debug > 1: print("gui.message")
-        # Display a message on the bottom-right hand corner of the window
-        # If duration is None then the message will persist forever
-        self.message_text.set(text)
-        self.message_label.show()
-        if duration is not None:
-            if self.message_after_id is not None:
-                self.after_cancel(self.message_after_id)
-            self.message_after_id = self.after(duration, self.clear_message)
-    def clear_message(self,*args,**kwargs):
-        if globals.debug > 1: print("gui.clear_message")
-        self.message_text.set("")
-        self.message_label.hide()
-        if self.message_after_id is not None:
-            self.after_cancel(self.message_after_id)
-        self.message_after_id = None
 
     def set_user_controlled(self,value):
         if globals.debug > 1: print("gui.set_user_controlled")
@@ -360,7 +336,7 @@ class GUI(tk.Frame,object):
         while thread.isAlive():
             root.update()
         thread.stop()
-        self.clear_message()
+        self.message.clear(check="Reading data")
         
         # We can't update the data property of this class from the spawned thread,
         # so instead we obtain self._data and then assign self.data to that.
@@ -436,7 +412,7 @@ class GUI(tk.Frame,object):
         def get_data(*args,**kwargs):
             total = len(self.filenames)
             for i,filename in enumerate(self.filenames):
-                self.message_text.set("Reading data (%3d%%)..." % int(i/total*100))
+                self.message("Reading data (%3d%%)..." % int(i/total*100), duration=None)
                 d = read_file(filename)
 
                 if 'compact_support' in data.keys():
@@ -471,11 +447,11 @@ class GUI(tk.Frame,object):
 
             total = len(data['data'].keys())
             for i,(key, val) in enumerate(data['data'].items()):
-                self.message_text.set("Flattening data arrays (%3d%%)..." % int(i/total*100))
+                self.message("Flattening data arrays (%3d%%)..." % int(i/total*100), duration=None)
                 data['data'][key] = np.array(val).flatten()
             self._temp = data
 
-            self.message_text.set("Setting up display data arrays...")
+            self.message("Setting up display data arrays...", duration=None)
 
         self.set_user_controlled(False)
 
@@ -489,7 +465,7 @@ class GUI(tk.Frame,object):
         self.data = self._temp
         
         self.set_user_controlled(True)
-        self.clear_message()
+        self.message.clear(check="Setting up display data arrays...")
 
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
