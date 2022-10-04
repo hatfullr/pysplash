@@ -329,7 +329,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if np.any(valid):
             vmin = np.nanmin(data[valid])
             vmax = np.nanmax(data[valid])
-            self.axesimage.set_data(data)
+            if hasattr(self, 'axesimage') and self.axesimage is not None: self.axesimage.set_data(data)
             self.axis_controller.limits.low.set(vmin)
             self.axis_controller.limits.high.set(vmax)
         
@@ -340,11 +340,12 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     def update_data(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_data")
-        scale = self.axis_controller.scale.get()
-        data = self.axesimage._data
-        if scale == 'log10': self.linear_data = 10**data
-        elif scale == '^10': self.linear_data = np.log10(data)
-        else: self.linear_data = data
+        if hasattr(self,'axesimage') and self.axesimage is not None:
+            scale = self.axis_controller.scale.get()
+            data = self.axesimage._data
+            if scale == 'log10': self.linear_data = 10**data
+            elif scale == '^10': self.linear_data = np.log10(data)
+            else: self.linear_data = data
 
     # Prevent double-calls when both limits change
     def on_axis_controller_limits_changed(self,*args,**kwargs):
@@ -359,14 +360,9 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
         vmin, vmax = self.axis_controller.limits.low.get(), self.axis_controller.limits.high.get()
 
-        if hasattr(self,'axesimage'):
+        if hasattr(self,'axesimage') and self.axesimage is not None:
             self.axesimage.set_clim((vmin,vmax))
             
         self.set_clim((vmin, vmax))
-        
-        if self.connected_canvas is not None:
-            self.connected_canvas.draw_idle()
-            
-        #self.draw_all()
-        #self.connected_canvas.draw_idle()
+    
         

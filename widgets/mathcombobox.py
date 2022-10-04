@@ -87,3 +87,4 @@ class MathCombobox(ComboboxExtraOptions, object):
                     self.readonly_bid = None
         self.mathentry.allowed_values = kwargs.get('values', self.mathentry.allowed_values)
         super(MathCombobox,self).configure(*args, **kwargs)
+        self.event_generate("<Configure>")

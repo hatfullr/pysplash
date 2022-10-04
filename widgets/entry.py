@@ -62,7 +62,9 @@ class Entry(ttk.Entry, object):
                     kwargs['cursor'] = kwargs.get('cursor', self.previous_cursor)
                     self.previous_cursor = None
                 
-        return super(Entry,self).configure(*args,**kwargs)
+        super(Entry,self).configure(*args,**kwargs)
+        self.event_generate("<Configure>")
+        
     def config(self,*args,**kwargs):
         return self.configure(*args,**kwargs)
     

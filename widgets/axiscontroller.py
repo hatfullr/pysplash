@@ -148,13 +148,13 @@ class AxisController(LabelledFrame,object):
         value = self.value.get()
 
         if value != self.previous_value:
-
+            
             self.set_widgets_states()
-
+            
             if self.gui.data is not None:
                 # When the user selects time as an axis, we need to change global behaviors
                 self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
-
+                    
                 if value in self.gui.data['data'].keys():
                     if np.any(self.gui.get_display_data(value, raw=True) <= 0):
                         if self.scale.get() == "log10":
@@ -162,7 +162,7 @@ class AxisController(LabelledFrame,object):
                             self.on_scale_changed()
 
                     self.set_adaptive_limits()
-
+                    
                 if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
 
             if self.previous_value != value: self.stale = True
@@ -292,9 +292,16 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
         # Set the limit entries to be the data's true, total limits
         if self.axis is not None:
+            newlim = [None, None]
+            
             # Check if this axis is the colorbar
             if self.is_colorbar:
-                pass # Let CustomColorbar handle this
+                # Take a guess at what the limits of the colorbar should be
+                idx = np.isfinite(self.data)
+                newlim = [np.nanmin(self.data[idx]), np.nanmax(self.data[idx])]
+                print("Here")
+                #pass
+                #pass # Let CustomColorbar handle this
                 #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
                 #if self.scale.get() == 'log10': newlim = np.log10(np.array(newlim))
                 #elif self.scale.get() == '^10': newlim = 10**np.array(newlim)

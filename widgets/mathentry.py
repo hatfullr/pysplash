@@ -56,6 +56,7 @@ class MathEntry(FlashingEntry, object):
 
     def configure(self,*args,**kwargs):
         super(MathEntry,self).configure(*args,**kwargs)
+        self.event_generate("<Configure>")
         if 'state' in kwargs.keys():
             if kwargs['state'] != 'readonly' and hasattr(self, "rich_edit_button"):
                 self.rich_edit_button.configure(state=kwargs['state'])

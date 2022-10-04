@@ -17,7 +17,7 @@ def save():
     # internally, e.g. in Entry widgets etc.
     preferences = TkVariable.preferences
     for variable in TkVariable.variables:
-        if str(variable.master) not in TkVariable.preferences:
+        if str(variable.master) not in TkVariable.preferences.keys():
             preferences[str(variable.master)] = {}
         preferences[str(variable.master)][variable.name] = variable.get()
         

@@ -63,6 +63,7 @@ class Controls(tk.Frame,object):
         self.previous_yaxis_limits = None
         self.previous_caxis_limits = None
         self.previous_axis_scales = {key:None for key in self.axis_controllers.keys()}
+        self.previous_colorbar_integrated_surface = None
         
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
 
@@ -289,19 +290,21 @@ class Controls(tk.Frame,object):
             need_full_redraw = True
         
         # If the x, y, or colorbar axes' combobox/entry values changed
-        for axis_controller in self.axis_controllers.values():
-            if axis_controller.value in changed_variables:
-                need_full_redraw = True
-                break
+        if not need_full_redraw:
+            for axis_controller in self.axis_controllers.values():
+                if axis_controller.value in changed_variables:
+                    need_full_redraw = True
+                    break
 
         # If the axis labels changed, then we only need a quick update
-        for axis_controller in self.axis_controllers.values():
-            if axis_controller.label in changed_variables:
-                need_quick_redraw = True
-                break
+        if not need_quick_redraw:
+            for axis_controller in self.axis_controllers.values():
+                if axis_controller.label in changed_variables:
+                    need_quick_redraw = True
+                    break
 
         # If the point size changed, we need a full redraw
-        if self.gui.controls.plotcontrols.point_size in changed_variables:
+        if not need_full_redraw and self.gui.controls.plotcontrols.point_size in changed_variables:
             need_full_redraw=True
 
         # Check if the user changed any of the x or y axis limits (changing units also changes limits)
@@ -321,6 +324,9 @@ class Controls(tk.Frame,object):
             self.gui.interactiveplot.ax.set_xlim(user_xlims)
             self.gui.interactiveplot.ax.set_ylim(user_ylims)
 
+            need_full_redraw = True
+            
+            """
             # Check if any of the plot's data is outside these limits
             xlim, ylim = self.gui.interactiveplot.calculate_xylim(which='both')
             if (all([xl is not None for xl in xlim]) and
@@ -347,6 +353,7 @@ class Controls(tk.Frame,object):
                 if self.axis_controllers[key].scale.get() != self.previous_axis_scales[key]:
                     need_full_redraw = True
                     break
+            """
             
 
         if self.is_limits_changed(('Colorbar')):
@@ -357,7 +364,7 @@ class Controls(tk.Frame,object):
             need_quick_redraw = True
 
         # Check if the colorbar's scale has changed
-        if (self.gui.interactiveplot.colorbar.visible and
+        if not need_quick_redraw and (self.gui.interactiveplot.colorbar.visible and
             self.axis_controllers['Colorbar'].scale.get() != self.previous_axis_scales['Colorbar']):
             need_quick_redraw = True
         
@@ -377,9 +384,16 @@ class Controls(tk.Frame,object):
             )
             need_full_redraw = True
 
+        # Redraw when swapping between Integrated/Surface plots
+        if not need_full_redraw and self.colorbar_integrated_surface.get() != self.previous_colorbar_integrated_surface:
+            need_full_redraw = True
+
         # Save the previous scales
         for key,axis_controller in self.axis_controllers.items():
             self.previous_axis_scales[key] = axis_controller.scale.get()
+
+        # Save the previous Integrated/Surface value
+        self.previous_colorbar_integrated_surface = self.colorbar_integrated_surface.get()
                 
         # Draw the new plot
         if need_full_redraw:

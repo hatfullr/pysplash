@@ -90,6 +90,7 @@ class ProgressBar(ttk.Frame,object):
             if 'value' in kwargs.keys(): self.value.set(kwargs.pop('value'))
             self.font = kwargs.pop('font', self.font)
             super(ProgressBar,self).configure(*args,**kwargs)
+            self.event_generate("<Configure>")
         except tk.TclError as e:
             if "invalid command name" in str(e): return
             raise(e)

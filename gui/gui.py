@@ -20,6 +20,8 @@ from lib.data import Data
 from functions.makemovie import make_movie
 from functions.makerotationmovie import make_rotation_movie
 from functions.getallchildren import get_all_children
+from functions.setwidgetstatepermanent import set_widget_state_permanent
+from functions.getpreference import get_preference
 from lib.threadedtask import ThreadedTask
 from lib.hotkeys import Hotkeys
 from hotkeyslist import hotkeyslist
@@ -147,17 +149,22 @@ class GUI(tk.Frame,object):
             # Setup the limits on the interactive plot using user's preferences
             self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
             self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
+
+            if self.interactiveplot.tracking:
+                for name in ['XAxis','YAxis']:
+                    set_widget_state_permanent(self.controls.axis_controllers[name].limits.adaptive_button, ['disabled'])
         
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()
-            if currentfile in self.filenames:
+            currentfile_is_in_list = currentfile in self.filenames
+            if currentfile_is_in_list:
                 self.filecontrols.current_file.set(currentfile)
             else:
                 self.filecontrols.current_file.set(self.filenames[0])
 
             #if globals.time_mode: self.read_time_mode()
             #else: self.read()
-            self.read()
+            self.read(first=first)
             
             # Don't allow the axis controllers to start out in time mode (for now)
             for axis_controller in self.controls.axis_controllers.values():
@@ -169,6 +176,14 @@ class GUI(tk.Frame,object):
                             # Set the label too, if the user hasn't typed their own label
                             if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
                             break
+
+            if currentfile_is_in_list:
+                colors = get_preference(self.interactiveplot, "colors")
+                if colors is not None:
+                    uniq = np.unique(colors)
+                    for uniq in np.unique(colors):
+                        particles = np.where(colors == uniq)
+                        self.interactiveplot.color_particles(None, particles=np.where(colors==uniq), index=uniq, update=False)
             
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
@@ -187,10 +202,10 @@ class GUI(tk.Frame,object):
                     self.interactiveplot.ax.set_xlim(xlimits.get())
                 if all(np.isfinite(ylim)):
                     self.interactiveplot.ax.set_ylim(ylimits.get())
+            
+            self.interactiveplot.update()
 
             self.controls.update_colorbar_controller()
-                    
-            self.interactiveplot.update()
         else:
             self.filecontrols.current_file.set("")
             self.interactiveplot.reset()
@@ -203,6 +218,11 @@ class GUI(tk.Frame,object):
         self.controls.plotcontrols.update_rotations_controls()
         self.controls.update_xaxis_controller()
         self.controls.update_yaxis_controller()
+
+        #print(self.controls.axis_controllers['XAxis'].combobox.get())
+
+        #if len(self.filenames) > 0:
+            
 
         # Show the orientation arrows if the user's preferences have them set on
         if self.controls.plotcontrols.show_orientation.get():
@@ -350,7 +370,7 @@ class GUI(tk.Frame,object):
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
         else:
             new_data_length = len(self.data['data'][iter(self.data['data']).next()])
-        if new_data_length != previous_data_length:
+        if new_data_length != previous_data_length and not kwargs.get('first',False):
             self.interactiveplot.reset_colors()
 
         if self.data.is_image:

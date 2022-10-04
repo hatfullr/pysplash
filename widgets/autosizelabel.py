@@ -36,6 +36,7 @@ class AutoSizeLabel(ttk.Label, object):
     def configure(self, *args, **kwargs):
         self._font = self.get_font(kwargs.get('font',None))
         super(AutoSizeLabel,self).configure(*args,**kwargs)
+        self.event_generate("<Configure>")
 
     def on_mapped(self, *args, **kwargs):
         self._textvariable.trace("w", self.fit_to_width)

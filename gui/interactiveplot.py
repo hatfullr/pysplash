@@ -35,6 +35,9 @@ from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseev
 from functions.getallchildren import get_all_children
 from functions.hotkeystostring import hotkeys_to_string
 from functions.annotateparticle import AnnotateParticle
+from functions.setwidgetstatepermanent import set_widget_state_permanent, release_widget_state_permanent
+from functions.setpreference import set_preference
+from functions.getpreference import get_preference
 
 from widgets.resizableframe import ResizableFrame
 from widgets.loadingwheel import LoadingWheel
@@ -47,6 +50,8 @@ import ast
 class InteractivePlot(ResizableFrame,object):
     default_cursor_inside_axes = matplotlib.backend_tools.Cursors.SELECT_REGION
     default_cursor_outside_axes = matplotlib.backend_tools.Cursors.POINTER
+    # This needs to be a list or tuple
+    plot_types_allowed_tracking = (ScatterPlot, SurfaceValuePlot)
     
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
@@ -82,7 +87,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.origin = np.zeros(2)
         self.origin_cid = None
-        self.colors = None
+        self._colors = None
 
         self._select_info = None
 
@@ -145,6 +150,13 @@ class InteractivePlot(ResizableFrame,object):
         )
 
         self._updating = False
+
+    @property
+    def colors(self): return self._colors
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
+        set_preference(self, "colors", value if value is None else value.tolist())
         
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -286,12 +298,6 @@ class InteractivePlot(ResizableFrame,object):
         if self.tracking and self.track_id.get() in np.arange(len(x)):
             self.origin = np.array([x[self.track_id.get()],y[self.track_id.get()]])
 
-        if self.colors is None:
-            if isinstance(x, (np.ndarray, list, tuple)):
-                self.colors = np.full(len(x), ScatterPlot.default_color_index)
-            else:
-                self.colors = np.full(1, ScatterPlot.default_color_index)
-
         if (xaxis.value.get() in ['x','y','z'] and
             yaxis.value.get() in ['x','y','z']):
             aspect = 'equal'
@@ -327,20 +333,13 @@ class InteractivePlot(ResizableFrame,object):
                     x,
                     y,
                 )
+
+                if self.colors is None:
+                    self.colors = np.full(len(x), ScatterPlot.default_color_index)
+                
                 kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
                 kwargs['c'] = self.colors
                 kwargs['aftercalculate'] = self.after_scatter_calculate
-
-                if self.tracking:
-                    xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
-                    dx = 0.5*(xlim[1]-xlim[0])
-                    dy = 0.5*(ylim[1]-ylim[0])
-                    xlim = (self.origin[0]-dx,self.origin[0]+dx)
-                    ylim = (self.origin[1]-dy,self.origin[1]+dy)
-                    self.ax.set_xlim(xlim)
-                    self.ax.set_ylim(ylim)
-                    xaxis.limits.set_limits(xlim)
-                    yaxis.limits.set_limits(ylim)
                 
                 self.colorbar.hide()
 
@@ -354,9 +353,6 @@ class InteractivePlot(ResizableFrame,object):
             
             kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
             kwargs['aftercalculate'] = self.after_scatter_calculate
-            #kwargs['cmap'] = self.colorbar.cmap
-            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
                 
         elif self.gui.controls.colorbar_integrated_surface.get() == 'integrated':
@@ -398,9 +394,6 @@ class InteractivePlot(ResizableFrame,object):
                 ],
             )
 
-            #kwargs['cmap'] = self.colorbar.cmap
-            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
             
         elif self.gui.controls.colorbar_integrated_surface.get() == 'surface':
@@ -411,8 +404,6 @@ class InteractivePlot(ResizableFrame,object):
             
             h = self.gui.get_display_data('h')
             
-            idx = self.gui.get_data('u') != 0
-
             # We need z information (direction into the screen)
             xvalue = self.gui.controls.axis_controllers['XAxis'].value.get()
             yvalue = self.gui.controls.axis_controllers['YAxis'].value.get()
@@ -426,11 +417,11 @@ class InteractivePlot(ResizableFrame,object):
             method = SurfaceValuePlot
             args = (
                 self.ax,
-                A[idx],
-                x[idx],
-                y[idx],
-                z[idx],
-                h[idx],
+                A,
+                x,
+                y,
+                z,
+                h,
                 [ # physical units
                     A_physical_units,
                     x_physical_units,
@@ -445,11 +436,18 @@ class InteractivePlot(ResizableFrame,object):
                 ],
             )
 
-            
-            #kwargs['cmap'] = self.colorbar.cmap
-            #kwargs['cscale'] = self.gui.controls.axis_controllers['Colorbar'].scale.get()
-            #kwargs['cunits'] = self.gui.controls.axis_controllers['Colorbar'].units.value.get()
             kwargs['colorbar'] = self.colorbar
+
+        if self.tracking and method in InteractivePlot.plot_types_allowed_tracking:
+            xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
+            dx = 0.5*(xlim[1]-xlim[0])
+            dy = 0.5*(ylim[1]-ylim[0])
+            xlim = (self.origin[0]-dx,self.origin[0]+dx)
+            ylim = (self.origin[1]-dy,self.origin[1]+dy)
+            self.ax.set_xlim(xlim)
+            self.ax.set_ylim(ylim)
+            xaxis.limits.set_limits(xlim)
+            yaxis.limits.set_limits(ylim)
 
         if self.drawn_object is None: kwargs['initialize'] = True
         else:
@@ -655,8 +653,12 @@ class InteractivePlot(ResizableFrame,object):
     # https://stackoverflow.com/a/12793033/4954083
     def zoom(self, event, which="both"):
         if globals.debug > 1: print("interactiveplot.zoom")
-        #print(event_in_axis(self.ax, event))
         if not event_in_axis(self.ax, event): return
+
+        #for name in ['XAxis','YAxis']:
+        #    if self.gui.controls.axis_controllers[name].limits.adaptive.get():
+        #        self.gui.message("Cannot zoom while adaptive limits are enabled")
+        #        return
         
         event = tkevent_to_matplotlibmouseevent(self.ax, event)
 
@@ -677,8 +679,9 @@ class InteractivePlot(ResizableFrame,object):
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
 
         if self.tracking:
-            x = self.gui.controls.axis_controllers['XAxis'].data[self.track_id.get()]
-            y = self.gui.controls.axis_controllers['YAxis'].data[self.track_id.get()]
+            xy = self.get_xy_data()
+            x = xy[:,0][self.track_id.get()]
+            y = xy[:,1][self.track_id.get()]
         else:
             x,y = self.mouse
             if None in [x,y]: return
@@ -697,7 +700,7 @@ class InteractivePlot(ResizableFrame,object):
             y-new_height*(1-rely),
             y+new_height*(rely),
         )
-
+        
         if which in ['both','x']:
             self.ax.set_xlim(xlim)
             self.gui.controls.axis_controllers['XAxis'].limits.set_limits(xlim)
@@ -706,7 +709,7 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
 
         self.draw()
-        #self.canvas.draw_idle()
+        
         if isinstance(self.drawn_object, ScatterPlot):
             self.update()
         else:
@@ -715,6 +718,11 @@ class InteractivePlot(ResizableFrame,object):
     def start_pan(self, event):
         if globals.debug > 1: print("interactiveplot.start_pan")
         if not event_in_axis(self.ax, event): return
+
+        if self.tracking:
+            self.gui.message("Cannot pan while tracking a particle. Press "+hotkeys_to_string("track particle")+" outside the axis to disable.")
+            return
+        
         
         # Disconnect the scroll wheel zoom binding while panning
         self.hotkeys.disable('zoom')
@@ -730,6 +738,8 @@ class InteractivePlot(ResizableFrame,object):
     def drag_pan(self, event):
         if globals.debug > 1: print("interactiveplot.drag_pan")
         if not event_in_axis(self.ax, event): return
+        if self.tracking: return
+        
         event.key = 1
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
         # Check to make sure the mouse is inside an axis
@@ -743,6 +753,8 @@ class InteractivePlot(ResizableFrame,object):
         
     def stop_pan(self, event):
         if globals.debug > 1: print("interactiveplot.stop_pan")
+        if self.tracking: return
+        
         self.gui.plottoolbar.release_pan(event)
         # Reconnect the scroll wheel zoom binding
         self.hotkeys.enable('zoom')
@@ -754,14 +766,17 @@ class InteractivePlot(ResizableFrame,object):
 
         if event is not None and not event_in_axis(self.ax, event): return
         
+        if event is None and None in [particles,index]: return
+        
         if self.colorbar.visible:
             self.gui.message("Cannot change particle colors while using a colorbar")
             return
 
+        xy = self.get_xy_data()
+        colors = self.colors if self.colors is not None else np.full(len(xy), ScatterPlot.default_color_index)
+
         # Only do this if we are in a scatter plot
         if isinstance(self.drawn_object, ScatterPlot):
-            x = self.gui.controls.axis_controllers['XAxis'].data
-            y = self.gui.controls.axis_controllers['YAxis'].data
             IDs = None
             
             if particles is None:
@@ -773,6 +788,9 @@ class InteractivePlot(ResizableFrame,object):
                 xlim = self.selection[:2]
                 ylim = self.selection[2:]
 
+                x = xy[:,0]
+                y = xy[:,1]
+
                 IDs = np.logical_and(
                     np.logical_and(xlim[0] <= x, x <= xlim[1]),
                     np.logical_and(ylim[0] <= y, y <= ylim[1]),
@@ -781,13 +799,16 @@ class InteractivePlot(ResizableFrame,object):
                 IDs = particles
             
             if IDs is not None:
-                self.colors[IDs] = int(event.keysym) if index is None else index
+                if event is not None:
+                    colors[IDs] = int(event.keysym) if index is None else index
+                else: colors[IDs] = index
                 if update: self._update()
+                    
         elif particles is not None and index is not None:
-            x = self.gui.controls.axis_controllers['XAxis'].data
-            y = self.gui.controls.axis_controllers['YAxis'].data
-            self.colors[particles] = index
+            colors[particles] = index
             if update: self._update()
+        
+        self.colors = colors
 
     # This method sets the origin to be at the particle closest to the mouse
     # position
@@ -805,8 +826,8 @@ class InteractivePlot(ResizableFrame,object):
             else:
                 self.clear_particle_annotation(self.track_id.get())
         
-        # Only do this if we are in a scatter plot
-        if isinstance(self.drawn_object, ScatterPlot):
+        # Only do this if we are in either a scatter plot or a surface value plot
+        if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
             self.tracking = event is not None or index is not None
             
             # Only get the mouse coordinates if this method was called by pressing the hotkey
@@ -823,15 +844,15 @@ class InteractivePlot(ResizableFrame,object):
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
             xlimits.adaptive_off()
             ylimits.adaptive_off()
-            xlimits.adaptive_button.state(['disabled'])
-            ylimits.adaptive_button.state(['disabled'])
+            set_widget_state_permanent(xlimits.adaptive_button,['disabled'])
+            set_widget_state_permanent(ylimits.adaptive_button,['disabled'])
             
             # Update the origin
             self.origin = self.get_xy_data()[self.track_id.get()]
             
             self.gui.message("Started tracking particle "+str(self.track_id.get()))
 
-            if isinstance(self.drawn_object, ScatterPlot):
+            if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
                 self.update()
             else:
                 self.gui.controls.update_button.configure(state='!disabled')
@@ -851,6 +872,8 @@ class InteractivePlot(ResizableFrame,object):
             # Re-allow adaptive limits
             xlimits = self.gui.controls.axis_controllers['XAxis'].limits
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
+            release_widget_state_permanent(xlimits.adaptive_button)
+            release_widget_state_permanent(ylimits.adaptive_button)
             xlimits.adaptive_button.state(['!disabled'])
             ylimits.adaptive_button.state(['!disabled'])
 
@@ -862,7 +885,7 @@ class InteractivePlot(ResizableFrame,object):
             return
         
         if not self.tracking: return
-        if isinstance(self.drawn_object, ScatterPlot):
+        if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
             if event is not None: self.track_and_annotate = True
             self.annotate_particle(ID=self.track_id.get())
 
@@ -873,7 +896,7 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.message("Cannot annotate particles in time mode")
             return
         
-        if isinstance(self.drawn_object, ScatterPlot):
+        if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
             ID_orig = ID
             if ID is None:
                 ID = self.get_closest_particle_to_mouse()
@@ -881,7 +904,7 @@ class InteractivePlot(ResizableFrame,object):
                 if ID is None:
                     AnnotateParticle(self.gui)
                     return
-                
+            
             xy = self.get_xy_data()[ID]
             # Make a new annotation
             if ID not in self.particle_annotations.keys():
@@ -926,8 +949,8 @@ class InteractivePlot(ResizableFrame,object):
             return np.column_stack((self.drawn_object.x,self.drawn_object.y))
         else:
             return np.column_stack((
-                self.gui.controls.axis_controllers['XAxis'].data,
-                self.gui.controls.axis_controllers['YAxis'].data,
+                self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
+                self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
             ))
 
     # event needs to be a Matplotlib event from mpl_connect

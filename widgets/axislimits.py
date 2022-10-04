@@ -82,6 +82,7 @@ class AxisLimits(tk.LabelFrame,object):
         if globals.debug > 1: print("axislimits.configure")
         self.adaptivecommands = kwargs.pop("adaptivecommands",self.adaptivecommands)
         super(AxisLimits,self).configure(*args,**kwargs)
+        self.event_generate("<Configure>")
 
     def config(self,*args,**kwargs):
         if globals.debug > 1: print("axislimits.config")
@@ -128,7 +129,7 @@ class AxisLimits(tk.LabelFrame,object):
         
         # Reset the entry boxes to have the current view
         self.on_axis_limits_changed()
-
+        
         if self.adaptivecommands[1] is not None: self.adaptivecommands[1](*args, **kwargs)
 
     def _on_adaptive_set(self,*args,**kwargs):
