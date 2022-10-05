@@ -66,7 +66,6 @@ class MultiArtistEditor(tk.Frame, object):
     def on_listbox_select(self,*args,**kwargs):
         #curselection = self.listbox.curselection()
         curselection = self.treeview.selection()
-        print(curselection)
         if len(curselection) >= 1:
             curselection = self.treeview.index(curselection[0])
             if self.current_editor is not self.artist_editors[curselection]:
