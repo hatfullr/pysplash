@@ -9,7 +9,7 @@ def set_widget_state_permanent(widget, state):
         widget.configure(state=state)
         
         def new_configure(event):
-            widget = permanent_state_widgets[str(event.widget)]
+            widget = permanent_state_widgets[str(event.widget)]['widget']
             widget.unbind("<Configure>", permanent_state_widgets[str(widget)]['bind id'])
             widget.configure(state=permanent_state_widgets[str(widget)]['state'])
             permanent_state_widgets[str(widget)]['bind id'] = widget.bind("<Configure>", new_configure, add="+")
