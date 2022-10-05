@@ -173,17 +173,24 @@ class ParticleMenuBar(Menu, object):
 
         particles = []
         annotations = []
-        for particle, annotation in self.gui.interactiveplot.particle_annotations.items():
-            particles.append(particle)
+        for particle, annotation in self.gui.interactiveplot.plot_annotations.items():
+            try: int(particle)
+            except: continue
+            particles.append(int(particle))
             annotations.append(annotation)
         track_id = self.gui.interactiveplot.track_id.get()
         for particle, annotation in zip(particles,annotations):
             if particle == track_id: continue
             if particle not in self.neighbors:
-                self.gui.interactiveplot.clear_particle_annotation(particle,draw=False)
+                self.gui.interactiveplot.plot_annotations.remove(str(particle))
 
         if self.annotate_neighbors.get():
-            keys = self.gui.interactiveplot.particle_annotations.keys()
+            keys = []
+            for key in self.gui.interactiveplot.plot_annotations.keys():
+                try: int(key)
+                except: continue
+                keys.append(key)
+                
             for neighbor in np.arange(len(self.neighbors))[self.neighbors]:
                 if neighbor == track_id: continue
                 if neighbor not in keys:

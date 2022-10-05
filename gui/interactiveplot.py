@@ -27,6 +27,7 @@ from lib.customcolorbar import CustomColorbar
 from lib.pointdensityplot import PointDensityPlot
 from lib.surfacevalueplot import SurfaceValuePlot
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
+from lib.plotannotations import PlotAnnotations
 
 from functions.findnearest2d import find_nearest_2d
 from functions.stringtofloat import string_to_float
@@ -93,7 +94,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.selection = None
 
-        self.particle_annotations = {}
+        self.plot_annotations = PlotAnnotations(self.ax)
 
         self.making_movie = False
 
@@ -188,8 +189,6 @@ class InteractivePlot(ResizableFrame,object):
         self.hspace = DoubleVar(self,self.fig.subplotpars.hspace,'hspace')
         self.wspace = DoubleVar(self,self.fig.subplotpars.wspace,'wspace')
 
-        self.time_text = None
-    
     def create_widgets(self):
         if globals.debug > 1: print("interactiveplot.create_widgets")
         #self.canvas = CustomCanvas(self.fig, master=self)
@@ -217,6 +216,8 @@ class InteractivePlot(ResizableFrame,object):
             self.hotkeys.bind("particle color "+str(i), self.color_particles)
             
     def destroy(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.destroy")
+        
         if hasattr(self, "_after_id_update") and self._after_id_update is not None:
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
@@ -491,9 +492,10 @@ class InteractivePlot(ResizableFrame,object):
         if self._first_after_calculate:
             xydata = self.get_xy_data()
             renderer = self.canvas.get_renderer()
-            for ID, annotation in self.particle_annotations.items():
-                annotation.set_position(xydata[ID])
-                annotation.draw(renderer)
+            for ID, annotation in self.plot_annotations.items():
+                try: int(ID)
+                except: continue
+                self.plot_annotations.configure(ID, position=xydata[int(ID)])
         
         self._first_after_calculate = False
 
@@ -565,8 +567,9 @@ class InteractivePlot(ResizableFrame,object):
             if "expected floating-point number but got" in str(e):
                 return
 
-        if self.time_text is not None:
-            self.time_text.set_text(text)
+        if 'time' in self.plot_annotations.keys():
+            self.plot_annotations.configure('time',text=text)
+            #self.time_text.set_text(text)
 
         if event is not None:
             # Check if the mouse is inside the plot region
@@ -580,19 +583,23 @@ class InteractivePlot(ResizableFrame,object):
                     (0 <= ypos and ypos <= height)):
                 return
             
-            if self.time_text is None:
-                self.time_text = self.ax.annotate(
-                    text,
-                    (xpos,ypos),
-                    xycoords='figure pixels',
-                )
+            if 'time' not in self.plot_annotations.keys():
+                self.plot_annotations.add("time", text, (xpos,ypos), xycoords='figure pixels')
+                #self.time_text = self.ax.annotate(
+                #    text,
+                #    (xpos,ypos),
+                #    xycoords='figure pixels',
+                #)
             else:
-                pos = self.time_text.get_position()
+                pos = self.plot_annotations['time'].get_position()
+                #pos = self.time_text.get_position()
                 if xpos == pos[0] and ypos == pos[1] and self.time_text.get_visible():
-                    self.time_text.set_visible(False)
+                    self.plot_annotations.configure('time',visible=False)
+                    #self.time_text.set_visible(False)
                 else:
-                    self.time_text.set_position((xpos,ypos))
-                    self.time_text.set_visible(True)
+                    self.plot_annotations.configure('time',position=(xpos,ypos),visible=True)
+                    #self.time_text.set_position((xpos,ypos))
+                    #self.time_text.set_visible(True)
         self.canvas.draw_idle()
 
     #def reset_clim(self, draw=True):
@@ -846,8 +853,6 @@ class InteractivePlot(ResizableFrame,object):
             if None in self.mouse: # Mouse is outside the axis
                 self.clear_tracking()
                 return
-            #else:
-            #    self.clear_particle_annotation(self.track_id.get())
         
         # Only do this if we are in either a scatter plot or a surface value plot
         if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
@@ -883,7 +888,7 @@ class InteractivePlot(ResizableFrame,object):
     def track_and_annotate(self, event):
         if globals.debug > 1: print("interactiveplot.track_and_annotate")
         if None in self.mouse: # Mouse is outside axis
-            self.clear_particle_annotation(self.track_id.get())
+            self.plot_annotations.remove(str(self.track_id.get()))
             self.clear_tracking()
         else:
             self.track_particle(event=event)
@@ -892,8 +897,6 @@ class InteractivePlot(ResizableFrame,object):
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
         if self.track_id.get() != -1:
-            #self.clear_particle_annotation(self.track_id.get())
-        
             if self.tracking:
                 message = "Stopped tracking particle "+str(self.track_id.get())
                 reason = kwargs.get('reason',None)
@@ -941,30 +944,18 @@ class InteractivePlot(ResizableFrame,object):
             
             xy = self.get_xy_data()[ID]
             # Make a new annotation
-            if ID not in self.particle_annotations.keys():
-                self.particle_annotations[ID] = self.ax.annotate(
-                    str(ID),
-                    xy,
-                    clip_on=True
-                )
+            if str(ID) not in self.plot_annotations.keys():
+                self.plot_annotations.add(str(ID),str(ID),xy,clip_on=True)
                 if draw: self.draw()
-                return self.particle_annotations[ID]
+                return self.plot_annotations[str(ID)]
             elif ID_orig is None: # User chose an already-annotated particle, so clear that annotation
-                self.clear_particle_annotation(ID)
+                self.plot_annotations.remove(str(ID))
                 if draw: self.draw()
         return None
 
-    def clear_particle_annotation(self, ID, draw=True):
-        if globals.debug > 1: print("interactiveplot.clear_particle_annotation")
-        
-        if ID in self.particle_annotations.keys():
-            self.particle_annotations[ID].remove()
-            self.particle_annotations.pop(ID)
-        if draw: self.canvas.draw_idle()
-
     def get_closest_particle(self, data, x, y):
         if globals.debug > 1: print("interactiveplot.get_closest_particle")
-        return find_nearest_2d(data,np.array([x,y]))
+        return int(find_nearest_2d(data,np.array([x,y])))
 
     def get_closest_particle_to_mouse(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.get_closest_particle_to_mouse")
