@@ -134,7 +134,7 @@ class AxisLimits(tk.LabelFrame,object):
 
     def _on_adaptive_set(self,*args,**kwargs):
         if globals.debug > 1: print("axislimits._on_adaptive_set")
-        if 'disabled' not in str(self.adaptive_button.cget('state')):
+        if '!disabled' in str(self.adaptive_button['state']):
             if self.adaptive.get():
                 self.entry_low.configure(state='disabled')
                 self.entry_high.configure(state='disabled')

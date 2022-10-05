@@ -536,7 +536,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
-        if not self.gui.data.is_image:
+        if not self.gui.data.is_image and not self.tracking:
             self.previous_args = args
             self.previous_kwargs = kwargs
 
@@ -634,7 +634,7 @@ class InteractivePlot(ResizableFrame,object):
                 self.ax.set_ylim(new_ylim)
                 self.gui.controls.axis_controllers['YAxis'].limits.on_axis_limits_changed()
             
-        if draw: self.canvas.draw_idle()
+        if draw: self.draw()
     
     def calculate_xylim(self, which='both', using=(None,None)):
         if globals.debug > 1: print("interactiveplot.calculate_xylim")
@@ -691,11 +691,6 @@ class InteractivePlot(ResizableFrame,object):
     def zoom(self, event, which="both"):
         if globals.debug > 1: print("interactiveplot.zoom")
         if not event_in_axis(self.ax, event): return
-
-        #for name in ['XAxis','YAxis']:
-        #    if self.gui.controls.axis_controllers[name].limits.adaptive.get():
-        #        self.gui.message("Cannot zoom while adaptive limits are enabled")
-        #        return
         
         event = tkevent_to_matplotlibmouseevent(self.ax, event)
 
@@ -706,9 +701,10 @@ class InteractivePlot(ResizableFrame,object):
         if event.xdata is None or event.ydata is None: return
         
         # Make the limits not be adaptive
-        for axis_controller in self.gui.controls.axis_controllers.values():
-            if axis_controller.limits.adaptive.get():
-                axis_controller.limits.adaptive_button.invoke()
+        if not self.tracking:
+            for axis_controller in self.gui.controls.axis_controllers.values():
+                if axis_controller.limits.adaptive.get():
+                    axis_controller.limits.adaptive_button.invoke()
         
         factor = 0.9
         if event.button == 'down': factor = 1./factor
@@ -919,8 +915,8 @@ class InteractivePlot(ResizableFrame,object):
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
             release_widget_state_permanent(xlimits.adaptive_button)
             release_widget_state_permanent(ylimits.adaptive_button)
-            xlimits.adaptive_button.state(['!disabled'])
-            ylimits.adaptive_button.state(['!disabled'])
+            xlimits.adaptive_button.configure(state='!disabled')
+            ylimits.adaptive_button.configure(state='!disabled')
 
     def annotate_tracked_particle(self, event=None):
         if globals.debug > 1: print("interactiveplot.annotate_tracked_particle")
