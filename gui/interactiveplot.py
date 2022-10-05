@@ -257,6 +257,13 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.reset_colors")
         self.colors = None
 
+    def clear_particle_annotations(self, *args, **kwargs):
+        if globals.debug > 1: print("interactiveplot.clear_particle_annotations")
+        for key in self.plot_annotations.keys():
+            try: int(key)
+            except: pass
+            self.plot_annotations.remove(key)
+
     # Draw the figure
     def draw(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.draw")

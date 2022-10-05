@@ -348,6 +348,7 @@ class GUI(tk.Frame,object):
             new_data_length = len(self.data['data'][iter(self.data['data']).next()])
         if new_data_length != previous_data_length and not kwargs.get('first',False):
             self.interactiveplot.reset_colors()
+            self.interactiveplot.clear_particle_annotations()
 
         if self.data.is_image:
             return
@@ -556,6 +557,9 @@ class GUI(tk.Frame,object):
         self.controls.plotcontrols.disable_rotations()
 
         self.interactiveplot.clear_tracking()
+        self.interactiveplot.clear_particle_annotations()
+        if 'time' in self.interactiveplot.plot_annotations.keys():
+            self.interactiveplot.plot_annotations.remove('time')
         
         self.read_time_mode(*args,**kwargs)
 

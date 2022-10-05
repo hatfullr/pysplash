@@ -9,7 +9,6 @@ class PlotAnnotations(dict, object):
         self.ax = ax
         self.master = self.ax.get_figure().canvas.get_tk_widget()
         
-        
         self._kwargs = {}
 
         # Load the preferences
