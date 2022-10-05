@@ -41,7 +41,6 @@ class ParticleSettings(PopupWindow,object):
 
     def create_widgets(self,*args,**kwargs):
         self.multi_artist_editor = MultiArtistEditor(
-            self.gui,
             self.contents,
             self.artists,
         )

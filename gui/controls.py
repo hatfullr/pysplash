@@ -79,6 +79,10 @@ class Controls(tk.Frame,object):
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
 
         self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
+
+        def on_colorbar_integrated_surface_changed(*args,**kwargs):
+            if self.axis_controllers['Colorbar'].value.get() != "": self.update_button.configure(state='!disabled')
+        self.colorbar_integrated_surface.trace('w', on_colorbar_integrated_surface_changed)
         
         self.initialized = False
 
@@ -93,7 +97,6 @@ class Controls(tk.Frame,object):
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
         self.colorbar_integrated_surface = StringVar(self, "integrated", "colorbar_integrated_surface")
-        globals.state_variables.append(self.colorbar_integrated_surface)
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -385,7 +388,8 @@ class Controls(tk.Frame,object):
             need_full_redraw = True
 
         # Redraw when swapping between Integrated/Surface plots
-        if not need_full_redraw and self.colorbar_integrated_surface.get() != self.previous_colorbar_integrated_surface:
+        if (not need_full_redraw and
+            self.colorbar_integrated_surface.get() != self.previous_colorbar_integrated_surface):
             need_full_redraw = True
 
         # Save the previous scales

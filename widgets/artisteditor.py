@@ -18,6 +18,7 @@ import collections
 
 import matplotlib
 import numpy as np
+from copy import deepcopy
 
 # A frame which contains options for editing the properties of a given artist
 
@@ -58,14 +59,14 @@ class ArtistEditor(VerticalScrolledFrame, object):
         ],
     }
     
-    def __init__(self, gui, master, artist, name, *args, **kwargs):
-        self.gui = gui
+    def __init__(self, master, artist, name, *args, **kwargs):
         self.artist = artist
         self.name = name
         super(ArtistEditor,self).__init__(master,*args,**kwargs)
 
         # Get valid properties
         self.properties = {}
+        self.initial_properties = {}
         for name, value in self.artist.properties().items():
             if self.is_name_hidden(name): continue
             
@@ -78,8 +79,10 @@ class ArtistEditor(VerticalScrolledFrame, object):
             except AttributeError as e:
                 if "object has no property '" not in str(e): raise
                 else: continue
-            else: self.properties[name] = value
-
+            else:
+                self.properties[name] = value
+                self.initial_properties[name] = value
+        
         self.labels = collections.OrderedDict()
         self.widgets = collections.OrderedDict()
         self.variables = collections.OrderedDict()
@@ -104,10 +107,14 @@ class ArtistEditor(VerticalScrolledFrame, object):
                     v.trace('w', lambda *args,name=name: self.on_variable_changed(name))
             else: variable.trace('w', lambda *args,name=name: self.on_variable_changed(name))
 
-        self.bind("<Map>", self.initialize)
+        self.bind("<Map>", self.initialize, add="+")
         def reset_initialized(*args,**kwargs): self.initialized = False
         self.bind("<Unmap>", reset_initialized)
         self.initialized = False
+
+    def get_artist_properties(self, *args, **kwargs):
+        properties = self.artist.properties()
+        return {key:properties[key] for key in self.properties.keys()}
 
     def is_name_hidden(self, name):
         if name in ArtistEditor.hidden['all']: return True
@@ -118,8 +125,14 @@ class ArtistEditor(VerticalScrolledFrame, object):
         return False
 
     def initialize(self, *args, **kwargs):
+        # Update the variables to the artist's values
+        for name, variable in self.variables.items():
+            if isinstance(self.variables[name], (tuple,list,np.ndarray)):
+                for var, prop in zip(self.variables[name], self.properties[name]):
+                    var.set(prop)
+            else:
+                self.variables[name].set(self.properties[name])
         self.initialized = True
-        self.update_artist()
     
     def update_artist(self, *args, **kwargs):
         for name, variable in self.variables.items():
@@ -127,8 +140,13 @@ class ArtistEditor(VerticalScrolledFrame, object):
             if isinstance(self.variables[name], (list,tuple,np.ndarray)):
                 self.properties[name] = [v.get() for v in self.variables[name]]
             else: self.properties[name] = self.variables[name].get()
-        self.artist.set(**self.properties)
-        self.gui.interactiveplot.draw()
+        if self.properties != self.initial_properties:
+            self.artist.set(**self.properties)
+            fig = self.artist.get_figure()
+            if fig is not None:
+                fig.canvas.draw_idle()
+                fig.canvas.flush_events()
+                self.initial_properties = {key:value for key,value in self.properties.items()}
 
     def on_variable_changed(self, name):
         if not self.initialized: return

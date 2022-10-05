@@ -22,6 +22,12 @@ class PlotAnnotations(dict, object):
 
         super(PlotAnnotations, self).__init__(initial)
         self.master.bind("<<BeforePreferencesSaved>>", self.save, add="+")
+        self.master.bind("<<ArtistRemoved>>", self.on_artist_removed, add="+")
+
+    def pop(self, *args, **kwargs):
+        if globals.debug > 1: print("plotannotations.pop")
+        self._kwargs.pop(*args, **kwargs)
+        return super(PlotAnnotations,self).pop(*args,**kwargs)
 
     def save(self, *args, **kwargs):
         if globals.debug > 1: print("plotannotations.save")
@@ -54,4 +60,11 @@ class PlotAnnotations(dict, object):
             self._kwargs[k] = val
         self[key].draw(self.ax.get_figure().canvas.get_renderer())
 
-        
+    # When an artist gets removed, search to see if it was one of our artists
+    def on_artist_removed(self, *args, **kwargs):
+        if globals.debug > 1: print("plotannotations.on_artist_removed")
+        removed_keys = []
+        for key,artist in self.items():
+            if artist.get_figure() is None: removed_keys.append(key)
+        for key in removed_keys: self.pop(key)
+

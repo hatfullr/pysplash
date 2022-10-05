@@ -46,6 +46,8 @@ class ManageArtists(PopupWindow,object):
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
+
+        self.editor.bind("<<CurrentEditorChanged>>", self.set_delete_button_state, add="+")
         
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.create_variables")
@@ -53,13 +55,21 @@ class ManageArtists(PopupWindow,object):
     def create_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.create_widgets")
         self.editor = MultiArtistEditor(
-            self.gui,
             self.contents,
             {str(artist):artist for artist in self.artists},
+        )
+        self.delete_button = Button(
+            self.buttons_frame,
+            text="Delete",
+            command=self.editor.delete_current_selection,
+            state='disabled',
         )
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("manageartists.place_widgets")
         self.editor.pack(fill='both',expand=True)
+        self.delete_button.pack(side='left')
 
-
+    def set_delete_button_state(self, *args, **kwargs):
+        if globals.debug > 1: print("manageartists.set_delete_button_state")
+        self.delete_button.configure(state='disabled' if self.editor.current_editor is None else 'normal')

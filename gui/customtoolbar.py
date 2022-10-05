@@ -39,6 +39,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         # a regular pointer arrow when outside the axes
         self.canvas.mpl_connect('axes_enter_event', self.on_axes_enter_event)
         self.canvas.mpl_connect('axes_leave_event', self.on_axes_leave_event)
+        self.canvas.mpl_connect('motion_notify_event', self.on_motion_notify_event)
         self._mouse_in_axes = False
 
         self.queued_zoom = None
@@ -254,12 +255,15 @@ class CustomToolbar(NavigationToolbar2Tk):
     def configure_subplots(self,*args,**kwargs):
         ConfigureSubplots(self.gui)
 
+    def on_motion_notify_event(self, *args, **kwargs):
+        if self._mouse_in_axes:
+            # If the cursor was previously just the regular cursor, change it to the
+            # default inside the axes
+            if str(self.canvas.get_tk_widget().cget('cursor')) == matplotlib.backends._backend_tk.cursord[InteractivePlot.default_cursor_outside_axes]:
+                self.set_cursor(InteractivePlot.default_cursor_inside_axes)
+
     def on_axes_enter_event(self, *args, **kwargs):
         self._mouse_in_axes = True
-        # If the cursor was previously just the regular cursor, change it to the
-        # default inside the axes
-        if str(self.canvas.get_tk_widget().cget('cursor')) == matplotlib.backends._backend_tk.cursord[InteractivePlot.default_cursor_outside_axes]:
-            self.set_cursor(InteractivePlot.default_cursor_inside_axes)
         
     def on_axes_leave_event(self, *args, **kwargs):
         self._mouse_in_axes = False
