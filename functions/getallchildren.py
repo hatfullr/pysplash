@@ -4,6 +4,24 @@
 # beginning by widgets which do have children.
 import numpy as np
 
+def get_all_children(widget, order_by_level=False):
+    def get(widget):
+        children = widget.winfo_children()
+        for child in children:
+            for grandchild in get(child):
+                if grandchild not in children:
+                    children.append(grandchild)
+        return children
+    children = get(widget)
+    # The "order" of a widget in the heirarchy is given simply by
+    # counting how many "." are in the widget's name
+    if order_by_level:
+        orders = [child._w.count(".") for child in children]
+        idxs = np.argsort(orders)
+        children = [children[i] for i in idxs[::-1]]
+    return children
+
+"""
 def get_all_children(widget, wid=None, order_by_level=False):
     children = widget.winfo_children()
     for child in children:
@@ -19,4 +37,4 @@ def get_all_children(widget, wid=None, order_by_level=False):
         idxs = np.argsort(orders)
         children = [children[i] for i in idxs[::-1]]
     return children
-
+"""
