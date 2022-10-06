@@ -78,6 +78,16 @@ class Controls(tk.Frame,object):
         self.axis_controllers['XAxis'].combobox.bind("<<ComboboxSelected>>", self.update_yaxis_controller, add="+")
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
 
+        #def disable_integrated_surface_buttons(*args,**kwargs):
+        #    self.colorbar_integrated_button.configure(state='disabled')
+        #    self.colorbar_surface_button.configure(state='disabled')
+        #def enable_integrated_surface_buttons(*args,**kwargs):
+        #    state = self.axis_controllers['Colorbar'].combobox.cget('state')
+        #    self.colorbar_integrated_button.configure(state=state)
+        #    self.colorbar_surface_button.configure(state=state)
+        #self.axis_controllers['Colorbar'].bind("<<DisabledWidgets>>", disable_integrated_surface_buttons,add="+")
+        #self.axis_controllers['Colorbar'].bind("<<EnabledWidgets>>", enable_integrated_surface_buttons,add="+")
+        
         self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
 
         def on_colorbar_integrated_surface_changed(*args,**kwargs):

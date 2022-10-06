@@ -14,7 +14,6 @@ from functions.getallchildren import get_all_children
 from widgets.mathentry import MathEntry
 from widgets.entry import Entry
 from widgets.mathcombobox import MathCombobox
-from functions.setwidgetsstates import set_widgets_states
 from matplotlib.axis import XAxis, YAxis
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import globals
@@ -97,10 +96,8 @@ class AxisController(LabelledFrame,object):
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
         self.value = StringVar(self, None, 'value')
-        #self.scale = StringVar(self, 'linear', 'scale')
         self.label = StringVar(self, None, 'label')
         globals.state_variables.append(self.value)
-        #globals.state_variables.append(self.scale)
         globals.state_variables.append(self.label)
         
     def create_widgets(self,*args,**kwargs):
@@ -289,7 +286,6 @@ class AxisController(LabelledFrame,object):
                 # Take a guess at what the limits of the colorbar should be
                 idx = np.isfinite(self.data)
                 newlim = [np.nanmin(self.data[idx]), np.nanmax(self.data[idx])]
-                print("Here")
                 #pass
                 #pass # Let CustomColorbar handle this
                 #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
@@ -307,10 +303,11 @@ class AxisController(LabelledFrame,object):
     def set_widgets_states(self, *args, **kwargs):
         widgets = [
             self.label_entry,
+            self.limits.entry_low,
+            self.limits.entry_high,
             self.limits.adaptive_button,
             self.scale.linear_button,
             self.scale.log_button,
-            #self.scale.pow10_button,
             self.units.entry,
         ]
 
@@ -318,29 +315,7 @@ class AxisController(LabelledFrame,object):
         
         if self.value.get().strip() in ["",None,'None','none']:
             for widget in widgets: widget.configure(state='disabled')
+            self.event_generate("<<DisabledWidgets>>")
         else:
             for widget in widgets: widget.configure(state=state)
-
-        #if self.data_can_overflow(self._data):
-        #    self.scale.pow10_button.configure(state='disabled')
-        #else:
-        #    self.scale.pow10_button.configure(state='normal')
-    """
-    def data_can_overflow(self, data):
-        if globals.debug > 1: print("axiscontroller.data_can_overflow")
-        if not isinstance(data, np.ndarray): return False
-        if np.issubdtype(data.dtype, np.floating):
-            maxvalue = np.finfo(data.dtype).max
-        elif np.issubdtype(data.dtype, np.integer):
-            maxvalue = np.iinfo(data.dtype).max
-        else:
-            raise Exception("unknown dtype '"+str(data.dtype)+"' in data")
-        return np.any(data > np.log10(maxvalue))
-    
-    
-    def update_scale_buttons(self, *args, **kwargs):
-        if globals.debug > 1: print("axiscontroller.update_scale_buttons")
-        if self.data_can_overflow(self._data):
-            self.scale.pow10_button.configure(state='disabled')
-
-    """
+            self.event_generate("<<EnabledWidgets>>")
