@@ -25,6 +25,8 @@ try:
 except ImportError:
     has_jit = False
 
+
+    
 if __name__ == '__main__':
    if has_jit: cuda.select_device(0)
    globals.init()
@@ -34,3 +36,4 @@ if __name__ == '__main__':
    win.protocol("WM_DELETE_WINDOW",win.close)
    signal(SIGINT,win.close)
    win.launch()
+

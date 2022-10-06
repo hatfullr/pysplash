@@ -18,10 +18,10 @@ import globals
 import numpy as np
 
 class AxisLimits(tk.LabelFrame,object):
-    def __init__(self, master, text="Limits", adaptivecommands=(None, None), allowadaptive=True, **kwargs):
+    def __init__(self, master, controller, text="Limits", adaptivecommands=(None, None), allowadaptive=True, **kwargs):
         if globals.debug > 1: print("axislimits.__init__")
         super(AxisLimits, self).__init__(master,text=text,**kwargs)
-
+        self.controller = controller
         self.adaptivecommands = adaptivecommands
         self.allowadaptive = allowadaptive
         self.axis = None
@@ -141,3 +141,16 @@ class AxisLimits(tk.LabelFrame,object):
             else:
                 self.entry_low.configure(state='normal')
                 self.entry_high.configure(state='normal')
+
+    def update_limits(self, *args, **kwargs):
+        if globals.debug > 1: print("axislimits.update_limits")
+        if self.controller.units.entry.get() == "": return
+        units = self.controller.units.get()
+        if hasattr(self, "previous_units"): # Not the first time
+            if abs((self.previous_units-units)/units) > 0.001:
+                for limit in [self.low, self.high]:
+                    limit.set(limit.get() * self.previous_units / units)
+        else: # First time
+            for limit in [self.low, self.high]:
+                limit.set(limit.get() / units)
+        self.previous_units = units

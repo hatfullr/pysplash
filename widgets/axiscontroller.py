@@ -67,18 +67,17 @@ class AxisController(LabelledFrame,object):
     def data(self):
         if self.stale:
             self._data, self._physical_units, self._display_units = self.combobox.get()
-
-            # Enable/disable scaling options based on if overflows occur
-            self.update_scale_buttons()
             
             # Apply the scaling to the resulting data
             scale = self.scale.get()
             if scale == 'log10': self._data = np.log10(self._data)
             elif scale == '^10':
-                if self.data_can_overflow(self._data): self.scale.set('linear')
+                if self.scale.can_data_overflow_with_pow10(self._data):
+                    self.scale.set('linear')
                 else: self._data = 10.**self._data
             
             self.stale = False
+            self.event_generate("<<DataChanged>>")
         return self._data
     @property
     def physical_units(self):
@@ -98,10 +97,10 @@ class AxisController(LabelledFrame,object):
     def create_variables(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.create_variables")
         self.value = StringVar(self, None, 'value')
-        self.scale = StringVar(self, 'linear', 'scale')
+        #self.scale = StringVar(self, 'linear', 'scale')
         self.label = StringVar(self, None, 'label')
         globals.state_variables.append(self.value)
-        globals.state_variables.append(self.scale)
+        #globals.state_variables.append(self.scale)
         globals.state_variables.append(self.label)
         
     def create_widgets(self,*args,**kwargs):
@@ -122,10 +121,10 @@ class AxisController(LabelledFrame,object):
             state='disabled',
         )
         
-        self.limits = AxisLimits(self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
+        self.limits = AxisLimits(self,self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
         self.units_and_scale_frame = tk.Frame(self)
         self.units = AxisUnits(self.units_and_scale_frame, self)
-        self.scale = AxisScale(self.units_and_scale_frame)
+        self.scale = AxisScale(self.units_and_scale_frame, self)
         
     def place_widgets(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.place_widgets")
@@ -278,15 +277,6 @@ class AxisController(LabelledFrame,object):
             """
                 
             self.previous_scale = current_scale
-    
-    def update_limits(self, *args, **kwargs):
-        if globals.debug > 1: print('axiscontroller.update_limits')
-        if self.units.entry.get() == "": return
-        units = self.units.value.get()
-        if abs((self.previous_units-units)/units) > 0.001:
-            for limit in [self.limits.low, self.limits.high]:
-                limit.set(limit.get() * self.previous_units / units)
-            self.previous_units = units
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
@@ -331,11 +321,11 @@ class AxisController(LabelledFrame,object):
         else:
             for widget in widgets: widget.configure(state=state)
 
-        if self.data_can_overflow(self._data):
-            self.scale.pow10_button.configure(state='disabled')
-        else:
-            self.scale.pow10_button.configure(state='normal')
-
+        #if self.data_can_overflow(self._data):
+        #    self.scale.pow10_button.configure(state='disabled')
+        #else:
+        #    self.scale.pow10_button.configure(state='normal')
+    """
     def data_can_overflow(self, data):
         if globals.debug > 1: print("axiscontroller.data_can_overflow")
         if not isinstance(data, np.ndarray): return False
@@ -347,9 +337,10 @@ class AxisController(LabelledFrame,object):
             raise Exception("unknown dtype '"+str(data.dtype)+"' in data")
         return np.any(data > np.log10(maxvalue))
     
+    
     def update_scale_buttons(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.update_scale_buttons")
         if self.data_can_overflow(self._data):
             self.scale.pow10_button.configure(state='disabled')
 
-            
+    """

@@ -24,8 +24,11 @@ class AxisUnits(tk.LabelFrame, object):
         self.create_widgets()
         self.place_widgets()
 
-        self.value.trace('w',self.axis_controller.update_limits)
+        self.value.trace('w',self.axis_controller.limits.update_limits)
         self.axis_controller.bind("<<ComboboxSelected>>", self.on_axis_controller_combobox_selected)
+
+    def get(self,*args,**kwargs): return self.value.get()
+    def set(self,value): self.value.set(value)
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axisunits.create_variables")

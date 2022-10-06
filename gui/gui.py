@@ -131,8 +131,12 @@ class GUI(tk.Frame,object):
             self.menubar.particle.enable()
             self.menubar.functions.enable()
             
-        if globals.time_mode: self._data_time_mode = value
-        else: self._data = value
+        if globals.time_mode:
+            self._data_time_mode = value
+            self.event_generate("<<DataTimeModeChanged>>")
+        else:
+            self._data = value
+            self.event_generate("<<DataChanged>>")
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
