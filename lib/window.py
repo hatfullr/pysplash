@@ -52,4 +52,4 @@ class Window(tk.Tk):
         if error is not None:
             self.original_excepthook(error[0], error[1], error[2])
         
-        quit()
+        #quit()
