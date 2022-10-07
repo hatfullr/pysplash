@@ -543,7 +543,12 @@ class InteractivePlot(ResizableFrame,object):
             # It is ridiculous, but Matplotlib has some sort of bug with annotations
             # where sometimes the annotations cannot be seen. We reload them here to
             # avoid the problem.
-            self.plot_annotations.reload()
+            toreload = []
+            for key in self.plot_annotations.keys():
+                try: int(key)
+                except: continue
+                toreload.append(str(key))
+            self.plot_annotations.reload(which=toreload)
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
