@@ -195,6 +195,15 @@ class InteractivePlot(ResizableFrame,object):
         self.canvas = FigureCanvasTkAgg(self.fig,master=self)
         self.xycoords_label = tk.Label(self,textvariable=self.xycoords,bg='white')
         self.loading_wheel = LoadingWheel(self, 'sw', bg='white')
+        if globals.debug > 0:
+            self.draw_button = tk.Button(self,text="Draw",command=self.draw)
+    
+    def place_widgets(self):
+        if globals.debug > 1: print("interactiveplot.place_widgets")
+        self.canvas.get_tk_widget().pack(fill='both', expand=True)
+        self.xycoords_label.place(in_=self.canvas.get_tk_widget(),relx=1,rely=1,anchor='se')
+        if globals.debug > 0:
+            self.draw_button.place(in_=self.canvas.get_tk_widget(),relx=0,rely=1,anchor='sw')
 
     def create_hotkeys(self):
         if globals.debug > 1: print("interactiveplot.create_hotkeys")
@@ -232,11 +241,6 @@ class InteractivePlot(ResizableFrame,object):
         if (self.previously_drawn_object is not None and
             self.previously_drawn_object in self.ax.get_children()):
             self.previously_drawn_object.remove()
-        
-    def place_widgets(self):
-        if globals.debug > 1: print("interactiveplot.place_widgets")
-        self.canvas.get_tk_widget().pack(fill='both', expand=True)
-        self.xycoords_label.place(in_=self.canvas.get_tk_widget(),relx=1,rely=1,anchor='se')
 
     def update_mouse(self, event):
         self.mouse = np.array([event.xdata,event.ydata])
@@ -268,8 +272,10 @@ class InteractivePlot(ResizableFrame,object):
     def draw(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.draw")
         #self.loading_wheel.show()
+        
         self.canvas.draw_idle()
         self.canvas.flush_events()
+        
         #self.loading_wheel.hide()
         
     def update(self,*args,**kwargs):
@@ -498,11 +504,11 @@ class InteractivePlot(ResizableFrame,object):
 
         if self._first_after_calculate:
             xydata = self.get_xy_data()
-            renderer = self.canvas.get_renderer()
+            renderer= self.canvas.get_renderer()
             for ID, annotation in self.plot_annotations.items():
                 try: int(ID)
                 except: continue
-                self.plot_annotations.configure(ID, position=xydata[int(ID)])
+                self.plot_annotations.configure(ID, position=list(xydata[int(ID)]))
         
         self._first_after_calculate = False
 
@@ -524,7 +530,7 @@ class InteractivePlot(ResizableFrame,object):
             self.update_help_text()
 
             self.gui.event_generate("<<PlotUpdate>>")
-
+            
             self.draw()
 
             self.previous_xlim = self.ax.get_xlim()
@@ -533,6 +539,11 @@ class InteractivePlot(ResizableFrame,object):
             self._updating = False
             self.gui.message.clear(check="Drawing plot")
             self.enable()
+            
+            # It is ridiculous, but Matplotlib has some sort of bug with annotations
+            # where sometimes the annotations cannot be seen. We reload them here to
+            # avoid the problem.
+            self.plot_annotations.reload()
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
@@ -891,7 +902,8 @@ class InteractivePlot(ResizableFrame,object):
     def track_and_annotate(self, event):
         if globals.debug > 1: print("interactiveplot.track_and_annotate")
         if None in self.mouse: # Mouse is outside axis
-            self.plot_annotations.remove(str(self.track_id.get()))
+            if self.tracking:
+                self.plot_annotations.remove(str(self.track_id.get()))
             self.clear_tracking()
         else:
             self.track_particle(event=event)
@@ -906,7 +918,7 @@ class InteractivePlot(ResizableFrame,object):
                 if reason is not None:
                     message += " because "+reason
                 self.gui.message(message, persist=reason is not None)
-        
+
             self.tracking = False
             self.track_id.set(-1)
             

@@ -89,6 +89,7 @@ class AxisScale(tk.LabelFrame, object):
     # Check if the axis controller's data is able to overflow if it's raised to 10^
     def can_data_overflow_with_pow10(self, data):
         if globals.debug > 1: print('axisscale.can_data_overflow')
+        if data is None: return False
         if np.issubdtype(data.dtype, np.floating):
             maxvalue = np.finfo(data.dtype).max
         elif np.issubdtype(data.dtype, np.integer):

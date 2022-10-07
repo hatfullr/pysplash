@@ -1,6 +1,8 @@
 from functions.setpreference import set_preference
 from functions.getpreference import get_preference
+import matplotlib
 import globals
+#import numpy as np
 
 class PlotAnnotations(dict, object):
     def __init__(self,ax):
@@ -56,9 +58,8 @@ class PlotAnnotations(dict, object):
     def configure(self, key, **kwargs):
         if globals.debug > 1: print("plotannotations.configure")
         self[key].set(**kwargs)
-        for k, val in kwargs.items():
-            self._kwargs[k] = val
-        self[key].draw(self.ax.get_figure().canvas.get_renderer())
+        self._kwargs[key] = {k:val for k,val in kwargs.items()}
+        #self[key].draw(self.ax.get_figure().canvas.get_renderer())
 
     # When an artist gets removed, search to see if it was one of our artists
     def on_artist_removed(self, *args, **kwargs):
@@ -68,3 +69,14 @@ class PlotAnnotations(dict, object):
             if artist.get_figure() is None: removed_keys.append(key)
         for key in removed_keys: self.pop(key)
 
+    # Remove and re-add all the annotations
+    def reload(self, *args, **kwargs):
+        if globals.debug > 1: print("plotannotations.reload")
+        
+        for key, artist in self.items():
+            position = artist.get_position()
+            text = artist.get_text()
+            artist.remove()
+            self.add(key, text, position, **self._kwargs[key])
+            
+    

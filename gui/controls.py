@@ -320,7 +320,7 @@ class Controls(tk.Frame,object):
         if not need_full_redraw and self.gui.controls.plotcontrols.point_size in changed_variables:
             need_full_redraw=True
 
-        # Check if the user changed any of the x or y axis limits (changing units also changes limits)
+        # Check if the user changed any of the x or y axis limits (changing units and scales also changes limits)
         if self.is_limits_changed(('XAxis','YAxis')):
             # Cancel any queued zoom
             self.gui.plottoolbar.cancel_queued_zoom()
