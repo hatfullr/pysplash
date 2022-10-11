@@ -54,6 +54,8 @@ class InteractivePlot(ResizableFrame,object):
     # This needs to be a list or tuple
     plot_types_allowed_tracking = (ScatterPlot, SurfaceValuePlot)
     
+    colorbar_plots = (PointDensityPlot, SurfaceValuePlot, IntegratedValuePlot)
+    
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
         self.gui = gui
@@ -170,6 +172,9 @@ class InteractivePlot(ResizableFrame,object):
             self.clear_tracking(reason="the particle has a non-finite value on the plot")
         else:
             self._origin = value
+
+    @property
+    def isScatterPlot(self): return self.drawn_object is not None and isinstance(self.drawn_object, ScatterPlot) and not isinstance(self.drawn_object, PointDensityPlot)
         
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
@@ -263,7 +268,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def clear_particle_annotations(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_particle_annotations")
-        for key in self.plot_annotations.keys():
+        for key in list(self.plot_annotations.keys()):
             try: int(key)
             except: pass
             self.plot_annotations.remove(key)
@@ -488,10 +493,9 @@ class InteractivePlot(ResizableFrame,object):
         if self.making_movie:
             kwargs["resolution_steps"] = tuple([1])
 
-        if method is not ScatterPlot: self.disable()
+        #if method is not ScatterPlot: self.disable()
         self.gui.message("Drawing plot",duration=None)
         self._first_after_calculate = True
-
         
         self.drawn_object = method(*args,**kwargs)
 
@@ -509,13 +513,13 @@ class InteractivePlot(ResizableFrame,object):
                 try: int(ID)
                 except: continue
                 self.plot_annotations.configure(ID, position=list(xydata[int(ID)]))
+            
+            if isinstance(self.drawn_object, InteractivePlot.colorbar_plots): self.colorbar.show()
+            else: self.colorbar.hide()
         
         self._first_after_calculate = False
 
         if self.drawn_object is not None and self.drawn_object.calculating:
-            if not isinstance(self.drawn_object, ScatterPlot): self.colorbar.show()
-            else: self.colorbar.hide()
-            
             self.draw()
         else:
             # Make absolutely sure that the only drawn object on the axis is
@@ -760,7 +764,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.draw()
         
-        if isinstance(self.drawn_object, ScatterPlot):
+        if self.isScatterPlot:
             self.update()
         else:
             self.gui.controls.update_button.configure(state='!disabled')
@@ -796,7 +800,7 @@ class InteractivePlot(ResizableFrame,object):
         self.gui.plottoolbar.drag_pan(event)
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
-        if isinstance(self.drawn_object, ScatterPlot):
+        if self.isScatterPlot:
             self.update()
         else:
             self.gui.controls.update_button.configure(state='!disabled')
@@ -825,7 +829,7 @@ class InteractivePlot(ResizableFrame,object):
         colors = self.colors if self.colors is not None else np.full(len(xy), ScatterPlot.default_color_index)
 
         # Only do this if we are in a scatter plot
-        if isinstance(self.drawn_object, ScatterPlot):
+        if self.isScatterPlot:
             IDs = None
             
             if particles is None:
@@ -916,6 +920,7 @@ class InteractivePlot(ResizableFrame,object):
                 
     def clear_tracking(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.clear_tracking")
+        
         if self.track_id.get() != -1:
             if self.tracking:
                 message = "Stopped tracking particle "+str(self.track_id.get())
@@ -926,6 +931,8 @@ class InteractivePlot(ResizableFrame,object):
 
             self.tracking = False
             self.track_id.set(-1)
+
+            
             
             # Re-allow adaptive limits
             xlimits = self.gui.controls.axis_controllers['XAxis'].limits
@@ -1267,12 +1274,12 @@ class InteractivePlot(ResizableFrame,object):
     
     def disable(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.disable")
-        if not isinstance(self.drawn_object, ScatterPlot):
+        if not self.isScatterPlot:
             self.gui.set_user_controlled(False)
             self.hotkeys.disable()
         
     def enable(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.enable")
-        if not isinstance(self.drawn_object, ScatterPlot):
+        if not self.isScatterPlot:
             self.gui.set_user_controlled(True)
             self.hotkeys.enable()

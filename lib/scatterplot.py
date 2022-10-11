@@ -82,12 +82,12 @@ class ScatterPlot(CustomAxesImage,object):
 
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
-
+        
         cmap = kwargs.pop('cmap',ScatterPlot.cmap)
         norm = None
         if cmap == ScatterPlot.cmap:
             norm = matplotlib.colors.Normalize(vmin=0,vmax=ScatterPlot.Ncolors)
-        
+            
         super(ScatterPlot,self).__init__(
             self.ax,
             np.full((1,1),np.nan,dtype='uint8'),

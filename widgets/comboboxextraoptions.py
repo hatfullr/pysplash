@@ -78,6 +78,26 @@ class ComboboxExtraOptions(ttk.Combobox, object):
     def set(self,value):
         super(ComboboxExtraOptions,self).set(self._sanitize_selection(value))
 
+    # Choose the next value in the list of values if possible, otherwise do nothing
+    # If the current value isn't in the list of values, do nothing
+    def next(self,*args,**kwargs):
+        values = list(self['values'])
+        index = self.current()
+        if index != -1 and index < len(values)-1:
+            if index + 1 == self._find_divider():
+                if index + 2 < len(values)-1: self.current(index + 2)
+            else:
+                print(self['values'])
+                self.current(index + 1)
+
+    def previous(self,*args,**kwargs):
+        values = list(self['values'])
+        index = self.current()
+        if index != -1 and index > 0:
+            if index - 1 == self._find_divider():
+                if index - 2 >= 0: self.current(index - 2)
+            else: self.current(index - 1)
+        
     def configure(self,*args,**kwargs):
         values_set = False
         if 'extra' in kwargs.keys():

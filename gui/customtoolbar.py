@@ -18,8 +18,6 @@ import numpy as np
 import sys
 import os
 
-from lib.scatterplot import ScatterPlot
-
 class CustomToolbar(NavigationToolbar2Tk):
     matplotlib_default_cursor = matplotlib.backend_tools.Cursors.POINTER
     def __init__(self,master,gui,canvas,**kwargs):
@@ -169,7 +167,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()
 
-        if isinstance(self.gui.interactiveplot.drawn_object, ScatterPlot):
+        if self.gui.interactiveplot.isScatterPlot:
             self.gui.controls.update_button.invoke()
         else:
             self.gui.controls.update_button.configure(state='!disabled')

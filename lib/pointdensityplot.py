@@ -26,6 +26,11 @@ class PointDensityPlot(ScatterPlot, object):
         self.unique_x = np.unique(x)
         self.xbins = None
         self.ybins = None
+
+        if 'cmap' not in kwargs.keys():
+            colorbar = kwargs.get('colorbar', None)
+            if colorbar is not None:
+                kwargs['cmap'] = colorbar.cmap
         
         super(PointDensityPlot,self).__init__(ax,x,y,s=s,**kwargs)
 

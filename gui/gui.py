@@ -168,17 +168,21 @@ class GUI(tk.Frame,object):
 
             #if globals.time_mode: self.read_time_mode()
             #else: self.read()
+
             self.read(first=first)
             
             # Don't allow the axis controllers to start out in time mode (for now)
             for axis_controller in self.controls.axis_controllers.values():
                 values = axis_controller.combobox['values']
-                if values[axis_controller.combobox.current()] in ['t','time']:
+                if values[axis_controller.combobox.current()] in ['t','time','Time']:
                     for v in values:
-                        if v not in ['t','time']:
+                        if v not in ['t','time','Time']:
                             axis_controller.combobox.set(v)
                             # Set the label too, if the user hasn't typed their own label
                             if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
+                            # Make sure the colorbar is no longer Point Density
+                            if self.controls.axis_controllers['Colorbar'].value.get() == "Point Density":
+                                self.controls.axis_controllers['Colorbar'].combobox.set("")
                             break
 
             if currentfile_is_in_list:

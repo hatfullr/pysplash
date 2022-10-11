@@ -73,6 +73,8 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 vmin=self.vmin,
                 vmax=self.vmax,
             )
+
+            #print("Setting clim",self.vmin,self.vmax)
             
             # Implicitly calls update_axesimage_clim when cax limits are modified
             if self.side in ['right', 'left']:
