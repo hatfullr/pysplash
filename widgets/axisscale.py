@@ -53,9 +53,9 @@ class AxisScale(tk.LabelFrame, object):
         )
         self.pow10_button = RadioButton(
             self,
-            text="^10",
+            text="10^",
             variable=self._variable,
-            value="^10",
+            value="10^",
             width=0,
             state='disabled',
         )

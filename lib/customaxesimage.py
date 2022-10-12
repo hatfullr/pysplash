@@ -36,7 +36,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             self._data = copy(data['image'])
             extent = data['extent']
         else:
-            self._data = copy(data)            
+            self._data = copy(data)
             extent = list(self.ax.get_xlim())+list(self.ax.get_ylim())
 
         kwargs['origin'] = 'lower'
@@ -209,7 +209,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         #if not raw:
         #    if new_data.dtype != 'bool':
         #        if self.cscale == 'log10': new_data = np.log10(new_data)
-        #        elif self.cscale == '^10': new_data = 10.**new_data
+        #        elif self.cscale == '10^': new_data = 10.**new_data
         self._data = new_data
         #self._data = new_data.astype('uint8')
         super(CustomAxesImage,self).set_data(new_data)

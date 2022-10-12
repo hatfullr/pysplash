@@ -447,7 +447,7 @@ class Controls(tk.Frame,object):
         self.save_state()
 
     def update_colorbar_controller(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.on_xy_combobox_selected")
+        if globals.debug > 1: print("controls.update_colorbar_controller")
 
         if (self.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
             self.axis_controllers['YAxis'].value.get() in ['x','y','z']):

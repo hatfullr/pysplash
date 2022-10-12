@@ -70,7 +70,7 @@ class AxisController(LabelledFrame,object):
             # Apply the scaling to the resulting data
             scale = self.scale.get()
             if scale == 'log10': self._data = np.log10(self._data)
-            elif scale == '^10':
+            elif scale == '10^':
                 if self.scale.can_data_overflow_with_pow10(self._data):
                     self.scale.set('linear')
                 else: self._data = 10.**self._data
@@ -142,14 +142,15 @@ class AxisController(LabelledFrame,object):
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
-
+        print("value, previous_value =",value,self.previous_value)
         if value != self.previous_value:
             
             self.set_widgets_states()
             
             if self.gui.data is not None:
                 # When the user selects time as an axis, we need to change global behaviors
-                self.gui.time_mode.set(any([controller.value.get() in ['t','time'] for controller in self.gui.controls.axis_controllers.values()]))
+                print("Setting time mode to",any([controller.value.get() in ['t','time','Time'] for controller in self.gui.controls.axis_controllers.values()]))
+                self.gui.time_mode.set(any([controller.value.get() in ['t','time','Time'] for controller in self.gui.controls.axis_controllers.values()]))
                     
                 if value in self.gui.data['data'].keys():
                     if np.any(self.gui.get_display_data(value, raw=True) <= 0):
@@ -197,18 +198,11 @@ class AxisController(LabelledFrame,object):
 
     def on_scale_changed(self,*args,**kwargs):
         if globals.debug > 1: print("axiscontroller.on_scale_changed")
-
-        # Let CustomColorbar handle this
-        if self.is_colorbar:
-            self.event_generate("<<OnScaleChanged>>")
-            return
         
         current_scale = self.scale.get()
         if self.previous_scale != current_scale:
             # First reset the units so that things don't get mucked up
             self.units.reset()
-
-            previously_stale = self.stale
 
             self.stale = True
             
@@ -222,58 +216,55 @@ class AxisController(LabelledFrame,object):
 
                 if current_scale == 'log10':
                     low = max(low, 1.e-6)
-                    """
-                    lowset = False
-                    print("Hello")
-                    if low < 0:
-                        # Try obtaining new limits using the data
-                        if not previously_stale:
-                            data = self._data # The data before the scale has been changed
-                            log10data = np.log10(data)
-                            low = np.nanmin(data[np.isfinite(data)])
-                            print("I'm here")
-                            lowset = True
-                    if not lowset:
-                        low = max(low, 1.e-6)
-                    """
-
                 if self.previous_scale == 'linear':
                     if current_scale == 'log10':
                         self.limits.low.set(np.log10(low))
                         self.limits.high.set(np.log10(high))
-                    else: # Must be ^10
+                    else: # Must be 10^
                         self.limits.low.set(10**(low))
                         self.limits.high.set(10**(high))
                 elif self.previous_scale == 'log10':
                     if current_scale == 'linear':
                         self.limits.low.set(10**low)
                         self.limits.high.set(10**high)
-                    else: # Must be ^10
+                    else: # Must be 10^
                         self.limits.low.set(10**(10**low))
                         self.limits.high.set(10**(10**high))
-                elif self.previous_scale == '^10':
+                elif self.previous_scale == '10^':
                     if current_scale == 'linear':
                         self.limits.low.set(np.log10(low))
                         self.limits.high.set(np.log10(high))
                     else: # Must be log10
                         self.limits.low.set(np.log10(np.log10(low)))
                         self.limits.high.set(np.log10(np.log10(high)))
-            """
-            # If we changed scales on the colorbar, then modify the image data
-            if (self.gui.interactiveplot.drawn_object is not None and self.is_colorbar):
-                if not hasattr(self.gui.interactiveplot.drawn_object, 'linear_data'):
-                    self.gui.interactiveplot.drawn_object.linear_data = self.gui.interactiveplot.drawn_object._data
-                    
-                d = self.gui.interactiveplot.drawn_object.linear_data
-                t = (current_scale, self.previous_scale)
-                if t == ('log10', 'linear') or ('linear', '^10'): d = np.log10(d)
-                elif t == ('linear', 'log10') or t == ('^10', 'linear'): d = 10**d
-                d[~np.isfinite(d)] = np.nan
-                #else: d = self.gui.interactiveplot.drawn_object.linear_data
-                self.gui.interactiveplot.drawn_object.set_data(d)
-            """
-                
+
+            self.update_label_log_tag()
+            
             self.previous_scale = current_scale
+            # Let CustomColorbar handle this
+            if self.is_colorbar:
+                self.event_generate("<<OnScaleChanged>>")
+                #return
+
+    def update_label_log_tag(self, *args, **kwargs):
+        if globals.debug > 1: print("axiscontroller.update_label_log_tag")
+        current_scale = self.scale.get()
+        label = self.label.get()
+        newlabel = label
+        loglabels = ["log ", "$\\log_{10}"]
+        if current_scale != 'log10':
+            for loglabel in loglabels:
+                if label[:len(loglabel)] == loglabel:
+                    newlabel = newlabel[len(loglabel):]
+                    break
+            if newlabel[-1] == "$" and newlabel[0] != "$": newlabel = "$"+newlabel
+        else:
+            for loglabel in loglabels:
+                if loglabel in newlabel: break
+            else:
+                if newlabel[0] == "$": newlabel = "$\\log_{10}"+newlabel[1:]
+                else: newlabel = "log "+newlabel
+        if newlabel != label: self.label.set(newlabel)
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
@@ -290,7 +281,7 @@ class AxisController(LabelledFrame,object):
                 #pass # Let CustomColorbar handle this
                 #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
                 #if self.scale.get() == 'log10': newlim = np.log10(np.array(newlim))
-                #elif self.scale.get() == '^10': newlim = 10**np.array(newlim)
+                #elif self.scale.get() == '10^': newlim = 10**np.array(newlim)
                 # This axis is either the x or y axes of the main plot (not the colorbar)
             elif isinstance(self.axis, XAxis):
                 newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
@@ -311,11 +302,11 @@ class AxisController(LabelledFrame,object):
             self.units.entry,
         ]
 
-        state = self.combobox.cget('state')
+        #state = self.combobox.cget('state')
         
         if self.value.get().strip() in ["",None,'None','none']:
             for widget in widgets: widget.configure(state='disabled')
             self.event_generate("<<DisabledWidgets>>")
         else:
-            for widget in widgets: widget.configure(state=state)
+            for widget in widgets: widget.configure(state='!disabled')
             self.event_generate("<<EnabledWidgets>>")

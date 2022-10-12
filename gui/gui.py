@@ -175,15 +175,21 @@ class GUI(tk.Frame,object):
             for axis_controller in self.controls.axis_controllers.values():
                 values = axis_controller.combobox['values']
                 if values[axis_controller.combobox.current()] in ['t','time','Time']:
-                    for v in values:
-                        if v not in ['t','time','Time']:
-                            axis_controller.combobox.set(v)
-                            # Set the label too, if the user hasn't typed their own label
-                            if axis_controller.label.get() in values: axis_controller.label.set(axis_controller.value.get())
-                            # Make sure the colorbar is no longer Point Density
-                            if self.controls.axis_controllers['Colorbar'].value.get() == "Point Density":
-                                self.controls.axis_controllers['Colorbar'].combobox.set("")
-                            break
+                    axis_controller.combobox.next()
+                    axis_controller.combobox.event_generate("<<ComboboxSelected>>")
+                    #axis_controller.value.set(axis_controller.combobox['values'][axis_controller.combobox.current()])
+                    # Set the label too, if the user hasn't typed their own label
+                    #if axis_controller.label.get() in values: axis_controller.label.set(v)
+                    # Make sure the colorbar is no longer Point Density
+                    if self.controls.axis_controllers['Colorbar'].value.get() == "Point Density":
+                        self.controls.axis_controllers['Colorbar'].combobox.set("")
+                    #for v in values:
+                    #    if v not in ['t','time','Time']:
+                    #        axis_controller.value.set(v)
+                    #        #axis_controller.combobox.set(v)
+                            
+                            
+                    #        break
 
             if currentfile_is_in_list:
                 colors = get_preference(self.interactiveplot, "colors")
@@ -408,7 +414,7 @@ class GUI(tk.Frame,object):
     
     def read_time_mode(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read_time_mode")
-
+        
         # Make the data contain *all* the input data values
         data = {
             'data' : collections.OrderedDict({}),
@@ -459,7 +465,7 @@ class GUI(tk.Frame,object):
                 self.message("Flattening data arrays (%3d%%)..." % int(i/total*100), duration=None)
                 data['data'][key] = np.array(val).flatten()
             self._temp = data
-
+            
             self.message("Setting up display data arrays...", duration=None)
 
         self.set_user_controlled(False)
@@ -514,9 +520,9 @@ class GUI(tk.Frame,object):
                     scale = controller.scale.get()
                     if scale == 'linear': return self.get_data(key) * self.get_display_units(key) / units
                     elif scale == 'log10': return np.log10(self.get_data(key) * self.get_display_units(key) / units)
-                    elif scale == '^10': return 10**(self.get_data(key) * self.get_display_units(key) / units)
+                    elif scale == '10^': return 10**(self.get_data(key) * self.get_display_units(key) / units)
                     else:
-                        raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '^10'")
+                        raise RuntimeError("The AxisController '"+controller+"' has scale '"+scale+"', which is not one of 'linear', 'log10', or '10^'")
                 else: return self.get_data(key) * self.get_display_units(key) / units
             return self.get_data(key) * self.get_display_units(key)
 

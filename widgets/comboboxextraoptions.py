@@ -86,9 +86,7 @@ class ComboboxExtraOptions(ttk.Combobox, object):
         if index != -1 and index < len(values)-1:
             if index + 1 == self._find_divider():
                 if index + 2 < len(values)-1: self.current(index + 2)
-            else:
-                print(self['values'])
-                self.current(index + 1)
+            else: self.current(index + 1)
 
     def previous(self,*args,**kwargs):
         values = list(self['values'])

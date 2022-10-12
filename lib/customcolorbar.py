@@ -54,7 +54,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         # Modify by the scale
         scale = self.axis_controller.scale.get()
         if scale == 'log10': return np.log10(data)
-        elif scale == '^10': return 10**data
+        elif scale == '10^': return 10**data
         else: return data
 
     @property
@@ -69,12 +69,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             lim = self.get_cax_limits()
             self.vmin = cminmax[0]
             self.vmax = cminmax[1]
-            self.norm = matplotlib.colors.Normalize(
-                vmin=self.vmin,
-                vmax=self.vmax,
-            )
-
-            #print("Setting clim",self.vmin,self.vmax)
+            self.norm = matplotlib.colors.Normalize(vmin=self.vmin,vmax=self.vmax)
             
             # Implicitly calls update_axesimage_clim when cax limits are modified
             if self.side in ['right', 'left']:
@@ -83,9 +78,8 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 self.cax.set_xlim(self.vmin,self.vmax)
             else:
                 raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
-            
+                
             self.draw_all()
-            
     
     def find_axesimage(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.find_axesimage")
@@ -166,17 +160,17 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             self.axis_controller = axis_controller
         else:
             raise Exception("cannot connect colorbar '"+str(self)+"' to axis_controller '"+str(axis_controller)+"' because it is already connected to '"+str(self.axis_controller)+"'")
-
+        
         # Override what the adaptive limits button does
         self.axis_controller.limits.configure(adaptivecommands=(self.set_adaptive_limits,None))
-
+        
         # When the AxisScale buttons are clicked
         self.axis_controller.bind("<<OnScaleChanged>>", self.on_scale_changed, add="+")
         # Right before drawing the AxesImage, grab its data
         self.axis_controller.gui.bind("<<PlotUpdate>>", self.update_data, add="+")
         for var in [self.axis_controller.limits.low, self.axis_controller.limits.high]:
             if var in globals.state_variables: globals.state_variables.remove(var)
-
+        
         # Whenever the limits in the axis controller are edited, update the plot
         self.axis_controller.limits.low.trace('w', self.on_axis_controller_limits_changed)
         self.axis_controller.limits.high.trace('w', self.on_axis_controller_limits_changed)
@@ -314,7 +308,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     
     def _update_axesimage_clim(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_axesimage_clim")
-        
+
         if self.side in ['right', 'left']:
             self.axesimage.set_clim(self.cax.get_ylim())
         elif self.side in ['top', 'bottom']:
@@ -336,11 +330,25 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             if hasattr(self, 'axesimage') and self.axesimage is not None: self.axesimage.set_data(data)
             self.axis_controller.limits.low.set(vmin)
             self.axis_controller.limits.high.set(vmax)
-        
+
     def on_scale_changed(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.on_scale_changed")
+        
         # Update the limits
         self.set_adaptive_limits()
+
+        """
+        if self.axesimage_connected and self.axiscontroller_connected:
+            self.update_data()
+            scale = self.axis_controller.scale.get()
+            if scale == 'linear': self.axesimage.set_data(self.linear_data)
+            elif scale == 'log10':
+                print("log10")
+                self.axesimage.set_data(np.log10(self.linear_data))
+            clim = (np.nanmin(self.axesimage._data), np.nanmax(self.axesimage._data))
+            print("setting clim to",clim)
+            self.set_clim(clim)
+        """
 
     def update_data(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_data")
@@ -348,7 +356,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             scale = self.axis_controller.scale.get()
             data = self.axesimage._data
             if scale == 'log10': self.linear_data = 10**data
-            elif scale == '^10': self.linear_data = np.log10(data)
+            elif scale == '10^': self.linear_data = np.log10(data)
             else: self.linear_data = data
 
     # Prevent double-calls when both limits change
@@ -364,9 +372,9 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
         vmin, vmax = self.axis_controller.limits.low.get(), self.axis_controller.limits.high.get()
 
-        if hasattr(self,'axesimage') and self.axesimage is not None:
+        if self.axesimage_connected:
             self.axesimage.set_clim((vmin,vmax))
-            
+        
         self.set_clim((vmin, vmax))
     
         
