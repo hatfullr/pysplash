@@ -142,7 +142,6 @@ class AxisController(LabelledFrame,object):
         # Check for any <= 0 values in the data. If there are any, then if
         # the user is in log10 scale mode, we need to switch them out of it
         value = self.value.get()
-        print("value, previous_value =",value,self.previous_value)
         if value != self.previous_value:
             
             self.set_widgets_states()
