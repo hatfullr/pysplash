@@ -40,6 +40,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
             extent = list(self.ax.get_xlim())+list(self.ax.get_ylim())
 
         kwargs['origin'] = 'lower'
+        self.kwargs = kwargs
 
         super(CustomAxesImage, self).__init__(self.ax,extent=extent,interpolation=interpolation,**kwargs)
         self._extent = extent
@@ -62,8 +63,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         
             self.thread = None
 
-            self.after_id_calculate = None
-        
             self.threaded = True
             if initialize:
                 self.widget.after(1, self._calculate)
@@ -83,7 +82,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
         self.cancel() # Cancel any running calculations
-        if self.colorbar is not None: self.colorbar.disconnect_axesimage()
+        if self.colorbar is not None: self.colorbar.disconnect_axesimage(self)
         super(CustomAxesImage,self).remove(*args,**kwargs)
     
     def equalize_aspect_ratio(self,xlim=None,ylim=None):
@@ -137,12 +136,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
                 self._data = np.resize(self._data,(self.ypixels,self.xpixels)) # Fills new entries with 0
 
             if self.threaded:
-                
-                
-                #if self.thread is not None:
-                #    self.wait_to_calculate(*args,**kwargs)
-                #    return
-
                 while self.thread is not None:
                     self.widget.update()
                     if self._interrupt:
@@ -178,14 +171,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.thread = None
         
         self.set_data(self._data)
-        
-        # Update this image's colors based on the colorbar's limits
-        #if self.colorbar is not None:
-        #    self.set_clim(self.colorbar.get_cax_limits())
 
-        if self.after_id_calculate is not None:
-            self.widget.after_cancel(self.after_id_calculate)
-        self.after_id_calculate = None
         self.after_calculate()
         if self.aftercalculate is not None:
             self.aftercalculate(*args,**kwargs)
@@ -193,25 +179,9 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         if self.resolution_step == self.resolution_steps[-1]:
             self.calculating = False
     
-    # Allow a calculation to happen only once every 10 miliseconds
-    # Prevents double calculation when both x and y limits change
-    def wait_to_calculate(self,*args,**kwargs):
-        if globals.debug > 1: print("customaxesimage.wait_to_calculate")
-        #print(self,"wait to calculate",self.after_id_calculate, args,kwargs)
-        if self.after_id_calculate is None:
-            self.after_id_calculate = self.widget.after(10,lambda args=args,kwargs=kwargs:self._calculate(*args,**kwargs))
-        else:
-            self.widget.after_cancel(self.after_id_calculate)
-            self.after_id_calculate = None
-
-    def set_data(self,new_data,raw=False):
+    def set_data(self,new_data):
         if globals.debug > 1: print("customaxesimage.set_data")
-        #if not raw:
-        #    if new_data.dtype != 'bool':
-        #        if self.cscale == 'log10': new_data = np.log10(new_data)
-        #        elif self.cscale == '10^': new_data = 10.**new_data
         self._data = new_data
-        #self._data = new_data.astype('uint8')
         super(CustomAxesImage,self).set_data(new_data)
 
     def cancel(self,*args,**kwargs):
@@ -219,4 +189,3 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self._interrupt = True
         self.calculating = False
         if self.thread is not None: self.thread.stop()
-        if self.after_id_calculate is not None: self.widget.after_cancel(self.after_id_calculate)

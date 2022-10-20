@@ -411,7 +411,8 @@ class GUI(tk.Frame,object):
                 if time is not None:
                     self.interactiveplot.time.set(time*self.get_display_units(name))
                 break
-    
+
+    """
     def read_time_mode(self,*args,**kwargs):
         if globals.debug > 1: print("gui.read_time_mode")
         
@@ -440,13 +441,13 @@ class GUI(tk.Frame,object):
                 # Figure out how long the data is
                 length = 0
                 for key,val in d['data'].items():
-                    if key not in ['t','time']:
+                    if key not in ['t','time','Time']:
                         length = len(val)
                         break
                 if length == 0: raise Exception("data file '"+filename+"' either only contains time data, or has no data at all")
 
                 for key,val in d['data'].items():
-                    if key in ['t','time']: val = np.repeat(val,length)
+                    if key in ['t','time','Time']: val = np.repeat(val,length)
                     if key not in data['data'].keys(): data['data'][key] = [val]
                     else: data['data'][key] += [val]
 
@@ -481,7 +482,8 @@ class GUI(tk.Frame,object):
         
         self.set_user_controlled(True)
         self.message.clear(check="Setting up display data arrays...")
-
+    """
+    
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
         if self.data is None: return None
@@ -574,8 +576,6 @@ class GUI(tk.Frame,object):
         self.interactiveplot.clear_particle_annotations()
         if 'time' in self.interactiveplot.plot_annotations.keys():
             self.interactiveplot.plot_annotations.remove('time')
-        
-        self.read_time_mode(*args,**kwargs)
 
         # Stale the axis controllers so that we obtain the correct data
         # (the shape of the data has changed now)
@@ -587,7 +587,7 @@ class GUI(tk.Frame,object):
 
         globals.time_mode = False
         
-        self.controls.axis_controllers['Colorbar'].combobox.configure(state='enabled')
+        self.controls.axis_controllers['Colorbar'].combobox.configure(state='normal')
         self.menubar.particle.enable()
 
         if self.previous_file is not None:

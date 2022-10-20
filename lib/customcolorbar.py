@@ -1,6 +1,7 @@
 import matplotlib.colorbar
 from matplotlib.image import AxesImage
 import matplotlib.colors
+import matplotlib.image
 import globals
 import numpy as np
 
@@ -26,11 +27,13 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         self.draw_cid = None
         self.connected_canvas = None
         self.axis_controller = None
-        self.linear_data = None
+        self.linear_data = []
+
+        self.axesimages = []
 
         self._after_update_axesimage_clim_cid = None
         self._after_limits_changed_cid = None
-        self._axesimage_cid = None
+        self._axesimages_cids = []
 
     @property
     def visible(self):
@@ -49,16 +52,17 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if self.axis_controller is None:
             raise Exception("cannot access data while axis_controller is not connected")
         # Modify by the units
-        data = self.linear_data * self.axis_controller.units.value.get()
-        
-        # Modify by the scale
-        scale = self.axis_controller.scale.get()
-        if scale == 'log10': return np.log10(data)
-        elif scale == '10^': return 10**data
-        else: return data
+        units = self.axis_controller.units.value.get()
+        data = self.linear_data
+        for i,d in enumerate(data):
+            # Modify by the scale
+            scale = self.axis_controller.scale.get()
+            if scale == 'log10': data[i] = np.log10(d)
+            elif scale == '10^': data[i] = 10**d
+        return data
 
     @property
-    def axesimage_connected(self): return hasattr(self, "axesimage") and self.axesimage is not None
+    def axesimage_connected(self): return len(self.axesimages) > 0
 
     @property
     def axiscontroller_connected(self): return hasattr(self, "axis_controller") and self.axis_controller is not None
@@ -123,13 +127,28 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         self.connected_canvas = self._ax.get_figure().canvas
         self.connect_resize()
         self.connect_draw()
+        
+        if self.side in ['right', 'left']:
+            self.image_cid = self.cax.callbacks.connect(
+                "ylim_changed",
+                self.update_axesimage_clim,
+            )
+        elif self.side in ['top', 'bottom']:
+            self.image_cid = self.cax.callbacks.connect(
+                "xlim_changed",
+                self.update_axesimage_clim,
+            )
+        else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
 
     def disconnect_canvas(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_canvas")
         self.disconnect_resize()
-        self.disconnect_axesimage()
+        self.disconnect_axesimages()
         #self.disconnect_draw()
         self.connected_canvas = None
+        if self.image_cid is not None:
+            self.cax.callbacks.disconnect(self.image_cid)
+        self.image_cid = None
 
     
     def connect_draw(self, *args, **kwargs):
@@ -181,41 +200,38 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     def connect_axesimage(self, axesimage):
         if globals.debug > 1: print("customcolorbar.connect_axesimage")
 
-        self.axesimage = axesimage
+        if axesimage in self.axesimages:
+            raise Exception("cannot connect AxesImage '"+str(axesimage)+"' to the colorbar because it is already connected")
+        self.axesimages.append(axesimage)
 
         def func(*args,**kwargs):
             self.update_data()
             if self.axiscontroller_connected and self.axis_controller.limits.adaptive.get():
                 self.set_adaptive_limits()
-        self._axesimage_cid = self.axesimage.get_figure().canvas.mpl_connect("draw_event",func)
+
+        self._axesimages_cids.append(axesimage.get_figure().canvas.mpl_connect("draw_event",func))
         
         #self.update_data()
         #if self.axis_controller.limits.adaptive.get():
         #self.set_adaptive_limits()
-        
-        if self.side in ['right', 'left']:
-            self.image_cid = self.cax.callbacks.connect(
-                "ylim_changed",
-                self.update_axesimage_clim,
-            )
-        elif self.side in ['top', 'bottom']:
-            self.image_cid = self.cax.callbacks.connect(
-                "xlim_changed",
-                self.update_axesimage_clim,
-            )
-        else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
 
-    # Called when AxesImage previously ocnnected with connect_axesimage
+    # Called when AxesImage previously connected with connect_axesimage
     # is removed from the plot.
-    def disconnect_axesimage(self, *args, **kwargs):
+    def disconnect_axesimages(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.disconnect_axesimage")
-        if self.image_cid is not None:
-            self.cax.callbacks.disconnect(self.image_cid)
-        self.image_cid = None
-        if self._axesimage_cid is not None:
-            self.axesimage.get_figure().canvas.mpl_disconnect(self._axesimage_cid)
-        self._axesimage_cid = None
-        self.axesimage = None
+        for axesimage, cid in zip(self.axesimages, self._axesimages_cids):
+            axesimage.get_figure().canvas.mpl_disconnect(cid)
+        self._axesimages_cids = []
+        self.axesimages = []
+
+    def disconnect_axesimage(self, axesimage):
+        if globals.debug > 1: print("customcolorbar.disconnect_axesimage")
+        if axesimage not in self.axesimages:
+            raise ValueError("cannot find '"+str(axesimage)+"' in the list of axes images")
+        idx = self.axesimages.index(axesimage)
+        self.axesimages[idx].get_figure().canvas.mpl_disconnect(self._axesimages_cids[idx])
+        self.axesimages.remove(axesimage)
+        self._axesimages_cids.remove(self._axesimages_cids[idx])
 
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")
@@ -310,26 +326,28 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.update_axesimage_clim")
 
         if self.side in ['right', 'left']:
-            self.axesimage.set_clim(self.cax.get_ylim())
+            for image in self.axesimages: image.set_clim(self.cax.get_ylim())
         elif self.side in ['top', 'bottom']:
-            self.axesimage.set_clim(self.cax.get_xlim())
+            for image in self.axesimages: image.set_clim(self.cax.get_xlim())
         else:
             raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.set_adaptive_limits")
-        # Update the data if needed
-        #if self.linear_data is None and self.axesimage is not None and self.axis_controller is not None:
-        #    self.update_data()
 
         data = self.data
-        valid = np.isfinite(data)
-        if np.any(valid):
-            vmin = np.nanmin(data[valid])
-            vmax = np.nanmax(data[valid])
-            if hasattr(self, 'axesimage') and self.axesimage is not None: self.axesimage.set_data(data)
-            self.axis_controller.limits.low.set(vmin)
-            self.axis_controller.limits.high.set(vmax)
+        vmin = None
+        vmax = None
+        for image,d in zip(self.axesimages, data):
+            valid = np.isfinite(d)
+            if np.any(valid):
+                if vmin is None: vmin = np.nanmin(d[valid])
+                else: vmin = min(vmin, np.nanmin(d[valid]))
+                if vmax is None: vmax = np.nanmax(d[valid])
+                else: vmax = max(vmax, np.nanmax(d[valid]))
+            image.set_data(d)
+        self.axis_controller.limits.low.set(vmin)
+        self.axis_controller.limits.high.set(vmax)
 
     def on_scale_changed(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.on_scale_changed")
@@ -352,12 +370,18 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     def update_data(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_data")
-        if hasattr(self,'axesimage') and self.axesimage is not None:
+        if self.axesimage_connected:
             scale = self.axis_controller.scale.get()
-            data = self.axesimage._data
-            if scale == 'log10': self.linear_data = 10**data
-            elif scale == '10^': self.linear_data = np.log10(data)
-            else: self.linear_data = data
+            self.linear_data = []
+            for i, image in enumerate(self.axesimages):
+                data = image.get_array()
+                #if isinstance(image, CustomAxesImage): data = image._data
+                #elif isinstance(image, matplotlib.image.AxesImage): data = image.get_array()
+                #else: raise TypeError("unrecognized image type '"+type(image).__name__+"'")
+                
+                if scale == 'log10': self.linear_data.append(10**data)
+                elif scale == '10^': self.linear_data.append(np.log10(data))
+                else: self.linear_data.append(data)
 
     # Prevent double-calls when both limits change
     def on_axis_controller_limits_changed(self,*args,**kwargs):
@@ -373,7 +397,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         vmin, vmax = self.axis_controller.limits.low.get(), self.axis_controller.limits.high.get()
 
         if self.axesimage_connected:
-            self.axesimage.set_clim((vmin,vmax))
+            for image in self.axesimages: image.set_clim((vmin,vmax))
         
         self.set_clim((vmin, vmax))
     

@@ -452,7 +452,7 @@ class Controls(tk.Frame,object):
         if (self.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
             self.axis_controllers['YAxis'].value.get() in ['x','y','z']):
             self.axis_controllers['Colorbar'].combobox.configure(state='normal')
-        else:
+        elif not self.gui.time_mode.get():
             self.axis_controllers['Colorbar'].combobox.configure(state='readonly')
             if self.axis_controllers['Colorbar'].value.get() not in ['Point Density','','None',None]:
                 self.axis_controllers['Colorbar'].value.set("")

@@ -6,6 +6,7 @@ PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher
   * If using Python2, please install the [Enum](https://pypi.org/project/enum34/) package
 * ![Tkinter](https://tkdocs.com/tutorial/install.html) (pre-installed with most Python distributions)
 * ![Numpy](https://numpy.org/install/) (pre-installed with most Python distributions)
+* ![SciPy](https://scipy.org/install/)
 * ![Matplotlib](https://matplotlib.org/stable/users/installing.html)
 * ![Numba](https://numba.pydata.org/numba-doc/latest/user/installing.html) (optional)
 

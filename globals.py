@@ -25,6 +25,15 @@ debug = 0
 # value to False gives ~10x performance increase.
 use_multiprocessing = False
 
+# When in Time Mode we create "point density" plots
+# with time on the x-axis. In this way, all the files
+# imported into PySplash are shown. However, if there
+# are many files imported then the RAM limit might be
+# reached. Thus, we create the "point density" plots
+# by reading in this number of files at a time and
+# plotting them in groups.
+time_mode_nfiles = 30
+
 # The width of a tooltip to determine text wrapping
 tooltip_wraplength = 50
 

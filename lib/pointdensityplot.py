@@ -23,7 +23,7 @@ class PointDensityPlot(ScatterPlot, object):
         x = x[valid]
         y = y[valid]
 
-        self.unique_x = np.unique(x)
+        #self.unique_x = np.unique(x)
         self.xbins = None
         self.ybins = None
 
@@ -42,14 +42,14 @@ class PointDensityPlot(ScatterPlot, object):
         self.xbins = np.linspace(self._extent[0],self._extent[1],self.xpixels+1)
 
         # Figure out the resolution that we should use on the x-axis
-        if globals.time_mode:
-            # If we will use more pixels than what is available from our data,
-            # reduce the number of bins to instead fit the data
-            dx = np.diff(self.unique_x)
-            self.xbins = np.empty(len(self.unique_x)+1)
-            self.xbins[0] = self.unique_x[0]
-            self.xbins[-1] = self.unique_x[-1]
-            self.xbins[1:-1] = self.unique_x[:-1] + 0.5*dx
+        #if globals.time_mode:
+        #    # If we will use more pixels than what is available from our data,
+        #    # reduce the number of bins to instead fit the data
+        #    dx = np.diff(self.unique_x)
+        #    self.xbins = np.empty(len(self.unique_x)+1)
+        #    self.xbins[0] = self.unique_x[0]
+        #    self.xbins[-1] = self.unique_x[-1]
+        #    self.xbins[1:-1] = self.unique_x[:-1] + 0.5*dx
 
     if has_jit:
         def calculate_data_gpu(self,x,y,c):

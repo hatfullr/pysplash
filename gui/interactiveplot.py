@@ -25,6 +25,7 @@ from lib.orientationarrows import OrientationArrows
 from lib.customaxesimage import CustomAxesImage
 from lib.customcolorbar import CustomColorbar
 from lib.pointdensityplot import PointDensityPlot
+from lib.timemodeplot import TimeModePlot
 from lib.surfacevalueplot import SurfaceValuePlot
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from lib.plotannotations import PlotAnnotations
@@ -54,7 +55,7 @@ class InteractivePlot(ResizableFrame,object):
     # This needs to be a list or tuple
     plot_types_allowed_tracking = (ScatterPlot, SurfaceValuePlot)
     
-    colorbar_plots = (PointDensityPlot, SurfaceValuePlot, IntegratedValuePlot)
+    colorbar_plots = (PointDensityPlot, SurfaceValuePlot, IntegratedValuePlot, TimeModePlot)
     
     def __init__(self,master,gui,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.__init__")
@@ -313,6 +314,27 @@ class InteractivePlot(ResizableFrame,object):
         for axis_controller in self.gui.controls.axis_controllers.values():
             axis_controller.stale = True
 
+        kwargs = {
+            'aftercalculate' : self.after_calculate, # Overwritten for some plot types
+            'aspect' : None,
+        }
+
+        if self.gui.time_mode.get():
+            self.gui.message("Creating time mode plot...", duration=None)
+            kwargs['colorbar'] = self.colorbar
+            self.drawn_object = TimeModePlot(
+                self.ax,
+                self.gui.controls.axis_controllers['YAxis'].value.get(),
+                self.gui,
+                **kwargs,
+            )
+            
+            if globals.use_multiprocessing:
+                if self.drawn_object.thread is None:
+                    raise RuntimeError("Failed to spawn thread to draw the plot")
+            return
+                    
+
         xaxis = self.gui.controls.axis_controllers['XAxis']
         yaxis = self.gui.controls.axis_controllers['YAxis']
         x, x_display_units, x_physical_units = xaxis.data, xaxis.display_units, xaxis.physical_units
@@ -331,9 +353,7 @@ class InteractivePlot(ResizableFrame,object):
 
         if (xaxis.value.get() in ['x','y','z'] and
             yaxis.value.get() in ['x','y','z']):
-            aspect = 'equal'
-        else:
-            aspect = None
+            kwargs['aspect'] = 'equal'
 
         # If there's no data to plot, stop here
         if not self.gui.data:
@@ -342,10 +362,6 @@ class InteractivePlot(ResizableFrame,object):
 
         self.gui.event_generate("<<BeforePlotUpdate>>")
         
-        kwargs = {
-            'aftercalculate' : self.after_calculate, # Overwritten for some plot types
-            'aspect' : aspect,
-        }
         colorbar_text = self.gui.controls.axis_controllers['Colorbar'].value.get()
         
         # Scatter plot
@@ -516,12 +532,16 @@ class InteractivePlot(ResizableFrame,object):
             
             if isinstance(self.drawn_object, InteractivePlot.colorbar_plots): self.colorbar.show()
             else: self.colorbar.hide()
-        
+
         self._first_after_calculate = False
 
-        if self.drawn_object is not None and self.drawn_object.calculating:
+        if self.drawn_object is not None and self.drawn_object.calculating and len(self.drawn_object.resolution_steps) > 1:
             self.draw()
         else:
+            if len(self.drawn_object.resolution_steps) <= 1:
+                if isinstance(self.drawn_object, InteractivePlot.colorbar_plots): self.colorbar.show()
+                else: self.colorbar.hide()
+            
             # Make absolutely sure that the only drawn object on the axis is
             # the one we just created
             for child in self.ax.get_children():
@@ -536,12 +556,14 @@ class InteractivePlot(ResizableFrame,object):
             self.gui.event_generate("<<PlotUpdate>>")
             
             self.draw()
-
+            
             self.previous_xlim = self.ax.get_xlim()
             self.previous_ylim = self.ax.get_ylim()
             self.loading_wheel.hide()
             self._updating = False
-            self.gui.message.clear(check="Drawing plot")
+            if not self.gui.time_mode.get():
+                self.gui.message.clear(check="Drawing plot")
+            else: self.gui.message.clear(check="Creating time mode plot...")
             self.enable()
             
             # It is ridiculous, but Matplotlib has some sort of bug with annotations
@@ -1050,7 +1072,7 @@ class InteractivePlot(ResizableFrame,object):
     # style is a list or tuple
     def set_style(self,style):
         if globals.debug > 1: print("interactiveplot.set_style")
-
+        
         if not isinstance(style, (list,tuple)):
             try:
                 style = list(ast.literal_eval(style))
@@ -1083,140 +1105,144 @@ class InteractivePlot(ResizableFrame,object):
             for key,val in new_rcParams.items():
                 matplotlib.pyplot.rcParams[key] = val
 
-            ax = self.ax
-            figure = ax.get_figure()
 
-            # Store keywords
-            figkw = {key:val for key,val in new_rcParams.items() if 'figure.' in key}
-            fontkw = {key:val for key,val in new_rcParams.items() if 'font.' in key}
-            lineskw = {key:val for key,val in new_rcParams.items() if 'lines.' in key}
-            axeskw = {key:val for key,val in new_rcParams.items() if 'axes.' in key}
-            textkw = {key:val for key,val in new_rcParams.items() if 'text.' in key}
-            xtickkw = {key:val for key,val in new_rcParams.items() if 'xtick.' in key}
-            ytickkw = {key:val for key,val in new_rcParams.items() if 'ytick.' in key}
-
-            # Update the figure parameters
-            keys = figkw.keys()
-            if 'figure.subplot' in keys:
-                word = 'figure.subplot'
-                kws = ['bottom','hspace','left','right','top','wspace']
-                words = [word+'.'+w for w in kws]
-                kw = {}
-                for key in words:
-                    kw[key] = figkw.get(key,None)
-                figure.subplots_adjust(**kw)
-            # Do our best to capture keywords by the 'set' commands in an effort
-            # to make our code future compatible as best as we can
-            figdir = dir(figure)
-            for key,val in figkw.items():
-                keycheck = key.replace('figure.','')
-                for d in [f for f in figdir if 'set_' in f and keycheck in f]:
-                    if "dpi" not in d:
-                        getattr(figure,d)(val)
-
-            # Tick parameters
-            xtick_minor_visible = new_rcParams.get('xtick.minor.visible',False)
-            ytick_minor_visible = new_rcParams.get('ytick.minor.visible',False)
-
-            # Font properties
-            keys = inspect.getargspec(matplotlib.font_manager.FontProperties.__init__).args
-            kwargs = {}
-            for key in keys:
-                for k,v in fontkw.items():
-                    if key in k:
-                        kwargs[key] = v
-            font = matplotlib.font_manager.FontProperties(**kwargs)
-
-            # Update the axis
-            if xtick_minor_visible and ytick_minor_visible:
-                ax.minorticks_on()
-            else:
-                ax.minorticks_on()
-                xlocator = ax.xaxis.get_minor_locator()
-                ylocator = ax.yaxis.get_minor_locator()
-                ax.minorticks_off()
-
-                if xtick_minor_visible:
-                    ax.xaxis.set_minor_locator(xlocator)
-                if ytick_minor_visible:
-                    ax.yaxis.set_minor_locator(ylocator)
-
-
-            # Update the ticks
-            for axis,tickkw in zip(['x','y'],[xtickkw,ytickkw]):
-                minorvisible = tickkw.pop(axis+"tick.minor.visible", None)
-                if minorvisible is not None:
-                    if axis == 'x':
-                        ax.tick_params(axis=axis,which='minor',bottom=minorvisible,top=minorvisible)
-                    else:
-                        ax.tick_params(axis=axis,which='minor',left=minorvisible,right=minorvisible)
-
-                major_stuff = {}
-                minor_stuff = {}
-                for key, val in tickkw.items():
-                    if 'major' in key:
-                        real_key = key.split(".")[-1]
-                        major_stuff[real_key] = val
-                    elif 'minor' in key:
-                        real_key = key.split(".")[-1]
-                        minor_stuff[real_key] = val
-                for key,val in major_stuff.items():
-                    try:
-                        ax.tick_params(axis=axis,which='major',**{key:val})
-                    except ValueError: pass
-
-                for key,val in minor_stuff.items():
-                    try:
-                        ax.tick_params(axis=axis,which='minor',**{key:val})
-                    except ValueError: pass
-                        
-                stuff = {}
-                for key, val in tickkw.items():
-                    if 'major' not in key and 'minor' not in key:
-                        real_key = key.split(".")[-1]
-                        stuff[real_key] = val
-
-                for key,val in stuff.items():
-                    try:
-                        ax.tick_params(axis=axis,which='both',**{key:val})
-                    except ValueError: pass
-
-            # Update fonts and objects that have text
-            spines = [val for key,val in ax.spines.items()]
-            patch = ax.patch
-            xticklines = ax.get_xticklines()
-            yticklines = ax.get_yticklines()
-            dirax = dir(ax)
-            for key,val in axeskw.items():
-                attr = key.replace('axes.','')
-                if 'set_'+attr in dirax:
-                    getattr(ax,'set_'+attr)(val)
-                else:
-                    if attr == 'edgecolor': # This means to color the spines
-                        for side,spine in ax.spines.items(): 
-                            spine.set_color(val)
-
-            for child in self.get_all_ax_children():
-                # Make global edits to text
-                if hasattr(child, "set_fontproperties"):
-                    child.set_fontproperties(font)
-                if 'text.color' in textkw:
-                    if isinstance(child, matplotlib.text.Text):
-                        child.set_color(textkw['text.color'])
+            for ax in self.fig.get_children():
+                if not isinstance(ax, matplotlib.axes._base._AxesBase): continue
+                #ax = self.ax
+                figure = ax.get_figure()
                 
+                # Store keywords
+                figkw = {key:val for key,val in new_rcParams.items() if 'figure.' in key}
+                fontkw = {key:val for key,val in new_rcParams.items() if 'font.' in key}
+                lineskw = {key:val for key,val in new_rcParams.items() if 'lines.' in key}
+                axeskw = {key:val for key,val in new_rcParams.items() if 'axes.' in key}
+                textkw = {key:val for key,val in new_rcParams.items() if 'text.' in key}
+                xtickkw = {key:val for key,val in new_rcParams.items() if 'xtick.' in key}
+                ytickkw = {key:val for key,val in new_rcParams.items() if 'ytick.' in key}
+                
+                # Update the figure parameters
+                keys = figkw.keys()
+                if 'figure.subplot' in keys:
+                    word = 'figure.subplot'
+                    kws = ['bottom','hspace','left','right','top','wspace']
+                    words = [word+'.'+w for w in kws]
+                    kw = {}
+                    for key in words:
+                        kw[key] = figkw.get(key,None)
+                    figure.subplots_adjust(**kw)
+                # Do our best to capture keywords by the 'set' commands in an effort
+                # to make our code future compatible as best as we can
+                figdir = dir(figure)
+                for key,val in figkw.items():
+                    keycheck = key.replace('figure.','')
+                    for d in [f for f in figdir if 'set_' in f and keycheck in f]:
+                        if "dpi" not in d:
+                            getattr(figure,d)(val)
+                
+                # Tick parameters
+                xtick_minor_visible = new_rcParams.get('xtick.minor.visible',False)
+                ytick_minor_visible = new_rcParams.get('ytick.minor.visible',False)
+                
+                # Font properties
+                keys = inspect.getargspec(matplotlib.font_manager.FontProperties.__init__).args
+                kwargs = {}
+                for key in keys:
+                    for k,v in fontkw.items():
+                        if key in k:
+                            kwargs[key] = v
+                font = matplotlib.font_manager.FontProperties(**kwargs)
+                
+                # Update the axis
+                if xtick_minor_visible and ytick_minor_visible:
+                    ax.minorticks_on()
+                else:
+                    ax.minorticks_on()
+                    xlocator = ax.xaxis.get_minor_locator()
+                    ylocator = ax.yaxis.get_minor_locator()
+                    ax.minorticks_off()
+
+                    if xtick_minor_visible:
+                        ax.xaxis.set_minor_locator(xlocator)
+                    if ytick_minor_visible:
+                        ax.yaxis.set_minor_locator(ylocator)
+                
+                
+                # Update the ticks
+                for axis,tickkw in zip(['x','y'],[xtickkw,ytickkw]):
+                    minorvisible = tickkw.pop(axis+"tick.minor.visible", None)
+                    if minorvisible is not None:
+                        if axis == 'x':
+                            ax.tick_params(axis=axis,which='minor',bottom=minorvisible,top=minorvisible)
+                        else:
+                            ax.tick_params(axis=axis,which='minor',left=minorvisible,right=minorvisible)
+                    
+                    major_stuff = {}
+                    minor_stuff = {}
+                    for key, val in tickkw.items():
+                        if 'major' in key:
+                            real_key = key.split(".")[-1]
+                            major_stuff[real_key] = val
+                        elif 'minor' in key:
+                            real_key = key.split(".")[-1]
+                            minor_stuff[real_key] = val
+                    for key,val in major_stuff.items():
+                        try:
+                            ax.tick_params(axis=axis,which='major',**{key:val})
+                        except ValueError: pass
+
+                    for key,val in minor_stuff.items():
+                        try:
+                            ax.tick_params(axis=axis,which='minor',**{key:val})
+                        except ValueError: pass
+                    
+                    stuff = {}
+                    for key, val in tickkw.items():
+                        if 'major' not in key and 'minor' not in key:
+                            real_key = key.split(".")[-1]
+                            stuff[real_key] = val
+
+                    for key,val in stuff.items():
+                        try:
+                            ax.tick_params(axis=axis,which='both',**{key:val})
+                        except ValueError: pass
+                
+                # Update fonts and objects that have text
+                spines = [val for key,val in ax.spines.items()]
+                patch = ax.patch
+                xticklines = ax.get_xticklines()
+                yticklines = ax.get_yticklines()
+                dirax = dir(ax)
+                for key,val in axeskw.items():
+                    attr = key.replace('axes.','')
+                    if 'set_'+attr in dirax:
+                        getattr(ax,'set_'+attr)(val)
+                    else:
+                        if attr == 'edgecolor': # This means to color the spines
+                            for side,spine in ax.spines.items(): 
+                                spine.set_color(val)
+                
+                for child in self.get_all_ax_children(ax=ax):
+                    # Make global edits to text
+                    if hasattr(child, "set_fontproperties"):
+                        child.set_fontproperties(font)
+                    if 'text.color' in textkw:
+                        if isinstance(child, matplotlib.text.Text):
+                            child.set_color(textkw['text.color'])
+        
         # Draw the new figure
         self.canvas.draw()
 
 
-    def get_all_ax_children(self,obj=None,result=[]):
+    def get_all_ax_children(self,ax=None,obj=None,result=[]):
         if globals.debug > 1: print("interactiveplot.get_all_ax_children")
-
-        if obj is None: obj = self.ax
-        if obj is not self.ax and obj not in result: result.append(obj)
+        if ax is None: ax = self.ax
+        
+        if obj is None: obj = ax
+        if obj is not ax and obj not in result: result.append(obj)
         if hasattr(obj,"get_children"):
             for child in obj.get_children():
                 if child not in result: result.append(child)
-                self.get_all_ax_children(obj=child,result=result)
+                self.get_all_ax_children(ax=ax,obj=child,result=result)
         else:
             if child not in result: result.append(obj)
         return result

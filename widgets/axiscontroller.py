@@ -145,20 +145,21 @@ class AxisController(LabelledFrame,object):
         if value != self.previous_value:
             
             self.set_widgets_states()
+            self.gui.time_mode.set(any([controller.value.get() in ['t','time','Time'] for controller in self.gui.controls.axis_controllers.values()]))
             
             if self.gui.data is not None:
                 # When the user selects time as an axis, we need to change global behaviors
-                self.gui.time_mode.set(any([controller.value.get() in ['t','time','Time'] for controller in self.gui.controls.axis_controllers.values()]))
-                    
-                if value in self.gui.data['data'].keys():
-                    if np.any(self.gui.get_display_data(value, raw=True) <= 0):
-                        if self.scale.get() == "log10":
-                            self.scale.linear_button.invoke()
-                            self.on_scale_changed()
+                
+                if not self.gui.time_mode.get():
+                    if value in self.gui.data['data'].keys():
+                        if np.any(self.gui.get_display_data(value, raw=True) <= 0):
+                            if self.scale.get() == "log10":
+                                self.scale.linear_button.invoke()
+                                self.on_scale_changed()
 
                     self.set_adaptive_limits()
                     
-                if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
+                    if self.label.get().strip() in ['',self.previous_value] or self.previous_value is None: self.label.set(value)
 
             if self.previous_value != value: self.stale = True
             self.previous_value = value
