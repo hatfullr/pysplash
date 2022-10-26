@@ -6,6 +6,9 @@ import numpy as np
 
 def get_all_children(widget, order_by_level=False):
     def get(widget):
+        # Ignore combobox popdown listboxes, as we technically shouldn't
+        # even be allowed to reference them
+        if "popdown.f.l" in widget._w: return []
         children = widget.winfo_children()
         for child in children:
             for grandchild in get(child):

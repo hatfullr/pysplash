@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.collections import PathCollection, PolyCollection
 import matplotlib.backend_bases
+import matplotlib.image
 import matplotlib.colorbar
 import matplotlib.colors
 import numpy as np
@@ -27,6 +28,7 @@ from lib.customcolorbar import CustomColorbar
 from lib.pointdensityplot import PointDensityPlot
 from lib.timemodeplot import TimeModePlot
 from lib.surfacevalueplot import SurfaceValuePlot
+from lib.realplot import RealPlot
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from lib.plotannotations import PlotAnnotations
 
@@ -180,7 +182,7 @@ class InteractivePlot(ResizableFrame,object):
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
-        self.time = DoubleVar(self,None,'time')
+        self.time = DoubleVar(self,0.,'time')
         self.style = StringVar(self,["default"],'style')
         self.track_id = IntVar(self, -1, 'track')
         
@@ -309,22 +311,18 @@ class InteractivePlot(ResizableFrame,object):
             self.after_cancel(self._after_id_update)
             self._after_id_update = None
 
-        # Stale the axis controllers before fetching their data, so that we
-        # obtain fresh data
-        for axis_controller in self.gui.controls.axis_controllers.values():
-            axis_controller.stale = True
-
         kwargs = {
             'aftercalculate' : self.after_calculate, # Overwritten for some plot types
             'aspect' : None,
         }
+
+        self._first_after_calculate = True
 
         if self.gui.time_mode.get():
             self.gui.message("Creating time mode plot...", duration=None)
             kwargs['colorbar'] = self.colorbar
             self.drawn_object = TimeModePlot(
                 self.ax,
-                self.gui.controls.axis_controllers['YAxis'].value.get(),
                 self.gui,
                 **kwargs,
             )
@@ -333,10 +331,45 @@ class InteractivePlot(ResizableFrame,object):
                 if self.drawn_object.thread is None:
                     raise RuntimeError("Failed to spawn thread to draw the plot")
             return
-                    
+
+        if self.gui.data.is_image:
+            kwargs['colorbar'] = self.colorbar
+            kwargs['resolution_steps'] = tuple([1])
+            kwargs['extent'] = np.array(self.gui.data['extent'])
+            kwargs['extent'][:2] /= self.gui.controls.axis_controllers['XAxis'].units.get()
+            kwargs['extent'][2:] /= self.gui.controls.axis_controllers['YAxis'].units.get()
+            if self.drawn_object is not None:
+                if isinstance(self.drawn_object, CustomAxesImage):
+                    self.drawn_object.remove()
+                else:
+                    self.colorbar.disconnect_axesimage(self.drawn_object)
+                    self.drawn_object.remove()
+            self.drawn_object = self.ax.imshow(
+                self.gui.data['image'],
+                origin='lower',
+                cmap=self.colorbar.cmap,
+                interpolation='nearest',
+                extent=self.gui.data['extent'],
+                aspect='auto',
+                vmin=self.colorbar.vmin,
+                vmax=self.colorbar.vmax,
+            )
+            self.colorbar.connect_axesimage(self.drawn_object)
+            # I have no idea why we have to set the extent again, but at least it works...
+            self.drawn_object.set_extent(kwargs['extent'])
+            #self.colorbar.set_clim((np.nanmin(self.gui.data['image']), np.nanmax(self.gui.data['image'])))
+            self.after_calculate()
+            return
+        
 
         xaxis = self.gui.controls.axis_controllers['XAxis']
         yaxis = self.gui.controls.axis_controllers['YAxis']
+
+        # Stale the axis controllers before fetching their data, so that we
+        # obtain fresh data
+        for axis_controller in [xaxis, yaxis]:
+            axis_controller.stale = True
+        
         x, x_display_units, x_physical_units = xaxis.data, xaxis.display_units, xaxis.physical_units
         y, y_display_units, y_physical_units = yaxis.data, yaxis.display_units, yaxis.physical_units
 
@@ -356,7 +389,7 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['aspect'] = 'equal'
 
         # If there's no data to plot, stop here
-        if not self.gui.data:
+        if self.gui.data is None:
             self.after_calculate()
             return
 
@@ -366,29 +399,21 @@ class InteractivePlot(ResizableFrame,object):
         
         # Scatter plot
         if colorbar_text.strip() in ['None',None,'']:
-            if self.gui.data.is_image:
-                method = CustomAxesImage
-                args = (
-                    self.ax,
-                    self.gui.data,
-                )
-                kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
-            else:
-                method = ScatterPlot
-                args = (
-                    self.ax,
-                    x,
-                    y,
-                )
+            method = ScatterPlot
+            args = (
+                self.ax,
+                x,
+                y,
+            )
 
-                if self.colors is None:
-                    self.colors = np.full(len(x), ScatterPlot.default_color_index)
+            if self.colors is None:
+                self.colors = np.full(len(x), ScatterPlot.default_color_index)
                 
-                kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
-                kwargs['c'] = self.colors
-                kwargs['aftercalculate'] = self.after_scatter_calculate
+            kwargs['s'] = self.gui.controls.plotcontrols.point_size.get()
+            kwargs['c'] = self.colors
+            kwargs['aftercalculate'] = self.after_scatter_calculate
                 
-                self.colorbar.hide()
+            self.colorbar.hide()
 
         elif colorbar_text.strip() == 'Point Density':
             method = PointDensityPlot
@@ -402,8 +427,9 @@ class InteractivePlot(ResizableFrame,object):
             kwargs['aftercalculate'] = self.after_scatter_calculate
             kwargs['colorbar'] = self.colorbar
                 
-        elif self.gui.controls.colorbar_integrated_surface.get() == 'integrated':
+        elif self.gui.controls.colorbar_type.get() in ['integrated', 'real']:
             caxis = self.gui.controls.axis_controllers['Colorbar']
+            caxis.stale = True
             A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
             if A is None or A_display_units is None or A_physical_units is None:
                 raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
@@ -441,10 +467,18 @@ class InteractivePlot(ResizableFrame,object):
                 ],
             )
 
+            if self.gui.controls.colorbar_type.get() == 'real':
+                real_mode = self.gui.controls.colorbar_real_mode.get()
+                if real_mode == 'opacity': attenuator = self.gui.get_display_data('opacity')
+                else: attenuator = self.gui.get_display_data('tau')
+                args = (attenuator[idx], real_mode) + args
+                method = RealPlot
+                
             kwargs['colorbar'] = self.colorbar
             
-        elif self.gui.controls.colorbar_integrated_surface.get() == 'surface':
+        elif self.gui.controls.colorbar_type.get() == 'surface':
             caxis = self.gui.controls.axis_controllers['Colorbar']
+            caxis.stale = True
             A, A_display_units, A_physical_units = caxis.data, caxis.display_units, caxis.physical_units
             if A is None or A_display_units is None or A_physical_units is None:
                 raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
@@ -484,6 +518,7 @@ class InteractivePlot(ResizableFrame,object):
             )
 
             kwargs['colorbar'] = self.colorbar
+            
 
         if self.tracking and method in InteractivePlot.plot_types_allowed_tracking:
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
@@ -511,7 +546,6 @@ class InteractivePlot(ResizableFrame,object):
 
         #if method is not ScatterPlot: self.disable()
         self.gui.message("Drawing plot",duration=None)
-        self._first_after_calculate = True
         
         self.drawn_object = method(*args,**kwargs)
 
@@ -530,22 +564,27 @@ class InteractivePlot(ResizableFrame,object):
                 except: continue
                 self.plot_annotations.configure(ID, position=list(xydata[int(ID)]))
             
-            if isinstance(self.drawn_object, InteractivePlot.colorbar_plots): self.colorbar.show()
+            if isinstance(self.drawn_object, InteractivePlot.colorbar_plots) or self.gui.data.is_image: self.colorbar.show()
             else: self.colorbar.hide()
 
         self._first_after_calculate = False
 
-        if self.drawn_object is not None and self.drawn_object.calculating and len(self.drawn_object.resolution_steps) > 1:
+        if (self.drawn_object is not None and
+            (hasattr(self.drawn_object, "calculating") and
+             self.drawn_object.calculating) and
+            (hasattr(self.drawn_object, "resolution_steps") and
+             len(self.drawn_object.resolution_steps) > 1)):
             self.draw()
         else:
-            if len(self.drawn_object.resolution_steps) <= 1:
-                if isinstance(self.drawn_object, InteractivePlot.colorbar_plots): self.colorbar.show()
+            if (hasattr(self.drawn_object, "resolution_steps") and
+                len(self.drawn_object.resolution_steps) <= 1):
+                if isinstance(self.drawn_object, InteractivePlot.colorbar_plots) or self.gui.data.is_image: self.colorbar.show()
                 else: self.colorbar.hide()
             
             # Make absolutely sure that the only drawn object on the axis is
             # the one we just created
             for child in self.ax.get_children():
-                if isinstance(child,CustomAxesImage) and child is not self.drawn_object:
+                if isinstance(child,matplotlib.image.AxesImage) and child is not self.drawn_object:
                     child.remove()
 
             #if self.drawn_object not in self.canvas.blit_artists:
@@ -1020,13 +1059,17 @@ class InteractivePlot(ResizableFrame,object):
 
     def get_xy_data(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.get_xy_data")
-        if self.drawn_object is not None:
-            return np.column_stack((self.drawn_object.x,self.drawn_object.y))
+        if self.gui.data.is_image:
+            extent = self.drawn_object.get_extent()
+            return np.array([[extent[0], extent[2]],[extent[1],extent[3]]])
         else:
-            return np.column_stack((
-                self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
-                self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
-            ))
+            if self.drawn_object is not None:
+                return np.column_stack((self.drawn_object.x,self.drawn_object.y))
+            else:
+                return np.column_stack((
+                    self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
+                    self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
+                ))
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):

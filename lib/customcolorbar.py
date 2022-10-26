@@ -202,13 +202,13 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
         if axesimage in self.axesimages:
             raise Exception("cannot connect AxesImage '"+str(axesimage)+"' to the colorbar because it is already connected")
-        self.axesimages.append(axesimage)
 
         def func(*args,**kwargs):
             self.update_data()
             if self.axiscontroller_connected and self.axis_controller.limits.adaptive.get():
                 self.set_adaptive_limits()
 
+        self.axesimages.append(axesimage)
         self._axesimages_cids.append(axesimage.get_figure().canvas.mpl_connect("draw_event",func))
         
         #self.update_data()
@@ -226,12 +226,13 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
     def disconnect_axesimage(self, axesimage):
         if globals.debug > 1: print("customcolorbar.disconnect_axesimage")
-        if axesimage not in self.axesimages:
-            raise ValueError("cannot find '"+str(axesimage)+"' in the list of axes images")
-        idx = self.axesimages.index(axesimage)
-        self.axesimages[idx].get_figure().canvas.mpl_disconnect(self._axesimages_cids[idx])
-        self.axesimages.remove(axesimage)
-        self._axesimages_cids.remove(self._axesimages_cids[idx])
+        if axesimage in self.axesimages:
+            idx = self.axesimages.index(axesimage)
+            fig = self.axesimages[idx].get_figure()
+            if fig is not None:
+                fig.canvas.mpl_disconnect(self._axesimages_cids[idx])
+            self.axesimages.remove(axesimage)
+            self._axesimages_cids.remove(self._axesimages_cids[idx])
 
     def update_position(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.update_position")

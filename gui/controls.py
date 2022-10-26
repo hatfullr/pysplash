@@ -13,6 +13,7 @@ from functions.getwidgetsstates import get_widgets_states
 from functions.setwidgetsstates import set_widgets_states
 from functions.getallchildren import get_all_children
 from functions.hotkeystostring import hotkeys_to_string
+from functions.colorbarrealquantityprompt import ColorbarRealQuantityPrompt
 
 from widgets.tooltip import ToolTip
 from widgets.button import Button
@@ -63,9 +64,12 @@ class Controls(tk.Frame,object):
         self.previous_yaxis_limits = None
         self.previous_caxis_limits = None
         self.previous_axis_scales = {key:None for key in self.axis_controllers.keys()}
-        self.previous_colorbar_integrated_surface = None
+        self.previous_colorbar_type = None
         
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
+        self.gui.bind("<<DataChanged>>", self.update_colorbar_type,add="+")
+        self.gui.bind("<<TimeModeEnabled>>", self.update_colorbar_type,add="+")
+        self.gui.bind("<<TimeModeDisabled>>", self.update_colorbar_type,add="+")
 
         self.current_state = None
         self.previous_state = None
@@ -77,22 +81,18 @@ class Controls(tk.Frame,object):
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_colorbar_controller, add="+")
         self.axis_controllers['XAxis'].combobox.bind("<<ComboboxSelected>>", self.update_yaxis_controller, add="+")
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
-
-        #def disable_integrated_surface_buttons(*args,**kwargs):
-        #    self.colorbar_integrated_button.configure(state='disabled')
-        #    self.colorbar_surface_button.configure(state='disabled')
-        #def enable_integrated_surface_buttons(*args,**kwargs):
-        #    state = self.axis_controllers['Colorbar'].combobox.cget('state')
-        #    self.colorbar_integrated_button.configure(state=state)
-        #    self.colorbar_surface_button.configure(state=state)
-        #self.axis_controllers['Colorbar'].bind("<<DisabledWidgets>>", disable_integrated_surface_buttons,add="+")
-        #self.axis_controllers['Colorbar'].bind("<<EnabledWidgets>>", enable_integrated_surface_buttons,add="+")
-        
         self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
-
-        def on_colorbar_integrated_surface_changed(*args,**kwargs):
+        
+        def on_colorbar_type_changed(*args,**kwargs):
             if self.axis_controllers['Colorbar'].value.get() != "": self.update_button.configure(state='!disabled')
-        self.colorbar_integrated_surface.trace('w', on_colorbar_integrated_surface_changed)
+        self.colorbar_type.trace('w', on_colorbar_type_changed)
+
+        self.previous_colorbar_type = self.colorbar_type.get()
+        def save_previous_colorbar_type(event):
+            self.previous_colorbar_type = event.widget.value
+        
+        self.colorbar_integrated_button.bind("<<ButtonReleased>>", save_previous_colorbar_type, add='+')
+        self.colorbar_surface_button.bind("<<ButtonReleased>>", save_previous_colorbar_type, add='+')
         
         self.initialized = False
 
@@ -106,7 +106,8 @@ class Controls(tk.Frame,object):
         
     def create_variables(self):
         if globals.debug > 1: print("controls.create_variables")
-        self.colorbar_integrated_surface = StringVar(self, "integrated", "colorbar_integrated_surface")
+        self.colorbar_type = StringVar(self, "integrated", "colorbar_type")
+        self.colorbar_real_mode = StringVar(self, None, "colorbar_real_mode")
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -145,26 +146,38 @@ class Controls(tk.Frame,object):
             relief='sunken',
         )
 
-        self.colorbar_integrated_surface_frame = tk.Frame(colorbar)
+        self.colorbar_type_frame = tk.Frame(colorbar)
         self.colorbar_integrated_button = RadioButton(
-            self.colorbar_integrated_surface_frame,
+            self.colorbar_type_frame,
             text="Integrated",
-            variable=self.colorbar_integrated_surface,
+            variable=self.colorbar_type,
             value="integrated"
         )
         ToolTip.createToolTip(
             self.colorbar_integrated_button,
-            "Show the quantity as the value integrated through all particle kernels along the line of sight for each pixel (into the screen)",
+            "Show the quantity as the value integrated through all particle kernels along the line of sight for each pixel (into the screen).",
         )
         self.colorbar_surface_button = RadioButton(
-            self.colorbar_integrated_surface_frame,
+            self.colorbar_type_frame,
             text="Surface",
-            variable=self.colorbar_integrated_surface,
+            variable=self.colorbar_type,
             value="surface",
         )
         ToolTip.createToolTip(
             self.colorbar_surface_button,
-            "Show the quantity as the central value of the particle whose kernel is closest to the line of sight for each pixel (into the screen)",
+            "Show the quantity as the central value of the particle whose kernel is closest to the line of sight for each pixel (into the screen).",
+        )
+        self.colorbar_real_button = RadioButton(
+            self.colorbar_type_frame,
+            text="Real",
+            variable=self.colorbar_type,
+            value="real",
+            command=(lambda *args, **kwargs: ColorbarRealQuantityPrompt(self.gui), None),
+            state='disabled',
+        )
+        ToolTip.createToolTip(
+            self.colorbar_real_button,
+            "Similar to Integrated except the integration is limited by optical depth. Available only if you supplied either the density and opacity or the particle optical depth.",
         )
         
 
@@ -185,7 +198,8 @@ class Controls(tk.Frame,object):
         # Axis controls
         self.colorbar_integrated_button.pack(side='left',fill='both',expand=True)
         self.colorbar_surface_button.pack(side='left',fill='both',expand=True)
-        self.colorbar_integrated_surface_frame.pack(side='top',fill='both',expand=True,pady=(5,0))
+        self.colorbar_real_button.pack(side='left',fill='both',expand=True)
+        self.colorbar_type_frame.pack(side='top',fill='both',expand=True,pady=(5,0))
         for axis_name,axis_controller in self.axis_controllers.items():
             axis_controller.pack(side='top',fill='x')
 
@@ -399,7 +413,7 @@ class Controls(tk.Frame,object):
 
         # Redraw when swapping between Integrated/Surface plots
         if (not need_full_redraw and
-            self.colorbar_integrated_surface.get() != self.previous_colorbar_integrated_surface):
+            self.colorbar_type.get() != self.previous_colorbar_type):
             need_full_redraw = True
 
         # Save the previous scales
@@ -407,7 +421,7 @@ class Controls(tk.Frame,object):
             self.previous_axis_scales[key] = axis_controller.scale.get()
 
         # Save the previous Integrated/Surface value
-        self.previous_colorbar_integrated_surface = self.colorbar_integrated_surface.get()
+        self.previous_colorbar_type = self.colorbar_type.get()
                 
         # Draw the new plot
         if need_full_redraw:
@@ -485,3 +499,34 @@ class Controls(tk.Frame,object):
         if hasattr(self,"previous_xaxis_value") and self.previous_xaxis_value != value:
             if self.previous_xaxis_value in yvalues: yaxis.combobox.enable_choice(self.previous_xaxis_value)
         self.previous_xaxis_value = value
+
+    # Allow / disallow certain colorbar types based on the data currently
+    # available in the GUI. This method gets called when events
+    # <<DataChanged>>, <<TimeModeEnabled>>, and <<TimeModeDisabled>> are
+    # generated in the GUI.
+    def update_colorbar_type(self,*args,**kwargs):
+        if globals.debug > 1: print("controls.update_colorbar_type")
+
+        states = {
+            'integrated' : {
+                'widget' : self.colorbar_integrated_button,
+                'state' : 'normal',
+            },
+            'surface' : {
+                'widget' : self.colorbar_surface_button,
+                'state' : 'normal',
+            },
+            'real' : {
+                'widget' : self.colorbar_real_button,
+                'state' : 'disabled',
+            },
+        }
+        if self.gui.time_mode.get():
+            for key in states.keys():
+                states[key]['state'] = 'disabled'
+        else:
+            if self.gui.data is not None and (self.gui.data.has_variables('opacity') or self.gui.data.has_variables('tau')):
+                states['real']['state'] = 'normal'
+
+        for key, val in states.items():
+            val['widget'].configure(state=val['state'])

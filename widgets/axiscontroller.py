@@ -64,19 +64,20 @@ class AxisController(LabelledFrame,object):
 
     @property
     def data(self):
-        if self.stale:
-            self._data, self._physical_units, self._display_units = self.combobox.get()
-            
-            # Apply the scaling to the resulting data
-            scale = self.scale.get()
-            if scale == 'log10': self._data = np.log10(self._data)
-            elif scale == '10^':
-                if self.scale.can_data_overflow_with_pow10(self._data):
-                    self.scale.set('linear')
-                else: self._data = 10.**self._data
-            
-            self.stale = False
-            self.event_generate("<<DataChanged>>")
+        if self.gui.data is not None and not self.gui.data.is_image:
+            if self.stale:
+                self._data, self._physical_units, self._display_units = self.combobox.get()
+
+                # Apply the scaling to the resulting data
+                scale = self.scale.get()
+                if scale == 'log10': self._data = np.log10(self._data)
+                elif scale == '10^':
+                    if self.scale.can_data_overflow_with_pow10(self._data):
+                        self.scale.set('linear')
+                    else: self._data = 10.**self._data
+
+                self.stale = False
+                self.event_generate("<<DataChanged>>")
         return self._data
     @property
     def physical_units(self):
@@ -267,28 +268,41 @@ class AxisController(LabelledFrame,object):
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axiscontroller.set_adaptive_limits")
-        # Set the limit entries to be the data's true, total limits
-        if self.axis is not None:
-            newlim = [None, None]
-            
-            # Check if this axis is the colorbar
+
+        if self.gui.data is not None and self.gui.data.is_image:
             if self.is_colorbar:
-                # Take a guess at what the limits of the colorbar should be
-                idx = np.isfinite(self.data)
-                newlim = [np.nanmin(self.data[idx]), np.nanmax(self.data[idx])]
-                #pass
-                #pass # Let CustomColorbar handle this
-                #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
-                #if self.scale.get() == 'log10': newlim = np.log10(np.array(newlim))
-                #elif self.scale.get() == '10^': newlim = 10**np.array(newlim)
-                # This axis is either the x or y axes of the main plot (not the colorbar)
-            elif isinstance(self.axis, XAxis):
-                newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
-            elif isinstance(self.axis, YAxis):
-                dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
-            
-            if None not in newlim:
-                self.limits.set_limits(newlim)
+                limits = np.array([np.nanmin(self.gui.data['image']), np.nanmax(self.gui.data['image'])])
+            else:
+                if isinstance(self.axis, XAxis):
+                    limits = np.array(self.gui.data['extent'][:2])
+                elif isinstance(self.axis, YAxis):
+                    limits = np.array(self.gui.data['extent'][2:])
+                else: raise Exception("This should never happen")
+            limits /= self.units.get()
+            self.limits.set_limits(limits)
+        else:
+            # Set the limit entries to be the data's true, total limits
+            if self.axis is not None:
+                newlim = [None, None]
+                # Check if this axis is the colorbar
+                if self.is_colorbar:
+                    # Take a guess at what the limits of the colorbar should be
+                    if self.data is None: return
+                    idx = np.isfinite(self.data)
+                    newlim = [np.nanmin(self.data[idx]), np.nanmax(self.data[idx])]
+                    #pass
+                    #pass # Let CustomColorbar handle this
+                    #newlim = self.gui.interactiveplot.colorbar.calculate_limits()
+                    #if self.scale.get() == 'log10': newlim = np.log10(np.array(newlim))
+                    #elif self.scale.get() == '10^': newlim = 10**np.array(newlim)
+                    # This axis is either the x or y axes of the main plot (not the colorbar)
+                elif isinstance(self.axis, XAxis):
+                    newlim, dummy = self.gui.interactiveplot.calculate_xylim(which='xlim')
+                elif isinstance(self.axis, YAxis):
+                    dummy, newlim = self.gui.interactiveplot.calculate_xylim(which='ylim')
+
+                if None not in newlim:
+                    self.limits.set_limits(newlim)
 
     def set_widgets_states(self, *args, **kwargs):
         widgets = [

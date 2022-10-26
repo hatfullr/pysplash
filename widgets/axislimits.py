@@ -114,8 +114,10 @@ class AxisLimits(tk.LabelFrame,object):
 
     def set_limits(self, newlimits):
         if globals.debug > 1: print("axislimits.set_limits")
-        self.low.set(newlimits[0])
-        self.high.set(newlimits[1])
+        if None in newlimits:
+            raise ValueError("Cannot set limits to None")
+        if newlimits[0] is not None: self.low.set(newlimits[0])
+        if newlimits[1] is not None: self.high.set(newlimits[1])
 
     def adaptive_on(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.adaptive_on")

@@ -74,7 +74,6 @@ class GUI(tk.Frame,object):
         super(GUI,self).__init__(self.window)
         
         self._data = None
-        self._data_time_mode = None
         
         self.create_variables()
         self.create_widgets()
@@ -102,19 +101,19 @@ class GUI(tk.Frame,object):
         self.controls.connect()
 
     @property
-    def data(self): return self._data_time_mode if globals.time_mode else self._data
+    def data(self): return self._data
     @data.setter
     def data(self,value):
         if not isinstance(value, (dict, type(None))):
             raise TypeError("can only set data to type 'dict' or 'None', not '"+type(value).__name__+"'")
 
-        previous_data = self._data if not globals.time_mode else self._data_time_mode
-        mask = None if previous_data is None else previous_data._mask
+        previous_data = self._data
+        mask = None
+        if previous_data is not None and not previous_data.is_image:
+            mask = previous_data._mask
         
-        # If we switched time mode on/off, don't apply a mask
-        if (previous_data is self._data and globals.time_mode or
-            previous_data is self._data_time_mode and not globals.time_mode):
-            mask = None
+        # Don't apply a mask in time mode (for now)
+        if self.time_mode.get(): mask = None
 
         if value is None:
             for axis_controller in self.controls.axis_controllers.values():
@@ -130,13 +129,9 @@ class GUI(tk.Frame,object):
             self.menubar.data.enable()
             self.menubar.particle.enable()
             self.menubar.functions.enable()
-            
-        if globals.time_mode:
-            self._data_time_mode = value
-            self.event_generate("<<DataTimeModeChanged>>")
-        else:
-            self._data = value
-            self.event_generate("<<DataChanged>>")
+        
+        self._data = value
+        self.event_generate("<<DataChanged>>")
 
     def on_button1(self, event):
         if globals.debug > 1: print("gui.on_button1")
@@ -191,13 +186,14 @@ class GUI(tk.Frame,object):
                             
                     #        break
 
-            if currentfile_is_in_list:
-                colors = get_preference(self.interactiveplot, "colors")
-                if colors is not None:
-                    uniq = np.unique(colors)
-                    for uniq in np.unique(colors):
-                        particles = np.where(colors == uniq)
-                        self.interactiveplot.color_particles(None, particles=np.where(colors==uniq), index=uniq, update=False)
+            if not self.data.is_image:
+                if currentfile_is_in_list:
+                    colors = get_preference(self.interactiveplot, "colors")
+                    if colors is not None:
+                        uniq = np.unique(colors)
+                        for uniq in np.unique(colors):
+                            particles = np.where(colors == uniq)
+                            self.interactiveplot.color_particles(None, particles=np.where(colors==uniq), index=uniq, update=False)
             
             xlimits = self.controls.axis_controllers['XAxis'].limits
             ylimits = self.controls.axis_controllers['YAxis'].limits
@@ -333,7 +329,7 @@ class GUI(tk.Frame,object):
             raise Exception("gui.read is not allowed in time mode. This should never happen.")
         
         previous_data_length = 0
-        if self.data is not None:
+        if self.data is not None and not self.data.is_image:
             if sys.version_info.major >= 3:
                 previous_data_length = len(self.data['data'][next(iter(self.data['data']))])
             else:
@@ -356,6 +352,20 @@ class GUI(tk.Frame,object):
         # so instead we obtain self._data and then assign self.data to that.
         self.data = self._temp
 
+        if self.data.is_image:
+            self.controls.axis_controllers['XAxis'].combobox.configure(state='disabled')
+            self.controls.axis_controllers['YAxis'].combobox.configure(state='disabled')
+            self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
+            self.controls.axis_controllers['XAxis'].value.set("")
+            self.controls.axis_controllers['YAxis'].value.set("")
+            self.controls.axis_controllers['Colorbar'].value.set("")
+            return
+
+        self.controls.axis_controllers['XAxis'].combobox.configure(state='normal')
+        self.controls.axis_controllers['YAxis'].combobox.configure(state='normal')
+        self.controls.axis_controllers['Colorbar'].combobox.configure(state='normal')
+            
+        
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
         else:
@@ -364,16 +374,11 @@ class GUI(tk.Frame,object):
             self.interactiveplot.reset_colors()
             self.interactiveplot.clear_particle_annotations()
 
-        if self.data.is_image:
-            return
+        
         
         # Make sure the data has the required keys for scatter plots
         data_keys = self.data['data'].keys()
-        for data_key in ['x','y','z']:
-            if data_key not in data_keys:
-                break
-                #raise ValueError("Could not find required key '"+data_key+"' in the data from read_file")
-        else: # If we have all the 'x', 'y', and 'z' keys
+        if self.data.has_variables('x','y','z'):
             rotationx = self.controls.plotcontrols.rotation_x.get()
             rotationy = self.controls.plotcontrols.rotation_y.get()
             rotationz = self.controls.plotcontrols.rotation_z.get()
@@ -406,7 +411,7 @@ class GUI(tk.Frame,object):
         
         # Update the time text in the plot, if time data is available
         if not globals.time_mode:
-            for name in ['t','time']:
+            for name in ['t','time','Time']:
                 time = self.get_data(name)
                 if time is not None:
                     self.interactiveplot.time.set(time*self.get_display_units(name))
@@ -487,8 +492,8 @@ class GUI(tk.Frame,object):
     def get_data(self,key):
         if globals.debug > 1: print("gui.get_data")
         if self.data is None: return None
-        elif self.data.is_image: return self.data
-        else: return self.data['data'][key]
+        if self.data.is_image: return self.data
+        return self.data['data'][key]
 
     def get_display_units(self,key):
         if globals.debug > 1: print("gui.get_display_units")
@@ -582,6 +587,8 @@ class GUI(tk.Frame,object):
         for controller in self.controls.axis_controllers.values():
             controller.stale = True
 
+        self.event_generate("<<TimeModeEnabled>>")
+
     def disable_time_mode(self, *args, **kwargs):
         if globals.debug > 1: print("gui.disable_time_mode")
 
@@ -602,4 +609,5 @@ class GUI(tk.Frame,object):
         for controller in self.controls.axis_controllers.values():
             controller.stale = True
 
+        self.event_generate("<<TimeModeDisabled>>")
 

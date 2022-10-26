@@ -9,18 +9,18 @@ from widgets.button import Button
 from functions.closewindow import close_window
 import globals
 
-
 class PopupWindow(tk.Toplevel, object):
-    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, width=None, height=None, grab=True, **kwargs):
+    def __init__(self, master, title="", resizeable=(False,False), oktext="Ok", okcommand=None, canceltext="Cancel", cancelcommand=None, show=True, pad=5, width=None, height=None, grab=True, window_type='normal', **kwargs):
         if globals.debug > 1: print("popupwindow.__init__")
         
         self.grab = grab
         
         # Setup the window
         super(PopupWindow, self).__init__(master,**kwargs)
+
         self.transient(master) # Removes minimize/maximize buttons and makes window always be on top
         self.withdraw()
-
+        
         # When the user clicks on widgets etc, those widgets should acquire
         # the application focus... (why isn't this default?!)
         self.bind("<Button-1>", lambda event: event.widget.focus())

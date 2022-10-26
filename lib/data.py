@@ -9,6 +9,7 @@ class Data(collections.OrderedDict,object):
     def __init__(self,data,mask=None):
         if globals.debug > 1: print("data.__init__")
         kernel.compact_support = data.pop('compact_support',kernel.compact_support)
+        
         super(Data,self).__init__(data)
 
         self.is_image = False
@@ -41,6 +42,17 @@ class Data(collections.OrderedDict,object):
             if name not in ['t','time']:
                 return len(column)
         return 0
+
+    # Returns True if all of the provided keys are valid variables in the current data set
+    # and False otherwise (including when we have no data)
+    def has_variables(self, *keys):
+        if globals.debug > 1: print("data.has_variables")
+        if self.is_image: return False
+        dkeys = self['data']
+        for key in keys:
+            if key not in dkeys:
+                return False
+        return True
 
     def reset(self,*args,**kwargs):
         if globals.debug > 1: print("data.reset")

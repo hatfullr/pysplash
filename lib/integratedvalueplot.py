@@ -39,19 +39,19 @@ class IntegratedValuePlot(CustomAxesImage,object):
         # We are given all the quantities in display units. For now,
         # we want to show integrated value plots only in physical units.
         
-        physical_quantity_unit = physical_units[0]
-        physical_length_unit = physical_units[1]
-        physical_mass_unit = physical_units[3]
-        physical_density_unit = physical_units[5]
-        display_quantity_unit = display_units[0]
-        display_length_unit = display_units[1]
-        display_mass_unit = display_units[3]
-        display_density_unit = display_units[5]
+        #physical_quantity_unit = physical_units[0]
+        #physical_length_unit = physical_units[1]
+        #physical_mass_unit = physical_units[3]
+        #physical_density_unit = physical_units[5]
+        #display_quantity_unit = display_units[0]
+        #display_length_unit = display_units[1]
+        #display_mass_unit = display_units[3]
+        #display_density_unit = display_units[5]
 
-        physical_unit = physical_mass_unit * physical_quantity_unit / physical_density_unit * physical_length_unit / physical_length_unit**2
-        display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**2
+        #physical_unit = physical_mass_unit * physical_quantity_unit / physical_density_unit * physical_length_unit / physical_length_unit**2
+        #display_unit = display_mass_unit * display_quantity_unit / display_density_unit * display_length_unit / display_length_unit**2
         
-        self.units = physical_unit / display_unit
+        #self.units = physical_unit / display_unit
 
         self.wint, self.ctab = kernel.setupintegratedkernel()
         self.wint = np.ascontiguousarray(self.wint,dtype=np.double)
@@ -158,7 +158,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
                             cuda.atomic.add(data, (jy,ix), quantityi*wint[int(dr2*ctabinvh2i)]*invh2i)
         
     def calculate_data_gpu(self,idx): # On GPU
-        if globals.debug > 1: print("integratedvalueplot.calculate_data")
+        if globals.debug > 1: print("integratedvalueplot.calculate_data_gpu")
 
         device_idx = cuda.to_device(np.where(idx)[0])
         device_data = cuda.to_device(self._data)
@@ -194,7 +194,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
         self._data = device_data.copy_to_host()
 
     def calculate_data_cpu(self,idx): # On CPU
-        if globals.debug > 1: print("integratedvalueplot.calculate_data")
+        if globals.debug > 1: print("integratedvalueplot.calculate_data_cpu")
 
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()

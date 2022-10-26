@@ -82,7 +82,8 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         # Make sure we disconnect any connections we made to the associated axes
         # before removing the image
         self.cancel() # Cancel any running calculations
-        if self.colorbar is not None: self.colorbar.disconnect_axesimage(self)
+        if self.colorbar is not None:
+            self.colorbar.disconnect_axesimage(self)
         super(CustomAxesImage,self).remove(*args,**kwargs)
     
     def equalize_aspect_ratio(self,xlim=None,ylim=None):

@@ -54,6 +54,8 @@ class MathEntry(FlashingEntry, object):
         self.bind("<<ValidateFail>>", self.on_validate_fail,add="+")
         self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
 
+        self.get_variables_and_units_override = None
+
     def configure(self,*args,**kwargs):
         super(MathEntry,self).configure(*args,**kwargs)
         self.event_generate("<Configure>")
@@ -99,6 +101,9 @@ class MathEntry(FlashingEntry, object):
 
         
     def get_variables_and_units(self, *args, **kwargs):
+        if self.get_variables_and_units_override is not None:
+            return self.get_variables_and_units_override(*args, **kwargs)
+        
         # Get the keys to the data dictionary in GUI
         if self.gui.data is None: return None, None, None
         data = self.gui.data['data']
@@ -112,7 +117,9 @@ class MathEntry(FlashingEntry, object):
     def get_data(self, *args, **kwargs):
         text = kwargs.pop('text',None)
         if text is None: text = self.get()
+        
         variables, physical_units, display_units = self.get_variables_and_units()
+        
         if (text.strip() == "" or
             (variables is None and physical_units is None and display_units is None)):
             return None,None,None

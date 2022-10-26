@@ -29,11 +29,16 @@ def save():
 def get(name,widget=None):
     if widget is None:
         for w in TkVariable.preferences.values():
-            if name in w.keys(): return w[name]
-        return None
+            if name in w.keys():
+                if w[name] is not None:
+                    w[name]
+        raise Exception("failed to find the widget that "+str(name)+" belongs to")
     elif str(widget) in TkVariable.preferences.keys():
-        return TkVariable.preferences[str(widget)].get(name, None)
-    return None
+        result = TkVariable.preferences[str(widget)].get(name, None)
+        if result is None:
+            raise Exception("failed to find the widget that "+str(name)+" belongs to")
+        return result
+
 
 class TkVariable(tk.Variable, object):
     preferences_path = os.path.join(globals.profile_path,"preferences.json")
@@ -105,6 +110,10 @@ class DoubleVar(TkVariable, object):
     _default = tk.DoubleVar._default
     def __init__(self, master, value, name):
         super(DoubleVar, self).__init__(master, value, name)
+    def set(self, value):
+        if value is None:
+            raise ValueError("setting a DoubleVar to None is not permitted")
+        return super(DoubleVar,self).set(value)
     def get(self): # Copied from tk.DoubleVar
         """Return the value of the variable as a float."""
         return self._tk.getdouble(self._tk.globalgetvar(self._name))

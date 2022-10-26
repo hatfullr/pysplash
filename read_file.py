@@ -337,6 +337,7 @@ def fluxcal_track(filename):
 
 # teffs*.dat files from FluxCal
 def fluxcal_teff(filename):
+    from functions.stringtofloat import string_to_float
     data = OrderedDict()
     with open(filename,'r') as f:
         header = f.readline().split()
@@ -349,6 +350,8 @@ def fluxcal_teff(filename):
 
     data['image'] = np.loadtxt(filename,skiprows=1)
     data['extent'] = [xmin,xmin+dx*Nx,ymin,ymin+dy*Ny]
+
+    data['image'][~np.isfinite(data['image'])] = np.nan
 
     return data
 

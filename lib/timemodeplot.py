@@ -13,7 +13,7 @@ import globals
 from read_file import read_file
 from copy import copy
 from time import time
-from scipy.interpolate import interp2d
+import collections
 
 try:
     from numba import cuda
@@ -27,11 +27,10 @@ except ImportError:
 # iteratively. The x-axis will always be time.
 
 class TimeModePlot(CustomAxesImage, object):
-    def __init__(self, ax, yname, gui, **kwargs):
+    def __init__(self, ax, gui, **kwargs):
         if globals.debug > 1: print("timemodeplot.__init__")
 
         self.ax = ax
-        self.yname = yname
         self.gui = gui
         
         if not self.gui.time_mode.get():
@@ -75,8 +74,16 @@ class TimeModePlot(CustomAxesImage, object):
 
     def get_data(self, filenames):
         if globals.debug > 1: print("timemodeplot.get_data")
-        time = []
-        data = []
+
+        xstring = self.gui.controls.axis_controllers['XAxis'].value.get()
+        ystring = self.gui.controls.axis_controllers['YAxis'].value.get()
+        
+        data = {
+            'data' : collections.OrderedDict({}),
+            'display_units' : collections.OrderedDict({}),
+            'physical_units' : collections.OrderedDict({}),
+        }
+
         compact_support = None
         datalength = None
         for filename in filenames:
@@ -92,21 +99,36 @@ class TimeModePlot(CustomAxesImage, object):
                 else:
                     raise ValueError("compact_support value mismatch")
 
-            if self.yname not in d['data'].keys():
-                raise Exception("missing required column '"+self.yname+"' in provided columns '"+str(d['data'].keys())+"' in file '"+filename+"'")
-
-            data.append(d['data'][self.yname]*d['display_units'][self.yname])
-            length = len(data[-1])
-            
-            if datalength is None: datalength = length
-            elif datalength != length: raise Exception("mismatched data length in file '"+filename+"'. Expected "+str(datalength)+" but got "+str(length))
-            
-            for key, val in d['data'].items():
-                if key in ['t','time','Time']:
-                    time.append(np.repeat(val*d['display_units'][key],length))
+            length = 0
+            for key,val in d['data'].items():
+                if key not in ['t','time','Time']:
+                    length = len(val)
                     break
-        
-        return np.array(time).flatten(), np.array(data).flatten()
+            if length == 0: raise Exception("data file '"+filename+"' either only contains time data, or has no data at all")
+
+            for key, val in d['data'].items():
+                if key not in xstring and key not in ystring: continue
+                if key in ['t','time','Time']: val = np.repeat(val, length)
+                if key not in data['data'].keys(): data['data'][key] = [val]
+                else: data['data'][key] += [val]
+
+                if key not in data['display_units'].keys():
+                    data['display_units'][key] = d['display_units'][key]
+                elif data['display_units'][key] != d['display_units'][key]:
+                    raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found display units of '"+data['display_units'][key]+"', but file '"+filename+"' has display units of '"+d['display_units'][key]+"' for this key.")
+
+                if key not in data['physical_units'].keys():
+                    data['physical_units'][key] = d['physical_units'][key]
+                elif data['physical_units'][key] != d['physical_units'][key]:
+                    raise Exception("the input files have inconsistent data structures. For key '"+key+"', we previously found physical units of '"+data['display_units'][key]+"', but file '"+filename+"' has physical units of '"+d['display_units'][key]+"' for this key.")
+
+        for key, val in data['data'].items():
+            data['data'][key] = np.array(val).flatten()
+        self.gui.data = data
+
+        self.gui.controls.axis_controllers['XAxis'].stale = True
+        self.gui.controls.axis_controllers['YAxis'].stale = True
+
         
     def calculate(self, *args, **kwargs):
         if globals.debug > 1: print("timemodeplot.calculate")
@@ -126,14 +148,28 @@ class TimeModePlot(CustomAxesImage, object):
         new_data = []
         
         for i,(image,idx,group,xpixels) in enumerate(zip(self.images, self.group_idx, self.group_filenames, group_xpixels)):
-            time, y = self.get_data(group)
+            if self._interrupt: return
+            self.get_data(group)
+            time = self.gui.controls.axis_controllers['XAxis'].data
+            y = self.gui.controls.axis_controllers['YAxis'].data
+
+            valid = np.logical_and(np.isfinite(time), np.isfinite(y))
+
+            if not np.any(valid):
+                image.remove()
+                continue
             
+            time = time[valid]
+            y = y[valid]
+
             unique_time = np.unique(time)
             xbins = np.empty(len(unique_time)+1)
             xbins[:-1] = unique_time
             # This is sort-of a guess at the duration of the last time step. We don't ask for dt
             # information so we have to extrapolate.
             xbins[-1] = unique_time[-1]+(unique_time[-1]-unique_time[-2])
+
+            if self._interrupt: return
             pixels, extent = self.calculate_data_cpu(time, y, xbins)
 
             new_data.append(pixels)
@@ -141,12 +177,16 @@ class TimeModePlot(CustomAxesImage, object):
             if new_max is None: new_max = np.nanmax(pixels)
             else: new_max = max(new_max, np.nanmax(pixels))
 
+            if self._interrupt: return
+
             for j,dat in enumerate(new_data):
                 self.images[j].set_data(dat / new_max)
-            #image.set_data(pixels)   
+            
             image.set_extent(extent)
             canvas.draw_idle()
 
+        self.gui.data = None
+            
         if globals.debug > 0: print("timemodeplot.calculate took %f seconds" % (time()-start))
 
     def calculate_data_cpu(self, x, y, xbins):

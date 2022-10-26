@@ -32,7 +32,7 @@ use_multiprocessing = False
 # reached. Thus, we create the "point density" plots
 # by reading in this number of files at a time and
 # plotting them in groups.
-time_mode_nfiles = 30
+time_mode_nfiles = 5
 
 # The width of a tooltip to determine text wrapping
 tooltip_wraplength = 50

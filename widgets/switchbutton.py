@@ -37,7 +37,8 @@ class SwitchButton(Button,object):
             if variable: # Variable has just been set from False to True
                 if command[0] is not None: command[0](*args, **kwargs)
             # Variable has just been set from True to False
-            elif command[1] is not None: command[1](*args, **kwargs)
+            else:
+                if command[1] is not None: command[1](*args, **kwargs)
 
     def command(self,*args,**kwargs):
         if 'disabled' not in self.state():
