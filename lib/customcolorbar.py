@@ -82,7 +82,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 self.cax.set_xlim(self.vmin,self.vmax)
             else:
                 raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
-                
+
             self.draw_all()
     
     def find_axesimage(self, *args, **kwargs):

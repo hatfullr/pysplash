@@ -167,7 +167,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         # Update the axis limits in the GUI
         self.update_GUI_axis_limits()
 
-        if self.gui.interactiveplot.isScatterPlot:
+        if self.gui.interactiveplot.is_scatter_plot.get():
             self.gui.controls.update_button.invoke()
         else:
             self.gui.controls.update_button.configure(state='!disabled')

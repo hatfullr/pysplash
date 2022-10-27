@@ -69,12 +69,13 @@ class AxisController(LabelledFrame,object):
                 self._data, self._physical_units, self._display_units = self.combobox.get()
                 if self._data is not None:
                     # Apply the scaling to the resulting data
-                    scale = self.scale.get()
-                    if scale == 'log10': self._data = np.log10(self._data)
-                    elif scale == '10^':
-                        if self.scale.can_data_overflow_with_pow10(self._data):
-                            self.scale.set('linear')
-                        else: self._data = 10.**self._data
+                    if not self.is_colorbar:
+                        scale = self.scale.get()
+                        if scale == 'log10': self._data = np.log10(self._data)
+                        elif scale == '10^':
+                            if self.scale.can_data_overflow_with_pow10(self._data):
+                                self.scale.set('linear')
+                            else: self._data = 10.**self._data
 
                     self.stale = False
                     self.event_generate("<<DataChanged>>")
