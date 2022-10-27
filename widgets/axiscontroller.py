@@ -47,13 +47,13 @@ class AxisController(LabelledFrame,object):
         self.previous_scale = self.scale.get()
         self.previous_units = self.units.value.get()
 
-        self.value.trace('w', self.set_widgets_states)
+        #self.value.trace('w', self.set_widgets_states)
         self.scale.trace('w', self.on_scale_changed)
         self.label.trace('w', self.update_label)
         
         self.combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected, add='+')
 
-        self.combobox.bind("<Configure>", self.set_widgets_states, add="+")
+        #self.combobox.bind("<Configure>", self.set_widgets_states, add="+")
 
         self._data = None
         self.stale = False
@@ -67,17 +67,17 @@ class AxisController(LabelledFrame,object):
         if self.gui.data is not None and not self.gui.data.is_image:
             if self.stale:
                 self._data, self._physical_units, self._display_units = self.combobox.get()
+                if self._data is not None:
+                    # Apply the scaling to the resulting data
+                    scale = self.scale.get()
+                    if scale == 'log10': self._data = np.log10(self._data)
+                    elif scale == '10^':
+                        if self.scale.can_data_overflow_with_pow10(self._data):
+                            self.scale.set('linear')
+                        else: self._data = 10.**self._data
 
-                # Apply the scaling to the resulting data
-                scale = self.scale.get()
-                if scale == 'log10': self._data = np.log10(self._data)
-                elif scale == '10^':
-                    if self.scale.can_data_overflow_with_pow10(self._data):
-                        self.scale.set('linear')
-                    else: self._data = 10.**self._data
-
-                self.stale = False
-                self.event_generate("<<DataChanged>>")
+                    self.stale = False
+                    self.event_generate("<<DataChanged>>")
         return self._data
     @property
     def physical_units(self):
@@ -116,7 +116,6 @@ class AxisController(LabelledFrame,object):
         self.label_entry = Entry(
             self.label_frame,
             textvariable=self.label,
-            state='disabled',
         )
         
         self.limits = AxisLimits(self,self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
@@ -145,7 +144,7 @@ class AxisController(LabelledFrame,object):
         value = self.value.get()
         if value != self.previous_value:
             
-            self.set_widgets_states()
+            #self.set_widgets_states()
             self.gui.time_mode.set(any([controller.value.get() in ['t','time','Time'] for controller in self.gui.controls.axis_controllers.values()]))
             
             if self.gui.data is not None:
@@ -250,6 +249,7 @@ class AxisController(LabelledFrame,object):
         if globals.debug > 1: print("axiscontroller.update_label_log_tag")
         current_scale = self.scale.get()
         label = self.label.get()
+        if label in ["", " "]: return
         newlabel = label
         loglabels = ["log ", "$\\log_{10}"]
         if current_scale != 'log10':
@@ -304,22 +304,22 @@ class AxisController(LabelledFrame,object):
                 if None not in newlim:
                     self.limits.set_limits(newlim)
 
-    def set_widgets_states(self, *args, **kwargs):
-        widgets = [
-            self.label_entry,
-            self.limits.entry_low,
-            self.limits.entry_high,
-            self.limits.adaptive_button,
-            self.scale.linear_button,
-            self.scale.log_button,
-            self.units.entry,
-        ]
-
-        #state = self.combobox.cget('state')
-        
-        if self.value.get().strip() in ["",None,'None','none']:
-            for widget in widgets: widget.configure(state='disabled')
-            self.event_generate("<<DisabledWidgets>>")
-        else:
-            for widget in widgets: widget.configure(state='!disabled')
-            self.event_generate("<<EnabledWidgets>>")
+    #def set_widgets_states(self, *args, **kwargs):
+    #    widgets = [
+    #        self.label_entry,
+    #        self.limits.entry_low,
+    #        self.limits.entry_high,
+    #        self.limits.adaptive_button,
+    #        self.scale.linear_button,
+    #        self.scale.log_button,
+    #        self.units.entry,
+    #    ]
+    #
+    #    #state = self.combobox.cget('state')
+    #    
+    #    if self.value.get().strip() in ["",None,'None','none']:
+    #        for widget in widgets: widget.configure(state='disabled')
+    #        self.event_generate("<<DisabledWidgets>>")
+    #    else:
+    #        for widget in widgets: widget.configure(state='!disabled')
+    #        self.event_generate("<<EnabledWidgets>>")

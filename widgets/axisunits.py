@@ -40,7 +40,6 @@ class AxisUnits(tk.LabelFrame, object):
             self,
             variable=self.value,
             #disallowed_values=[0,0.,-0,-0.],
-            state='disabled',
         )
 
     def place_widgets(self, *args, **kwargs):
@@ -55,12 +54,3 @@ class AxisUnits(tk.LabelFrame, object):
         if globals.debug > 1: print('axisunits.on_axis_controller_combobox_selected')
         self.reset()
 
-    def disable(self,*args,**kwargs):
-        if globals.debug > 1: print("axisunits.disable")
-        set_widgets_states(get_all_children(self), 'disabled')
-
-    def enable(self,*args,**kwargs):
-        if globals.debug > 1: print("axisunits.enable")
-        set_widgets_states(get_all_children(self), 'normal')
-        
-    

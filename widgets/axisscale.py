@@ -23,7 +23,17 @@ class AxisScale(tk.LabelFrame, object):
         self.create_widgets()
         self.place_widgets()
 
-        self.controller.bind("<<DataChanged>>", self.on_controller_data_changed, add="+")
+        def update_allowed_states(*args,**kwargs):
+            self.pow10_allowed.set(
+                not self.can_data_overflow_with_pow10(self.controller.data) and
+                not self.can_data_overflow_with_pow10(np.array(self.controller.limits.high.get())) and
+                not self.can_data_overflow_with_pow10(np.array(self.controller.limits.low.get()))
+            )
+            #if self.controller.data is not None:
+            #    self.log_allowed.set(bool(np.all(self.controller.data > 0)))
+        
+        self.controller.bind("<<DataChanged>>", update_allowed_states, add="+")
+        self.controller.bind("<<LimitsChanged>>", update_allowed_states, add="+")
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_variables")
@@ -32,6 +42,8 @@ class AxisScale(tk.LabelFrame, object):
         #else: # if self._variable is None
         self._variable = StringVar(self, 'linear', '_variable')
         globals.state_variables.append(self._variable)
+        self.log_allowed = tk.BooleanVar(value=True)
+        self.pow10_allowed = tk.BooleanVar(value=True)
 
     def create_widgets(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_widgets")
@@ -74,18 +86,6 @@ class AxisScale(tk.LabelFrame, object):
         if globals.debug > 1: print("axisscale.connect")
         self.axis = axis
 
-    def disable(self, *args, **kwargs):
-        if globals.debug > 1: print('axisscale.disable')
-        self.linear_button.configure(state='disabled')
-        self.log_button.configure(state='disabled')
-        self.pow10_button.configure(state='disabled')
-
-    def enable(self, *args, **kwargs):
-        if globals.debug > 1: print('axisscale.enable')
-        self.linear_button.configure(state='normal')
-        self.log_button.configure(state='normal')
-        self.pow10_button.configure(state='normal')
-
     # Check if the axis controller's data is able to overflow if it's raised to 10^
     def can_data_overflow_with_pow10(self, data):
         if globals.debug > 1: print('axisscale.can_data_overflow')
@@ -98,14 +98,3 @@ class AxisScale(tk.LabelFrame, object):
             raise Exception("unknown dtype '"+str(data.dtype)+"' in data")
         return np.any(data > np.log10(maxvalue))
 
-    def on_controller_data_changed(self,*args,**kwargs):
-        if globals.debug > 1: print('axisscale.on_controller_data_changed')
-        
-        # If the data is able to overflow when raised to 10^data
-        if self.can_data_overflow_with_pow10(self.controller.data):
-            # Permanently disable the pow10 button
-            set_widget_state_permanent(self.pow10_button, 'disabled')
-        # Otherwise, release the permanent state (if set)
-        else:
-            release_widget_state_permanent(self.pow10_button)
-            self.pow10_button.configure(state='!disabled')

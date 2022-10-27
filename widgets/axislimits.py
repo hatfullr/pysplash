@@ -31,9 +31,14 @@ class AxisLimits(tk.LabelFrame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self._on_adaptive_set()
-
-        self.adaptive.trace('w', self._on_adaptive_set)
+        self.low.trace(
+            'w',
+            lambda *args, **kwargs: self.controller.event_generate("<<LimitsChanged>>")
+        )
+        self.high.trace(
+            'w',
+            lambda *args, **kwargs: self.controller.event_generate("<<LimitsChanged>>")
+        )
 
         self.connected = False
 
@@ -134,15 +139,15 @@ class AxisLimits(tk.LabelFrame,object):
         
         if self.adaptivecommands[1] is not None: self.adaptivecommands[1](*args, **kwargs)
 
-    def _on_adaptive_set(self,*args,**kwargs):
-        if globals.debug > 1: print("axislimits._on_adaptive_set")
-        if '!disabled' in str(self.adaptive_button['state']):
-            if self.adaptive.get():
-                self.entry_low.configure(state='disabled')
-                self.entry_high.configure(state='disabled')
-            else:
-                self.entry_low.configure(state='normal')
-                self.entry_high.configure(state='normal')
+    #def _on_adaptive_set(self,*args,**kwargs):
+    #    if globals.debug > 1: print("axislimits._on_adaptive_set")
+    #    if '!disabled' in str(self.adaptive_button['state']):
+    #        if self.adaptive.get():
+    #            self.entry_low.configure(state='disabled')
+    #            self.entry_high.configure(state='disabled')
+    #        else:
+    #            self.entry_low.configure(state='normal')
+    #            self.entry_high.configure(state='normal')
 
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.update_limits")

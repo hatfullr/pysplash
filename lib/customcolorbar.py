@@ -347,27 +347,16 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 if vmax is None: vmax = np.nanmax(d[valid])
                 else: vmax = max(vmax, np.nanmax(d[valid]))
             image.set_data(d)
-        self.axis_controller.limits.low.set(vmin)
-        self.axis_controller.limits.high.set(vmax)
+        if vmin is not None:
+            self.axis_controller.limits.low.set(vmin)
+        if vmax is not None:
+            self.axis_controller.limits.high.set(vmax)
 
     def on_scale_changed(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.on_scale_changed")
         
         # Update the limits
         self.set_adaptive_limits()
-
-        """
-        if self.axesimage_connected and self.axiscontroller_connected:
-            self.update_data()
-            scale = self.axis_controller.scale.get()
-            if scale == 'linear': self.axesimage.set_data(self.linear_data)
-            elif scale == 'log10':
-                print("log10")
-                self.axesimage.set_data(np.log10(self.linear_data))
-            clim = (np.nanmin(self.axesimage._data), np.nanmax(self.axesimage._data))
-            print("setting clim to",clim)
-            self.set_clim(clim)
-        """
 
     def update_data(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_data")
@@ -376,10 +365,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             self.linear_data = []
             for i, image in enumerate(self.axesimages):
                 data = image.get_array()
-                #if isinstance(image, CustomAxesImage): data = image._data
-                #elif isinstance(image, matplotlib.image.AxesImage): data = image.get_array()
-                #else: raise TypeError("unrecognized image type '"+type(image).__name__+"'")
-                
                 if scale == 'log10': self.linear_data.append(10**data)
                 elif scale == '10^': self.linear_data.append(np.log10(data))
                 else: self.linear_data.append(data)

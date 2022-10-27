@@ -75,13 +75,15 @@ class InteractivePlot(ResizableFrame,object):
         
         self.colorbar = CustomColorbar(self.ax)
 
-        self.drawn_object = None
+        self._drawn_object = None
         self.previously_drawn_object = None
 
         self.create_variables()
         self.create_widgets()
         self.place_widgets()
         self.create_hotkeys()
+
+        self.loading_wheel.hide()
 
         self.tracking = self.track_id.get() >= 0
         
@@ -157,6 +159,14 @@ class InteractivePlot(ResizableFrame,object):
         self._updating = False
 
     @property
+    def drawn_object(self): return self._drawn_object
+    @drawn_object.setter
+    def drawn_object(self, value):
+        self.plot_type.set(type(value).__name__)
+        self.is_scatter_plot.set(isinstance(value, ScatterPlot) and not isinstance(value, PointDensityPlot))
+        self._drawn_object = value
+        
+    @property
     def colors(self): return self._colors
     @colors.setter
     def colors(self, value):
@@ -176,9 +186,6 @@ class InteractivePlot(ResizableFrame,object):
         else:
             self._origin = value
 
-    @property
-    def isScatterPlot(self): return self.drawn_object is not None and isinstance(self.drawn_object, ScatterPlot) and not isinstance(self.drawn_object, PointDensityPlot)
-        
     def create_variables(self):
         if globals.debug > 1: print("interactiveplot.create_variables")
         self.xycoords = tk.StringVar()
@@ -196,6 +203,9 @@ class InteractivePlot(ResizableFrame,object):
         self.right = DoubleVar(self,self.fig.subplotpars.right,'right')
         self.hspace = DoubleVar(self,self.fig.subplotpars.hspace,'hspace')
         self.wspace = DoubleVar(self,self.fig.subplotpars.wspace,'wspace')
+
+        self.plot_type = tk.StringVar()
+        self.is_scatter_plot = tk.BooleanVar(value=False)
 
     def create_widgets(self):
         if globals.debug > 1: print("interactiveplot.create_widgets")
@@ -290,7 +300,6 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.update")
         # If we are waiting to update, then make sure the controls' update button is disabled
         #self.gui.controls.update_button.state(['disabled'])
-        self.loading_wheel.show()
         #if self._updating: return
         
         if globals.plot_update_delay > 0:
@@ -303,6 +312,10 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1:
             print("interactiveplot._update")
             print("    self.ax = ",self.ax)
+
+        if self.gui.data is None:
+            self.draw()
+            return
 
         self._updating = True
         self.loading_wheel.show()
@@ -378,6 +391,7 @@ class InteractivePlot(ResizableFrame,object):
             # Update the 'help' text in the plot
             self.update_help_text()
             self.draw()
+            self.loading_wheel.hide()
             return
 
         self.origin = np.zeros(2)
@@ -591,7 +605,7 @@ class InteractivePlot(ResizableFrame,object):
             #    self.canvas.blit_artists.append(self.drawn_object)
 
             self.update_help_text()
-
+            
             self.gui.event_generate("<<PlotUpdate>>")
             
             self.draw()
@@ -825,7 +839,7 @@ class InteractivePlot(ResizableFrame,object):
 
         self.draw()
         
-        if self.isScatterPlot:
+        if self.is_scatter_plot.get():
             self.update()
         else:
             self.gui.controls.update_button.configure(state='!disabled')
@@ -861,7 +875,7 @@ class InteractivePlot(ResizableFrame,object):
         self.gui.plottoolbar.drag_pan(event)
         self.gui.controls.axis_controllers['XAxis'].limits.set_limits(self.ax.get_xlim())
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
-        if self.isScatterPlot:
+        if self.is_scatter_plot.get():
             self.update()
         else:
             self.gui.controls.update_button.configure(state='!disabled')
@@ -890,7 +904,7 @@ class InteractivePlot(ResizableFrame,object):
         colors = self.colors if self.colors is not None else np.full(len(xy), ScatterPlot.default_color_index)
 
         # Only do this if we are in a scatter plot
-        if self.isScatterPlot:
+        if self.is_scatter_plot.get():
             IDs = None
             
             if particles is None:
@@ -919,7 +933,13 @@ class InteractivePlot(ResizableFrame,object):
                 if update: self._update()
                     
         elif particles is not None and index is not None:
-            colors[particles] = index
+            if not isinstance(particles, (list,tuple,np.ndarray)):
+                particles = np.array([particles],dtype=int)
+            elif isinstance(particles, (list,tuple)):
+                particles = np.array(particles, dtype=int)
+            
+            if np.all(np.logical_and(0 <= particles, particles < len(colors))):
+                colors[particles] = index
             if update: self._update()
         
         self.colors = colors
@@ -1343,12 +1363,12 @@ class InteractivePlot(ResizableFrame,object):
     
     def disable(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.disable")
-        if not self.isScatterPlot:
+        if not self.is_scatter_plot.get():
             self.gui.set_user_controlled(False)
             self.hotkeys.disable()
         
     def enable(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.enable")
-        if not self.isScatterPlot:
+        if not self.is_scatter_plot.get():
             self.gui.set_user_controlled(True)
             self.hotkeys.enable()

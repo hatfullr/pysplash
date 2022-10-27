@@ -83,9 +83,10 @@ class Controls(tk.Frame,object):
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
         self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
         
-        def on_colorbar_type_changed(*args,**kwargs):
-            if self.axis_controllers['Colorbar'].value.get() != "": self.update_button.configure(state='!disabled')
-        self.colorbar_type.trace('w', on_colorbar_type_changed)
+        
+        #def on_colorbar_type_changed(*args,**kwargs):
+        #    if self.axis_controllers['Colorbar'].value.get() != "": self.update_button.configure(state='!disabled')
+        #self.colorbar_type.trace('w', on_colorbar_type_changed)
 
         self.previous_colorbar_type = self.colorbar_type.get()
         def save_previous_colorbar_type(event):
@@ -208,7 +209,7 @@ class Controls(tk.Frame,object):
 
         self.controls_frame.pack(side='top',fill='both',expand=True)
         self.controls_frame.interior.configure(padx=5,pady=5)
-        
+
     def on_state_change(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_state_change")
 
@@ -257,22 +258,22 @@ class Controls(tk.Frame,object):
         self.saved_state = deepcopy(self.current_state)
         self.update_button.configure(state='disabled')#,relief='sunken')
     
-    def disable(self,temporarily=False):
-        if globals.debug > 1: print("controls.disable")
-        
-        if temporarily: self.previous_state = get_widgets_states(self._children)
-        else: self.previous_state = None
-        
-        set_widgets_states(self._children,'disabled')
+    #def disable(self,temporarily=False):
+    #    if globals.debug > 1: print("controls.disable")
+    #    
+    #    if temporarily: self.previous_state = get_widgets_states(self._children)
+    #    else: self.previous_state = None
+    #    
+    #    #set_widgets_states(self._children,'disabled')
 
-    def enable(self):
-        if globals.debug > 1: print("controls.enable")
-        if self.previous_state is not None:
-            for widget,state in self.previous_state:
-                widget.configure(state=state)
-            self.previous_state = None
-        else:
-            set_widgets_states(self._children,'normal')
+    #def enable(self):
+    #    if globals.debug > 1: print("controls.enable")
+    #    if self.previous_state is not None:
+    #        for widget,state in self.previous_state:
+    #            widget.configure(state=state)
+    #        self.previous_state = None
+    #    else:
+    #        set_widgets_states(self._children,'normal')
 
     def is_limits_changed(self, which):
         if globals.debug > 1: print("controls.is_limits_changed")
@@ -436,10 +437,6 @@ class Controls(tk.Frame,object):
         # Set the focus to the canvas
         self.gui.interactiveplot.canvas.get_tk_widget().focus_set()
         
-        # After the update, enable/disable rotations as needed
-        self.plotcontrols.update_rotations_controls()
-
-        
     def connect(self):
         if globals.debug > 1: print("controls.connect")
         # Connect the controls to the interactiveplot
@@ -465,9 +462,10 @@ class Controls(tk.Frame,object):
 
         if (self.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
             self.axis_controllers['YAxis'].value.get() in ['x','y','z']):
-            self.axis_controllers['Colorbar'].combobox.configure(state='normal')
+            pass
+            #self.axis_controllers['Colorbar'].combobox.configure(state='normal')
         elif not self.gui.time_mode.get():
-            self.axis_controllers['Colorbar'].combobox.configure(state='readonly')
+            #self.axis_controllers['Colorbar'].combobox.configure(state='readonly')
             if self.axis_controllers['Colorbar'].value.get() not in ['Point Density','','None',None]:
                 self.axis_controllers['Colorbar'].value.set("")
             
@@ -521,12 +519,12 @@ class Controls(tk.Frame,object):
                 'state' : 'disabled',
             },
         }
-        if self.gui.time_mode.get():
-            for key in states.keys():
-                states[key]['state'] = 'disabled'
-        else:
-            if self.gui.data is not None and (self.gui.data.has_variables('opacity') or self.gui.data.has_variables('tau')):
-                states['real']['state'] = 'normal'
+        #if self.gui.time_mode.get():
+        #    for key in states.keys():
+        #        states[key]['state'] = 'disabled'
+        #else:
+        #    if self.gui.data is not None and (self.gui.data.has_variables('opacity') or self.gui.data.has_variables('tau')):
+        #        states['real']['state'] = 'normal'
 
-        for key, val in states.items():
-            val['widget'].configure(state=val['state'])
+        #for key, val in states.items():
+        #    val['widget'].configure(state=val['state'])

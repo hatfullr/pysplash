@@ -29,6 +29,8 @@ from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 from widgets.autosizelabel import AutoSizeLabel
 from widgets.message import Message
 
+from gui.guiwidgetcontroller import GUIWidgetController
+
 from read_file import read_file
 import globals
 import kernel
@@ -79,6 +81,8 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
+        self.widget_controller = GUIWidgetController(self)
+
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=[],extra=[''])
 
         # When the user clicks on widgets etc, those widgets should acquire
@@ -114,22 +118,20 @@ class GUI(tk.Frame,object):
         
         # Don't apply a mask in time mode (for now)
         if self.time_mode.get(): mask = None
-
+        
         if value is None:
-            for axis_controller in self.controls.axis_controllers.values():
-                axis_controller.combobox.configure(state='disabled')
             self.menubar.data.disable()
             self.menubar.particle.disable()
             self.menubar.functions.disable()
         else:
             value = Data(value,mask=mask)
-            
-            for axis_controller in self.controls.axis_controllers.values():
-                axis_controller.combobox.configure(state='normal')
             self.menubar.data.enable()
             self.menubar.particle.enable()
             self.menubar.functions.enable()
-        
+
+        self.has_data.set(value is not None)
+        self.data_is_image.set(value.is_image)
+            
         self._data = value
         self.event_generate("<<DataChanged>>")
 
@@ -225,7 +227,6 @@ class GUI(tk.Frame,object):
                 controller.combobox.textvariable.set("")
                 controller.label.set("")
         
-        self.controls.plotcontrols.update_rotations_controls()
         self.controls.update_xaxis_controller()
         self.controls.update_yaxis_controller()
 
@@ -247,6 +248,8 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_variables")
         #self.message_text = tk.StringVar()
         self.time_mode = BooleanVar(self,globals.time_mode,"time mode")
+        self.has_data = tk.BooleanVar(value=False)
+        self.data_is_image = tk.BooleanVar(value=False)
         
     def create_widgets(self):
         if globals.debug > 1: print("gui.create_widgets")
@@ -306,15 +309,15 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.create_hotkeys")
         self.hotkeys = Hotkeys(self.window)
         self.hotkeys.bind("update plot", lambda *args,**kwargs: self.controls.update_button.invoke())
-
+        
     def set_user_controlled(self,value):
         if globals.debug > 1: print("gui.set_user_controlled")
         if value:
-            self.controls.enable()
+            #self.controls.enable()
             self.filecontrols.enable('all')
             self.plottoolbar.enable()
         else:
-            self.controls.disable(temporarily=True)
+            #self.controls.disable(temporarily=True)
             self.filecontrols.disable('all')
             self.plottoolbar.disable()
         self.user_controlled = value
@@ -353,18 +356,11 @@ class GUI(tk.Frame,object):
         self.data = self._temp
 
         if self.data.is_image:
-            self.controls.axis_controllers['XAxis'].combobox.configure(state='disabled')
-            self.controls.axis_controllers['YAxis'].combobox.configure(state='disabled')
-            self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
             self.controls.axis_controllers['XAxis'].value.set("")
             self.controls.axis_controllers['YAxis'].value.set("")
             self.controls.axis_controllers['Colorbar'].value.set("")
             return
 
-        self.controls.axis_controllers['XAxis'].combobox.configure(state='normal')
-        self.controls.axis_controllers['YAxis'].combobox.configure(state='normal')
-        self.controls.axis_controllers['Colorbar'].combobox.configure(state='normal')
-            
         
         if sys.version_info.major >= 3:
             new_data_length = len(self.data['data'][next(iter(self.data['data']))])
@@ -567,15 +563,12 @@ class GUI(tk.Frame,object):
         
         # Setup the controls
         self.controls.axis_controllers['Colorbar'].combobox.textvariable.set("Point Density")
-        self.controls.axis_controllers['Colorbar'].combobox.configure(state='disabled')
         self.menubar.particle.disable()
         
         if self.filecontrols.current_file in globals.state_variables:
             globals.state_variables.remove(self.filecontrols.current_file)
         self.previous_file = self.filecontrols.current_file.get()
         self.filecontrols.current_file.set("Time Mode")
-
-        self.controls.plotcontrols.disable_rotations()
 
         self.interactiveplot.clear_tracking()
         self.interactiveplot.clear_particle_annotations()
@@ -593,8 +586,7 @@ class GUI(tk.Frame,object):
         if globals.debug > 1: print("gui.disable_time_mode")
 
         globals.time_mode = False
-        
-        self.controls.axis_controllers['Colorbar'].combobox.configure(state='normal')
+
         self.menubar.particle.enable()
 
         if self.previous_file is not None:
