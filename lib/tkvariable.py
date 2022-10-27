@@ -34,10 +34,10 @@ def get(name,widget=None):
                     w[name]
         raise Exception("failed to find the widget that "+str(name)+" belongs to")
     elif str(widget) in TkVariable.preferences.keys():
-        result = TkVariable.preferences[str(widget)].get(name, None)
-        if result is None:
-            raise Exception("failed to find the widget that "+str(name)+" belongs to")
-        return result
+        return TkVariable.preferences[str(widget)].get(name, None)
+        #if result is None:
+        #    raise Exception("failed to find the widget that "+str(name)+" belongs to")
+        #return result
 
 
 class TkVariable(tk.Variable, object):

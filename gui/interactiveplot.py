@@ -669,9 +669,8 @@ class InteractivePlot(ResizableFrame,object):
             if "expected floating-point number but got" in str(e):
                 return
 
-        if 'time' in self.plot_annotations.keys():
-            self.plot_annotations.configure('time',text=text)
-            #self.time_text.set_text(text)
+        #if 'time' in self.plot_annotations.keys():
+        #    self.plot_annotations.configure('time',text=text)
 
         if event is not None:
             # Check if the mouse is inside the plot region
@@ -687,30 +686,16 @@ class InteractivePlot(ResizableFrame,object):
             
             if 'time' not in self.plot_annotations.keys():
                 self.plot_annotations.add("time", text, (xpos,ypos), xycoords='figure pixels')
-                #self.time_text = self.ax.annotate(
-                #    text,
-                #    (xpos,ypos),
-                #    xycoords='figure pixels',
-                #)
             else:
                 pos = self.plot_annotations['time'].get_position()
-                #pos = self.time_text.get_position()
-                if xpos == pos[0] and ypos == pos[1] and self.time_text.get_visible():
-                    self.plot_annotations.configure('time',visible=False)
-                    #self.time_text.set_visible(False)
-                else:
+                if self.plot_annotations['time'].get_visible():
+                    if xpos == pos[0] and ypos == pos[1]:
+                        self.plot_annotations.configure('time',visible=False)
+                    else:
+                        self.plot_annotations.configure('time',position=(xpos,ypos))
+                else: # Not visible yet
                     self.plot_annotations.configure('time',position=(xpos,ypos),visible=True)
-                    #self.time_text.set_position((xpos,ypos))
-                    #self.time_text.set_visible(True)
         self.canvas.draw_idle()
-
-    #def reset_clim(self, draw=True):
-    #    if globals.debug > 1: print("interactiveplot.reset_clim")
-    #    #self.canvas.draw() # I don't understand why we need to do this, but it works when we do...
-    #    newlim = np.array(self.colorbar.calculate_limits(data=self.drawn_object._data))
-    #    self.colorbar.set_clim(newlim)
-    #    self.gui.controls.axis_controllers['Colorbar'].limits.on_axis_limits_changed()
-    #    if draw: self.canvas.draw_idle()
 
     def reset_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_xylim")
