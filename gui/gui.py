@@ -150,10 +150,15 @@ class GUI(tk.Frame,object):
             # Setup the limits on the interactive plot using user's preferences
             self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
             self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
+            self.interactiveplot.colorbar.set_clim(self.controls.axis_controllers['Colorbar'].limits.get())
 
             if self.interactiveplot.tracking:
                 for name in ['XAxis','YAxis']:
                     set_widget_state_permanent(self.controls.axis_controllers[name].limits.adaptive_button, ['disabled'])
+
+            self.interactiveplot.colorbar.update_cmap(self.controls.colorbar_cmap.get())
+            self.controls.colorbar_cmap_combobox.bind("<<ComboboxSelected>>", lambda *args, **kwargs: self.interactiveplot.colorbar.update_cmap(self.controls.colorbar_cmap.get()), add="+")
+            self.controls.colorbar_cmap.set(self.interactiveplot.colorbar.cmap.name)
         
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()

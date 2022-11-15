@@ -5,7 +5,6 @@ else:
     import tkinter as tk
 from widgets.radiobutton import RadioButton
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
-from functions.setwidgetstatepermanent import set_widget_state_permanent, release_widget_state_permanent
 import globals
 import numpy as np
 
@@ -29,17 +28,12 @@ class AxisScale(tk.LabelFrame, object):
                 not self.can_data_overflow_with_pow10(np.array(self.controller.limits.high.get())) and
                 not self.can_data_overflow_with_pow10(np.array(self.controller.limits.low.get()))
             )
-            #if self.controller.data is not None:
-            #    self.log_allowed.set(bool(np.all(self.controller.data > 0)))
         
         self.controller.bind("<<DataChanged>>", update_allowed_states, add="+")
         self.controller.bind("<<LimitsChanged>>", update_allowed_states, add="+")
 
     def create_variables(self, *args, **kwargs):
         if globals.debug > 1: print("axisscale.create_variables")
-        #if self._variable and not isinstance(self._variable, StringVar):
-        #    raise TypeError("Keyword argument 'variable' must be of type StringVar. Received type '"+type(self._variable).__name__+"'")
-        #else: # if self._variable is None
         self._variable = StringVar(self, 'linear', '_variable')
         globals.state_variables.append(self._variable)
         self.log_allowed = tk.BooleanVar(value=True)
@@ -53,7 +47,6 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="linear",
             width=0,
-            state='disabled',
         )
         self.log_button = RadioButton(
             self,
@@ -61,7 +54,6 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="log10",
             width=0,
-            state='disabled',
         )
         self.pow10_button = RadioButton(
             self,
@@ -69,7 +61,6 @@ class AxisScale(tk.LabelFrame, object):
             variable=self._variable,
             value="10^",
             width=0,
-            state='disabled',
         )
 
     def place_widgets(self, *args, **kwargs):

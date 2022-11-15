@@ -50,9 +50,9 @@ def rotate_gpu(x,y,z,anglexdeg,angleydeg,anglezdeg):
     if not isinstance(y,np.ndarray): y = np.array(y)
     if not isinstance(z,np.ndarray): z = np.array(z)
 
-    xangle = float(anglexdeg)/180.*np.pi
-    yangle = float(angleydeg)/180.*np.pi
-    zangle = float(anglezdeg)/180.*np.pi
+    xangle = float(360-anglexdeg)/180.*np.pi
+    yangle = float(360-angleydeg)/180.*np.pi
+    zangle = float(360-anglezdeg)/180.*np.pi
 
     N = len(x)
     if len(y) != N or len(z) != N:
@@ -89,9 +89,9 @@ def rotate_cpu(x,y,z,anglexdeg,angleydeg,anglezdeg):
     if not isinstance(y,np.ndarray): y = np.array(y)
     if not isinstance(z,np.ndarray): z = np.array(z)
     
-    xangle = float(anglexdeg)/180.*np.pi
-    yangle = float(angleydeg)/180.*np.pi
-    zangle = float(anglezdeg)/180.*np.pi
+    xangle = float(360-anglexdeg)/180.*np.pi
+    yangle = float(360-angleydeg)/180.*np.pi
+    zangle = float(360-anglezdeg)/180.*np.pi
 
     if zangle != 0: # rotate about z
         rold = np.sqrt(x*x + y*y)

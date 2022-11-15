@@ -16,12 +16,13 @@ else:
 widget_controllers = {}
 
 class WidgetController:
-    def __init__(self, widget, *variables, comparison=None, default={}, true={}, false={}):
+    def __init__(self, widget, *variables, comparison=None, default={}, true={}, false={}, verbose=False):
         self.widget = widget
         self.variables = variables
         self.true = true
         self.false = false
         self.default = default
+        self.verbose = verbose
         if comparison is None: comparison = [True]*len(self.variables)
         elif len(self.variables) == 1: comparison = [comparison]
         self.comparison = comparison
@@ -39,18 +40,6 @@ class WidgetController:
             widget_controllers[self.widget] = self
         else:
             raise ValueError("cannot create multiple WidgetControllers for a single widget")
-            #for controller in widget_controllers[self.widget]:
-            #    if controller.variables == self.variables and controller.comparison == self.comparison:
-            #        for key, val in true.items():
-            #            if key in controller.true.keys() and controller.true[key] != val:
-            #                raise ValueError("keyword '"+str(key)+"' with value '"+str(val)+"' in true does not have the same value as the same keyword in '"+str(controller)+"' ("+str(controller.true[key])+")")
-            #        for key, val in false.items():
-            #            if key in controller.false.keys() and controller.false[key] != val:
-            #                raise ValueError("keyword '"+str(key)+"' with value '"+str(val)+"' in false does not have the same value as the same keyword in '"+str(controller)+"' ("+str(controller.false[key])+")")
-            #        for key, val in default.items():
-            #            if key in controller.default.keys() and controller.default[key] != val:
-            #                raise ValueError("keyword '"+str(key)+"' with value '"+str(val)+"' in default does not have the same value as the same keyword in '"+str(controller)+"' ("+str(controller.default[key])+")")
-            #widget_controllers[self.widget] += [self]
             
         self.widget.bind("<Map>", self.update_widget, add="+")
 
@@ -61,13 +50,25 @@ class WidgetController:
 
         alltrue = True
         allfalse = True
+        results = []
+        variables = []
+        comparisons = []
         for variable, comparison in zip(self.variables, self.comparison):
+            variables.append(variable.get())
+            comparisons.append(comparison)
             if isinstance(comparison, (list, tuple)):
-                if variable.get() in comparison: allfalse = False
-                else: alltrue = False
+                results.append(variable.get() in comparison)
+                #if variable.get() in comparison: allfalse = False
+                #else: alltrue = False
             else:
-                if variable.get() == comparison: allfalse = False
-                else: alltrue = False
+                results.append(variable.get() == comparison)
+                #if variable.get() == comparison: allfalse = False
+                #else: alltrue = False
+
+        alltrue = all(results)
+        allfalse = all([result == False for result in results])
+                
+        
 
         if alltrue:
             kwargs = self.true
@@ -75,5 +76,12 @@ class WidgetController:
             kwargs = self.false
         else:
             kwargs = self.default
+
+        if self.verbose:
+            print(self.widget)
+            print("   ",variables)
+            print("   ",comparisons)
+            print("   ",results)
+            print("   ",kwargs)
         
         self.widget.configure(**kwargs)

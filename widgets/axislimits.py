@@ -9,8 +9,6 @@ else:
 from widgets.floatentry import FloatEntry
 from widgets.switchbutton import SwitchButton
 from widgets.tooltip import ToolTip
-from functions.setwidgetsstates import set_widgets_states
-from functions.getallchildren import get_all_children
 from lib.tkvariable import StringVar, IntVar, DoubleVar, BooleanVar
 import gui
 from matplotlib.axis import XAxis, YAxis
@@ -56,12 +54,10 @@ class AxisLimits(tk.LabelFrame,object):
         self.entry_low = FloatEntry(
             self,
             variable=self.low,
-            state='disabled' if self.adaptive.get() else 'normal',
         )
         self.entry_high = FloatEntry(
             self,
             variable=self.high,
-            state='disabled' if self.adaptive.get() else 'normal',
         )
         self.adaptive_button = SwitchButton(
             self,
@@ -69,7 +65,6 @@ class AxisLimits(tk.LabelFrame,object):
             width=2,
             variable=self.adaptive,
             command=(self.adaptive_on, self.adaptive_off),
-            state='disabled',
         )
         ToolTip.createToolTip(self.adaptive_button, "Turn adaptive limits on/off. When turned on, the axis limits will automatically be set such that all data are visible. Disabled while tracking a particle.")
 
@@ -138,16 +133,6 @@ class AxisLimits(tk.LabelFrame,object):
         self.on_axis_limits_changed()
         
         if self.adaptivecommands[1] is not None: self.adaptivecommands[1](*args, **kwargs)
-
-    #def _on_adaptive_set(self,*args,**kwargs):
-    #    if globals.debug > 1: print("axislimits._on_adaptive_set")
-    #    if '!disabled' in str(self.adaptive_button['state']):
-    #        if self.adaptive.get():
-    #            self.entry_low.configure(state='disabled')
-    #            self.entry_high.configure(state='disabled')
-    #        else:
-    #            self.entry_low.configure(state='normal')
-    #            self.entry_high.configure(state='normal')
 
     def update_limits(self, *args, **kwargs):
         if globals.debug > 1: print("axislimits.update_limits")

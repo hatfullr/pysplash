@@ -431,6 +431,7 @@ codes = {
     "fluxcal" : [
         ["fluxcal*.track*",fluxcal_track],
         ["teffs*.dat*",fluxcal_teff],
+        ["teffmethod*.dat",fluxcal_teff],
     ],
     "mesa" : [
         ["*.mesa*", mesa],

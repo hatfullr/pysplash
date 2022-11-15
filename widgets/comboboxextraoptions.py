@@ -21,7 +21,8 @@ class ComboboxExtraOptions(ComboboxChoiceControls, object):
         self._divider = divider
         
         self._extra = kwargs.pop('extra', [])
-        kwargs['values'] = self._construct_values(kwargs['values'])
+        if 'values' in kwargs.keys():
+            kwargs['values'] = self._construct_values(kwargs['values'])
         if 'extra' in kwargs.keys():
             disabled = kwargs.get('disabled', [self.divider])
             if self.divider not in disabled:

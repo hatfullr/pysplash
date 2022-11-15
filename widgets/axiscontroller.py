@@ -305,22 +305,3 @@ class AxisController(LabelledFrame,object):
                 if None not in newlim:
                     self.limits.set_limits(newlim)
 
-    #def set_widgets_states(self, *args, **kwargs):
-    #    widgets = [
-    #        self.label_entry,
-    #        self.limits.entry_low,
-    #        self.limits.entry_high,
-    #        self.limits.adaptive_button,
-    #        self.scale.linear_button,
-    #        self.scale.log_button,
-    #        self.units.entry,
-    #    ]
-    #
-    #    #state = self.combobox.cget('state')
-    #    
-    #    if self.value.get().strip() in ["",None,'None','none']:
-    #        for widget in widgets: widget.configure(state='disabled')
-    #        self.event_generate("<<DisabledWidgets>>")
-    #    else:
-    #        for widget in widgets: widget.configure(state='!disabled')
-    #        self.event_generate("<<EnabledWidgets>>")

@@ -149,7 +149,7 @@ class FileControls(tk.Frame,object):
         if len(filenames) <= 0: return "break"
         idx = filenames.index(self.current_file.get())
         nextidx = min(idx+skip_amount,len(filenames)-1)
-        if nextidx == len(filenames)-1: self.skip_amount.set(1)
+        #if nextidx == len(filenames)-1: self.skip_amount.set(1)
         if filenames[nextidx] != self.current_file.get():
             self.current_file.set(filenames[nextidx])
 
@@ -160,7 +160,7 @@ class FileControls(tk.Frame,object):
         if len(filenames) <= 0: return "break"
         idx = filenames.index(self.current_file.get())
         nextidx = max(idx-skip_amount,0)
-        if nextidx == 0: self.skip_amount.set(1)
+        #if nextidx == 0: self.skip_amount.set(1)
         if filenames[nextidx] != self.current_file.get():
             self.current_file.set(filenames[nextidx])
 

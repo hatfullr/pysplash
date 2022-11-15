@@ -62,7 +62,7 @@ class PlotAnnotations(dict, object):
         self[key].set(**kwargs)
         for k, val in kwargs.items():
             self._kwargs[key][k] = val
-
+            
     # When an artist gets removed, search to see if it was one of our artists
     def on_artist_removed(self, *args, **kwargs):
         if globals.debug > 1: print("plotannotations.on_artist_removed")

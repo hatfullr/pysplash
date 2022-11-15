@@ -58,10 +58,17 @@ class ProgressBar(ttk.Frame,object):
         self.value.trace('w', self._update_progress)
 
         #self._update_progress
-
-        self.bind("<Configure>", self._resize_canvas)
-        self._canvas_width = self.winfo_reqwidth()
-        self._canvas_height = self.winfo_reqheight()
+        
+        self.cfg_bid = None
+        
+        #def set_width_and_height(*args, **kwargs):
+        #    self._canvas_width = self.winfo_reqwidth()
+        #    self._canvas_height = self.winfo_reqheight()
+            #if self.cfg_bid is None:
+            #    self.cfg_bid = self.bind("<Configure>", self._resize_canvas, add="+")
+        self.bind("<Configure>", self._resize_canvas, add="+")
+        #self.bind("<Map>", set_width_and_height, add="+")
+        
         self._canvas.addtag_all("all")
 
 
@@ -102,7 +109,9 @@ class ProgressBar(ttk.Frame,object):
     
     def _update_progress(self, *args, **kwargs):
         try:
-            x1 = int(self.value.get()/float(self.maximum)  * self._canvas_width)
+            width = self.winfo_width()
+            height = self.winfo_height()
+            x1 = int(self.value.get()/float(self.maximum)  * width)
         
             # Update the progress rectangle coordinates
             self._canvas.coords(
@@ -110,27 +119,33 @@ class ProgressBar(ttk.Frame,object):
                 0,
                 0,
                 x1,
-                self._canvas_height,
+                height,
             )
             # Update the progress rectangle color
             color = self.get_progress_color()
-        
+            
             self._canvas.itemconfig(self._progress_rectangle, fill=color, outline=color)
         except tk.TclError as e:
             if "invalid command name" in str(e): return
             raise(e)
-            
 
     def _resize_canvas(self, event):
-        wscale = float(event.width)/self._canvas_width
-        hscale = float(event.height)/self._canvas_height
-        self._canvas_width = event.width
-        self._canvas_height = event.height
-        self._canvas.config(width=self._canvas_width, height=self._canvas_height, bg=self.get_background_color())
+        width = self.winfo_width()
+        height = self.winfo_height()
+
+        if 0 in [width, height]: return
+        
+        wscale = float(event.width)/width
+        hscale = float(event.height)/height
+
+        self._canvas.config(width=width, height=height, bg=self.get_background_color())
+
+        # This prevents complaining
+        if 0 in [wscale, hscale]: return
         self._canvas.scale("all",0,0,wscale,hscale)
 
         # Make sure the text is positioned in the center
-        center = (self._canvas_width / 2 - 2*self.cget('borderwidth'), self._canvas_height / 2 - 2*self.cget('borderwidth'))
+        center = (width / 2 - 2*self.cget('borderwidth'), height / 2 - 2*self.cget('borderwidth'))
         self._canvas.coords(
             self._text,
             center,

@@ -34,20 +34,19 @@ class GUIWidgetController:
         self._add(
             self.gui.controls.axis_controllers['Colorbar'].combobox,
             self.gui.has_data,
+            self.gui.data_is_image,
             self.gui.controls.axis_controllers['XAxis'].value,
             self.gui.controls.axis_controllers['YAxis'].value,
             comparison=[
                 True,
+                False,
                 ['x','y','z'],
                 ['x','y','z'],
             ],
+            true = {'state' : 'normal'},
             false = {'state' : 'disabled'},
+            default = {'state' : 'disabled'},
         )
-        #self._add(
-        #    self.gui.controls.axis_controllers['Colorbar'].combobox,
-        #    self.gui.time_mode,
-        #    true = {'state' : 'disabled'},
-        #))
             
         # Scales
         for axis_controller in self.gui.controls.axis_controllers.values():

@@ -20,10 +20,12 @@ from widgets.button import Button
 from widgets.labelledframe import LabelledFrame
 from widgets.axiscontroller import AxisController
 from widgets.verticalscrolledframe import VerticalScrolledFrame
+from widgets.comboboxchoicecontrols import ComboboxChoiceControls
 
 from lib.tkvariable import StringVar
 from widgets.radiobutton import RadioButton
 
+import matplotlib
 from matplotlib.axis import XAxis, YAxis
 import numpy as np
 from copy import copy,deepcopy
@@ -67,9 +69,6 @@ class Controls(tk.Frame,object):
         self.previous_colorbar_type = None
         
         self.gui.bind("<<PlotUpdate>>",self.on_plot_update,add="+")
-        self.gui.bind("<<DataChanged>>", self.update_colorbar_type,add="+")
-        self.gui.bind("<<TimeModeEnabled>>", self.update_colorbar_type,add="+")
-        self.gui.bind("<<TimeModeDisabled>>", self.update_colorbar_type,add="+")
 
         self.current_state = None
         self.previous_state = None
@@ -82,12 +81,10 @@ class Controls(tk.Frame,object):
         self.axis_controllers['XAxis'].combobox.bind("<<ComboboxSelected>>", self.update_yaxis_controller, add="+")
         self.axis_controllers['YAxis'].combobox.bind("<<ComboboxSelected>>", self.update_xaxis_controller, add="+")
         self.axis_controllers['Colorbar'].combobox.mathentry.allowempty = True
-        
-        
-        #def on_colorbar_type_changed(*args,**kwargs):
-        #    if self.axis_controllers['Colorbar'].value.get() != "": self.update_button.configure(state='!disabled')
-        #self.colorbar_type.trace('w', on_colorbar_type_changed)
 
+        self.colorbar_cmap_combobox.bind("<Return>", lambda *args, **kwargs: self.focus(), add="+")
+        
+        
         self.previous_colorbar_type = self.colorbar_type.get()
         def save_previous_colorbar_type(event):
             self.previous_colorbar_type = event.widget.value
@@ -109,6 +106,7 @@ class Controls(tk.Frame,object):
         if globals.debug > 1: print("controls.create_variables")
         self.colorbar_type = StringVar(self, "integrated", "colorbar_type")
         self.colorbar_real_mode = StringVar(self, None, "colorbar_real_mode")
+        self.colorbar_cmap = StringVar(self, matplotlib.rcParams['image.cmap'], "colorbar_cmap")
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -116,7 +114,6 @@ class Controls(tk.Frame,object):
         self.update_button = Button(
             self,
             text="Update "+hotkeys_to_string('update plot'),
-            state='disabled',
             style="UpdateButton.TButton",
             command=self.on_update_button_pressed,
         )
@@ -174,12 +171,26 @@ class Controls(tk.Frame,object):
             variable=self.colorbar_type,
             value="real",
             command=(lambda *args, **kwargs: ColorbarRealQuantityPrompt(self.gui), None),
-            state='disabled',
         )
         ToolTip.createToolTip(
             self.colorbar_real_button,
             "Similar to Integrated except the integration is limited by optical depth. Available only if you supplied either the density and opacity or the particle optical depth.",
         )
+
+
+        self.colorbar_cmap_frame = tk.LabelFrame(colorbar, text="Colormap")
+        def validate(value):
+            success = value in list(self.colorbar_cmap_combobox['values'])
+            if not success: self.colorbar_cmap_combobox.flash()
+            return success
+        self.colorbar_cmap_combobox = ComboboxChoiceControls(
+            self.colorbar_cmap_frame,
+            values=list(matplotlib.colormaps.keys()),
+            textvariable=self.colorbar_cmap,
+            validate='focusout',
+            validatecommand=(self.register(validate), '%P'),
+        )
+            
         
 
         self.axis_controllers = {
@@ -201,6 +212,10 @@ class Controls(tk.Frame,object):
         self.colorbar_surface_button.pack(side='left',fill='both',expand=True)
         self.colorbar_real_button.pack(side='left',fill='both',expand=True)
         self.colorbar_type_frame.pack(side='top',fill='both',expand=True,pady=(5,0))
+
+        self.colorbar_cmap_combobox.pack(fill='both',expand=True)
+        self.colorbar_cmap_frame.pack(side='top',fill='x')
+        
         for axis_name,axis_controller in self.axis_controllers.items():
             axis_controller.pack(side='top',fill='x')
 
@@ -256,24 +271,6 @@ class Controls(tk.Frame,object):
     def save_state(self,*args,**kwargs):
         if globals.debug > 1: print("controls.save_state")
         self.saved_state = deepcopy(self.current_state)
-        self.update_button.configure(state='disabled')#,relief='sunken')
-    
-    #def disable(self,temporarily=False):
-    #    if globals.debug > 1: print("controls.disable")
-    #    
-    #    if temporarily: self.previous_state = get_widgets_states(self._children)
-    #    else: self.previous_state = None
-    #    
-    #    #set_widgets_states(self._children,'disabled')
-
-    #def enable(self):
-    #    if globals.debug > 1: print("controls.enable")
-    #    if self.previous_state is not None:
-    #        for widget,state in self.previous_state:
-    #            widget.configure(state=state)
-    #        self.previous_state = None
-    #    else:
-    #        set_widgets_states(self._children,'normal')
 
     def is_limits_changed(self, which):
         if globals.debug > 1: print("controls.is_limits_changed")
@@ -460,12 +457,9 @@ class Controls(tk.Frame,object):
     def update_colorbar_controller(self,*args,**kwargs):
         if globals.debug > 1: print("controls.update_colorbar_controller")
 
-        if (self.axis_controllers['XAxis'].value.get() in ['x','y','z'] and
-            self.axis_controllers['YAxis'].value.get() in ['x','y','z']):
-            pass
-            #self.axis_controllers['Colorbar'].combobox.configure(state='normal')
-        elif not self.gui.time_mode.get():
-            #self.axis_controllers['Colorbar'].combobox.configure(state='readonly')
+        if (not self.gui.time_mode.get() and
+            (self.axis_controllers['XAxis'].value.get() not in ['x','y','z'] or
+            self.axis_controllers['YAxis'].value.get() not in ['x','y','z'])):
             if self.axis_controllers['Colorbar'].value.get() not in ['Point Density','','None',None]:
                 self.axis_controllers['Colorbar'].value.set("")
             
@@ -498,33 +492,3 @@ class Controls(tk.Frame,object):
             if self.previous_xaxis_value in yvalues: yaxis.combobox.enable_choice(self.previous_xaxis_value)
         self.previous_xaxis_value = value
 
-    # Allow / disallow certain colorbar types based on the data currently
-    # available in the GUI. This method gets called when events
-    # <<DataChanged>>, <<TimeModeEnabled>>, and <<TimeModeDisabled>> are
-    # generated in the GUI.
-    def update_colorbar_type(self,*args,**kwargs):
-        if globals.debug > 1: print("controls.update_colorbar_type")
-
-        states = {
-            'integrated' : {
-                'widget' : self.colorbar_integrated_button,
-                'state' : 'normal',
-            },
-            'surface' : {
-                'widget' : self.colorbar_surface_button,
-                'state' : 'normal',
-            },
-            'real' : {
-                'widget' : self.colorbar_real_button,
-                'state' : 'disabled',
-            },
-        }
-        #if self.gui.time_mode.get():
-        #    for key in states.keys():
-        #        states[key]['state'] = 'disabled'
-        #else:
-        #    if self.gui.data is not None and (self.gui.data.has_variables('opacity') or self.gui.data.has_variables('tau')):
-        #        states['real']['state'] = 'normal'
-
-        #for key, val in states.items():
-        #    val['widget'].configure(state=val['state'])

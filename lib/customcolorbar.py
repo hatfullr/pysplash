@@ -2,6 +2,7 @@ import matplotlib.colorbar
 from matplotlib.image import AxesImage
 import matplotlib.colors
 import matplotlib.image
+import matplotlib
 import globals
 import numpy as np
 
@@ -386,5 +387,12 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             for image in self.axesimages: image.set_clim((vmin,vmax))
         
         self.set_clim((vmin, vmax))
-    
+
+    def update_cmap(self, new_cmap):
+        if globals.debug > 1: print('customcolorbar.update_cmap')
+        self.cmap = matplotlib.pyplot.get_cmap(new_cmap)
+        for image in self.axesimages:
+            image.set_cmap(new_cmap)
+        self.draw_all()
+        self.cax.get_figure().canvas.draw_idle()
         

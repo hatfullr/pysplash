@@ -11,7 +11,10 @@ def find_nearest_2d(array, value, output='index'):
     array[~np.isfinite(array)] = np.nan
     index = np.where(array == value)[0] # Make sure the value isn't in the array
     if index.size == 0:
-        index = np.nanargmin(cdist([value],array,method='euclidean')[0])
+        index = np.nanargmin(np.sqrt(np.sum((array-value)**2,axis=-1)))
+        #index = np.nanargmin(np.abs(array-value))
+        #print(index)
+        #index = np.nanargmin(cdist(np.array([value]),array,method='euclidean')[0])
     if output == 'index': return index
     elif output == 'value': return array[index]
     elif output == 'both': return index,array[index]

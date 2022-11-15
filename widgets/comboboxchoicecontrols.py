@@ -11,7 +11,7 @@ else:
 class ComboboxChoiceControls(ttk.Combobox, object):
     styles_initialized = False
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, master, **kwargs):
         if not ComboboxChoiceControls.styles_initialized:
             style = ttk.Style()
             ComboboxChoiceControls.listbox_enabled_choice_style = {
@@ -32,12 +32,10 @@ class ComboboxChoiceControls(ttk.Combobox, object):
                 selectbackground=[
                     ('readonly', style.lookup("Entry.TEntry", "fieldbackground", state=['readonly'])),
                     ('disabled', style.lookup("Entry.TEntry", "fieldbackground", state=['disabled'])),
-                    ('!disabled', style.lookup("Entry.TEntry", "fieldbackground", state=['!disabled'])),
                 ],
                 selectforeground=[
                     ('readonly', style.lookup("Entry.TEntry", "fieldforeground", state=['readonly'])),
                     ('disabled', style.lookup("Entry.TEntry", "fieldforeground", state=['disabled'])),
-                    ('!disabled', style.lookup("Entry.TEntry", "fieldforeground", state=['!disabled'])),
                 ],
                 # This controls the annoying little border that gets drawn around the entry value after
                 # selecting a value in the popdown
@@ -49,10 +47,23 @@ class ComboboxChoiceControls(ttk.Combobox, object):
             )
             ComboboxChoiceControls.styles_initialized = True
 
+        self.flash_color = kwargs.pop('flash_color', 'red')
+        self.flashing = False
+        self._flash_after_id = None
+
+        self.container = tk.Frame(master, borderwidth=1)
+            
         kwargs['style'] = kwargs.get('style', "ComboboxChoiceControls.TCombobox")
         disabled = kwargs.pop('disabled', [])
         if not isinstance(disabled, (tuple,list)): disabled = [disabled]
-        super(ComboboxChoiceControls, self).__init__(*args, **kwargs)
+        super(ComboboxChoiceControls, self).__init__(self.container, **kwargs)
+        super(ComboboxChoiceControls, self).pack(fill='both', expand=True)
+
+        self.pack = lambda *args,**kwargs: self.container.pack(*args,**kwargs)
+        self.place = lambda *args,**kwargs: self.container.place(*args,**kwargs)
+        self.grid = lambda *args,**kwargs: self.container.grid(*args,**kwargs)
+
+        self.previous_style = None
 
         # Update the listbox in the popdown toplevel so that
         # we can reference its name correctly
@@ -95,6 +106,10 @@ class ComboboxChoiceControls(ttk.Combobox, object):
         self.bind("<MouseWheel>", on_mouse_wheel, add="+")
         self.bind("<Button-4>", on_mouse_wheel, add="+")
         self.bind("<Button-5>", on_mouse_wheel, add="+")
+        def on_return(*args,**kwargs):
+            self.master.focus()
+            self.event_generate("<<ComboboxSelected>>")
+        self.bind("<Return>", on_return, add="+")
 
         self._listbox.bind("<Up>", self.previous, add="+")
         self._listbox.bind("<Down>", self.next, add="+")
@@ -220,3 +235,32 @@ class ComboboxChoiceControls(ttk.Combobox, object):
     def enable_choice(self, choice):
         if isinstance(choice, int): choice = list(self['values'])[choice]
         self._choices[choice]['state'] = 'enabled'
+
+    def destroy(self, *args, **kwargs):
+        if self._flash_after_id is not None: self.after_cancel(self._flash_after_id)
+        super(ComboboxChoiceControls,self).destroy(*args,**kwargs)
+
+    def flash(self,time=1000):
+        # Set the focus to this widget
+        self.focus()
+        
+        if not self.flashing:
+            self.flashing = True
+            self.previous_style = {
+                'background':self.container.cget('background'),
+            }
+            self.container.configure(background=self.flash_color)
+        else:
+            # We are already flashing, so we should extend the flash duration
+            # such that the flashing ends "time" from now
+            if self._flash_after_id is not None:
+                self.after_cancel(self._flash_after_id)
+        self._flash_after_id = self.after(time,self._stop_flash)
+        return "break"
+    
+    def _stop_flash(self,*args,**kwargs):
+        if self._flash_after_id is not None:
+            self.after_cancel(self._flash_after_id)
+        self._flash_after_id = None
+        if self.previous_style is not None: self.container.configure(self.previous_style)
+        self.flashing = False

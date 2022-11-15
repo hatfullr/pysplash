@@ -39,7 +39,6 @@ from functions.tkeventtomatplotlibmouseevent import tkevent_to_matplotlibmouseev
 from functions.getallchildren import get_all_children
 from functions.hotkeystostring import hotkeys_to_string
 from functions.annotateparticle import AnnotateParticle
-from functions.setwidgetstatepermanent import set_widget_state_permanent, release_widget_state_permanent
 from functions.setpreference import set_preference
 from functions.getpreference import get_preference
 
@@ -298,10 +297,6 @@ class InteractivePlot(ResizableFrame,object):
         
     def update(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.update")
-        # If we are waiting to update, then make sure the controls' update button is disabled
-        #self.gui.controls.update_button.state(['disabled'])
-        #if self._updating: return
-        
         if globals.plot_update_delay > 0:
             if self._after_id_update is not None:
                 self.after_cancel(self._after_id_update)
@@ -357,6 +352,7 @@ class InteractivePlot(ResizableFrame,object):
                 else:
                     self.colorbar.disconnect_axesimage(self.drawn_object)
                     self.drawn_object.remove()
+
             self.drawn_object = self.ax.imshow(
                 self.gui.data['image'],
                 origin='lower',
@@ -605,7 +601,7 @@ class InteractivePlot(ResizableFrame,object):
             #    self.canvas.blit_artists.append(self.drawn_object)
 
             self.update_help_text()
-            
+
             self.gui.event_generate("<<PlotUpdate>>")
             
             self.draw()
@@ -628,6 +624,8 @@ class InteractivePlot(ResizableFrame,object):
                 except: continue
                 toreload.append(str(key))
             self.plot_annotations.reload(which=toreload)
+            
+            self.gui.event_generate("<<AfterPlotUpdate>>")
 
     def after_scatter_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_scatter_calculate")
@@ -690,12 +688,13 @@ class InteractivePlot(ResizableFrame,object):
                 pos = self.plot_annotations['time'].get_position()
                 if self.plot_annotations['time'].get_visible():
                     if xpos == pos[0] and ypos == pos[1]:
-                        self.plot_annotations.configure('time',visible=False)
+                        self.plot_annotations.configure('time',text=text,visible=False)
                     else:
-                        self.plot_annotations.configure('time',position=(xpos,ypos))
+                        self.plot_annotations.configure('time',text=text,position=(xpos,ypos))
                 else: # Not visible yet
-                    self.plot_annotations.configure('time',position=(xpos,ypos),visible=True)
+                    self.plot_annotations.configure('time',text=text,position=(xpos,ypos),visible=True)
         self.canvas.draw_idle()
+        #self.draw()
 
     def reset_xylim(self,which='both',draw=True):
         if globals.debug > 1: print("interactiveplot.reset_xylim")
@@ -826,8 +825,6 @@ class InteractivePlot(ResizableFrame,object):
         
         if self.is_scatter_plot.get():
             self.update()
-        else:
-            self.gui.controls.update_button.configure(state='!disabled')
 
     def start_pan(self, event):
         if globals.debug > 1: print("interactiveplot.start_pan")
@@ -862,8 +859,6 @@ class InteractivePlot(ResizableFrame,object):
         self.gui.controls.axis_controllers['YAxis'].limits.set_limits(self.ax.get_ylim())
         if self.is_scatter_plot.get():
             self.update()
-        else:
-            self.gui.controls.update_button.configure(state='!disabled')
         
     def stop_pan(self, event):
         if globals.debug > 1: print("interactiveplot.stop_pan")
@@ -961,8 +956,6 @@ class InteractivePlot(ResizableFrame,object):
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
             xlimits.adaptive_off()
             ylimits.adaptive_off()
-            set_widget_state_permanent(xlimits.adaptive_button,['disabled'])
-            set_widget_state_permanent(ylimits.adaptive_button,['disabled'])
             
             # Update the origin
             self.origin = self.get_xy_data()[self.track_id.get()]
@@ -971,8 +964,7 @@ class InteractivePlot(ResizableFrame,object):
 
             if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
                 self.update()
-            else:
-                self.gui.controls.update_button.configure(state='!disabled')
+
 
     def track_and_annotate(self, event):
         if globals.debug > 1: print("interactiveplot.track_and_annotate")
@@ -997,16 +989,10 @@ class InteractivePlot(ResizableFrame,object):
 
             self.tracking = False
             self.track_id.set(-1)
-
-            
             
             # Re-allow adaptive limits
             xlimits = self.gui.controls.axis_controllers['XAxis'].limits
             ylimits = self.gui.controls.axis_controllers['YAxis'].limits
-            release_widget_state_permanent(xlimits.adaptive_button)
-            release_widget_state_permanent(ylimits.adaptive_button)
-            xlimits.adaptive_button.configure(state='!disabled')
-            ylimits.adaptive_button.configure(state='!disabled')
 
     def annotate_tracked_particle(self, event=None):
         if globals.debug > 1: print("interactiveplot.annotate_tracked_particle")
@@ -1357,3 +1343,4 @@ class InteractivePlot(ResizableFrame,object):
         if not self.is_scatter_plot.get():
             self.gui.set_user_controlled(True)
             self.hotkeys.enable()
+
