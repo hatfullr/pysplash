@@ -32,14 +32,12 @@ class MatplotlibHotkeys:
 
     def process_local_event(self, obj, event):
         if globals.debug > 1: print("matplotlibhotkeys.process_local_event")
-        print("Hello?")
         if event.x is None and event.y is None: return
         if event.key == obj['key']: obj['function'](event)
 
     def process_event(self, event_type, obj, event):
         if globals.debug > 1: print("matplotlibhotkeys.process_event")
-        print("Hello?")
-        if event_type == "KeyPress":
-            print(event)
+        #if event_type == "KeyPress":
+        #    print(event)
         
         

@@ -26,7 +26,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
 
         self.resolution_step = 0
         self._interrupt = False
-        
+
         self.data_is_image = False
         if hasattr(data,"is_image"):
             if data.is_image:

@@ -20,6 +20,7 @@ import globals
 import numpy as np
 
 class AxisController(LabelledFrame,object):
+    min_log_default = 1.e-6
     def __init__(self,master,gui,text,relief='sunken',bd=1,allowadaptive=True,**kwargs):
         if globals.debug > 1: print("axiscontroller.__init__")
         super(AxisController,self).__init__(
@@ -215,7 +216,7 @@ class AxisController(LabelledFrame,object):
                 high = self.limits.high.get()
 
                 if current_scale == 'log10':
-                    low = max(low, 1.e-6)
+                    low = max(low, AxisController.min_log_default)
                 if self.previous_scale == 'linear':
                     if current_scale == 'log10':
                         self.limits.low.set(np.log10(low))

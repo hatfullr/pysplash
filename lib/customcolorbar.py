@@ -1,5 +1,6 @@
 import matplotlib.colorbar
 from matplotlib.image import AxesImage
+from widgets.axiscontroller import AxisController
 import matplotlib.colors
 import matplotlib.image
 import matplotlib
@@ -75,6 +76,13 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             self.vmin = cminmax[0]
             self.vmax = cminmax[1]
             self.norm = matplotlib.colors.Normalize(vmin=self.vmin,vmax=self.vmax)
+
+            if self.axiscontroller_connected:
+                scale = self.axis_controller.scale.get()
+                if scale == 'log10': self.vmin = max(self.vmin, AxisController.min_log_default)
+
+            if np.isnan(self.vmin): self.vmin = 0 # Fallback in emergency
+            if np.isnan(self.vmax): self.vmax = 1 # Fallback in emergency
             
             # Implicitly calls update_axesimage_clim when cax limits are modified
             if self.side in ['right', 'left']:
@@ -92,65 +100,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             if isinstance(child, AxesImage):
                 return child
         return None
-    
-    """
-    def calculate_limits(self,data=None,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.calculate_limits")
-        if self.visible:
-            # Get the color data in the plot
-            vmin,vmax = None, None
-            if data is None:
-                axesimage = self.find_axesimage()
-                if axesimage:
-                    data = axesimage.get_array()
-                # Point density plots always range between 0 and 1,
-                # except when it's on a log scale (not supported yet)
-                from lib.pointdensityplot import PointDensityPlot
-                if isinstance(axesimage, PointDensityPlot):
-                    vmin, vmax = 0., 1.
-
-            if data is None:
-                return [None, None]
-
-            finite_data = data[np.isfinite(data)]
-            if vmin is None: vmin = np.nanmin(finite_data)
-            if vmax is None: vmax = np.nanmax(finite_data)
-            return [vmin, vmax]
-        else: return [None, None]
-    """
-
-    def update_limits(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.update_limits")
-        self.set_clim(self.calculate_limits())
-
-    def connect_canvas(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.connect_canvas")
-        self.connected_canvas = self._ax.get_figure().canvas
-        self.connect_resize()
-        self.connect_draw()
-        
-        if self.side in ['right', 'left']:
-            self.image_cid = self.cax.callbacks.connect(
-                "ylim_changed",
-                self.update_axesimage_clim,
-            )
-        elif self.side in ['top', 'bottom']:
-            self.image_cid = self.cax.callbacks.connect(
-                "xlim_changed",
-                self.update_axesimage_clim,
-            )
-        else: raise ValueError("Colorbar has an invalid side '",self.side,"'")
-
-    def disconnect_canvas(self,*args,**kwargs):
-        if globals.debug > 1: print("customcolorbar.disconnect_canvas")
-        self.disconnect_resize()
-        self.disconnect_axesimages()
-        #self.disconnect_draw()
-        self.connected_canvas = None
-        if self.image_cid is not None:
-            self.cax.callbacks.disconnect(self.image_cid)
-        self.image_cid = None
-
     
     def connect_draw(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.connect_draw")
@@ -186,8 +135,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         
         # When the AxisScale buttons are clicked
         self.axis_controller.bind("<<OnScaleChanged>>", self.on_scale_changed, add="+")
-        # Right before drawing the AxesImage, grab its data
-        self.axis_controller.gui.bind("<<PlotUpdate>>", self.update_data, add="+")
         for var in [self.axis_controller.limits.low, self.axis_controller.limits.high]:
             if var in globals.state_variables: globals.state_variables.remove(var)
         
@@ -200,19 +147,17 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
     # the plot, disconnect_axesimage is called.
     def connect_axesimage(self, axesimage):
         if globals.debug > 1: print("customcolorbar.connect_axesimage")
-
+        
         if axesimage in self.axesimages:
             raise Exception("cannot connect AxesImage '"+str(axesimage)+"' to the colorbar because it is already connected")
 
         def func(*args,**kwargs):
-            self.update_data()
             if self.axiscontroller_connected and self.axis_controller.limits.adaptive.get():
                 self.set_adaptive_limits()
 
         self.axesimages.append(axesimage)
         self._axesimages_cids.append(axesimage.get_figure().canvas.mpl_connect("draw_event",func))
         
-        #self.update_data()
         #if self.axis_controller.limits.adaptive.get():
         #self.set_adaptive_limits()
 
@@ -288,7 +233,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 raise NotImplementedError("placing the colorbar on the top or bottom of the plot is not yet supported")
 
         self.visible = True
-        self.connect_canvas()
         
     def hide(self,*args,**kwargs):
         if globals.debug > 1: print("customcolorbar.hide")
@@ -308,7 +252,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
                 raise NotImplementedError("placing the colorbar on the top or bottom of the plot is not yet supported")
         
         self.visible = False
-        self.disconnect_canvas()
 
     def get_cax_limits(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.get_cax_limits")
@@ -317,58 +260,81 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         elif self.side in ['top', 'bottom']: return self.cax.get_xlim()
         else: raise Exception("The colorbar has an unrecognized side attribute",self.side)
 
-    # Updates the colors of the connected AxesImage whenever the
-    # limits on the cax are modified. Prevents rapid calls
-    def update_axesimage_clim(self,*args,**kwargs):
-        if self._after_update_axesimage_clim_cid is not None:
-            self.axis_controller.after_cancel(self._after_update_axesimage_clim_cid)
-        self._after_update_axesimage_clim_cid = self.axis_controller.after(10, self._update_axesimage_clim)
-    
-    def _update_axesimage_clim(self, *args, **kwargs):
+    def update_axesimage_clim(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.update_axesimage_clim")
 
-        if self.side in ['right', 'left']:
-            for image in self.axesimages: image.set_clim(self.cax.get_ylim())
-        elif self.side in ['top', 'bottom']:
-            for image in self.axesimages: image.set_clim(self.cax.get_xlim())
+        if self.axesimage_connected:
+            # Before drawing the new plot to the screen, update the colors to
+            # omit "bad" colors (NaN and Inf)
+            scale = self.axis_controller.scale.get()
+            
+            vmin, vmax = self.vmin, self.vmax
+            if scale == 'log10':
+                vmin, vmax = 10**vmin, 10**vmax
+                for image in self.axesimages:
+                    data = np.array(image.get_array()) # Removes any masking
+                    data[~np.isfinite(np.log10(data))] = np.nan
+                    image.set_data(data)
+            elif scale == '10^':
+                vmin, vmax = np.log10(max(vmin, AxisController.min_log_default)), np.log10(vmax)
+
+            if scale != 'log10':
+                for image in self.axesimages:
+                    data = np.array(image.get_array())
+                    data[~np.isfinite(data)] = 0
+                    image.set_data(data)
+            
+            for image in self.axesimages:
+                image.set_clim(vmin,vmax)
+
+    def update_bad_values(self, *args, **kwargs):
+        if globals.debug > 1: print("customcolorbar.update_bad_values")
+        scale = self.axis_controller.scale.get()
+        if scale == 'log10':
+            for image in self.axesimages:
+                data = np.array(image.get_array()) # Removes any masking
+                data[~np.isfinite(np.log10(data))] = np.nan
+                image.set_data(data)
         else:
-            raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
+            for image in self.axesimages:
+                data = np.array(image.get_array())
+                data[~np.isfinite(data)] = 0
+                image.set_data(data)
 
     def set_adaptive_limits(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.set_adaptive_limits")
 
-        data = self.data
-        vmin = None
-        vmax = None
-        for image,d in zip(self.axesimages, data):
-            valid = np.isfinite(d)
-            if np.any(valid):
-                if vmin is None: vmin = np.nanmin(d[valid])
-                else: vmin = min(vmin, np.nanmin(d[valid]))
-                if vmax is None: vmax = np.nanmax(d[valid])
-                else: vmax = max(vmax, np.nanmax(d[valid]))
-            image.set_data(d)
-        if vmin is not None:
-            self.axis_controller.limits.low.set(vmin)
-        if vmax is not None:
-            self.axis_controller.limits.high.set(vmax)
+        if self.axesimage_connected:
+            scale = self.axis_controller.scale.get()
+            
+            vmin = None
+            vmax = None
+            for image in self.axesimages:
+                d = image.get_array()
+                valid = np.isfinite(d)
+                if np.any(valid):
+                    if vmin is None: vmin = np.nanmin(d[valid])
+                    else: vmin = min(vmin, np.nanmin(d[valid]))
+                    if vmax is None: vmax = np.nanmax(d[valid])
+                    else: vmax = max(vmax, np.nanmax(d[valid]))
+
+            if scale == 'log10':
+                if vmin is not None: vmin = np.log10(max(vmin, AxisController.min_log_default))
+                if vmax is not None: vmax = np.log10(vmax)
+            elif scale == '10^':
+                if vmin is not None: vmin = 10**vmin
+                if vmax is not None: vmax = 10**vmax
+
+            if vmin is not None:
+                self.axis_controller.limits.low.set(vmin)
+            if vmax is not None:
+                self.axis_controller.limits.high.set(vmax)
 
     def on_scale_changed(self, *args, **kwargs):
         if globals.debug > 1: print("customcolorbar.on_scale_changed")
         
         # Update the limits
         self.set_adaptive_limits()
-
-    def update_data(self, *args, **kwargs):
-        if globals.debug > 1: print("customcolorbar.update_data")
-        if self.axesimage_connected:
-            scale = self.axis_controller.scale.get()
-            self.linear_data = []
-            for i, image in enumerate(self.axesimages):
-                data = image.get_array()
-                if scale == 'log10': self.linear_data.append(10**data)
-                elif scale == '10^': self.linear_data.append(np.log10(data))
-                else: self.linear_data.append(data)
 
     # Prevent double-calls when both limits change
     def on_axis_controller_limits_changed(self,*args,**kwargs):
@@ -380,12 +346,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar._on_axis_controller_limits_changed")
         if self._after_limits_changed_cid is not None:
             self.axis_controller.after_cancel(self._after_limits_changed_cid)
-
         vmin, vmax = self.axis_controller.limits.low.get(), self.axis_controller.limits.high.get()
-
-        if self.axesimage_connected:
-            for image in self.axesimages: image.set_clim((vmin,vmax))
-        
         self.set_clim((vmin, vmax))
 
     def update_cmap(self, new_cmap):
@@ -395,4 +356,3 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
             image.set_cmap(new_cmap)
         self.draw_all()
         self.cax.get_figure().canvas.draw_idle()
-        

@@ -167,6 +167,9 @@ class ParticleMenuBar(Menu, object):
 
     def update_neighbor_annotations(self,*args,**kwargs):
         if not self.gui.interactiveplot.tracking or self.gui.data is None: return
+
+        # Do nothing if we are showing a data from an image
+        if self.gui.data.is_image: return
         
         if self.neighbors is None:
             self.neighbors = self.get_neighbors(self.gui.interactiveplot.track_id.get())

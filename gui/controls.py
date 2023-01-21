@@ -107,6 +107,7 @@ class Controls(tk.Frame,object):
         self.colorbar_type = StringVar(self, "integrated", "colorbar_type")
         self.colorbar_real_mode = StringVar(self, None, "colorbar_real_mode")
         self.colorbar_cmap = StringVar(self, matplotlib.rcParams['image.cmap'], "colorbar_cmap")
+        globals.state_variables.append(self.colorbar_type)
 
     def create_widgets(self):
         if globals.debug > 1: print("controls.create_widgets")
@@ -389,7 +390,7 @@ class Controls(tk.Frame,object):
             need_quick_redraw = True
 
         # Check if the colorbar's scale has changed
-        if not need_quick_redraw and (self.gui.interactiveplot.colorbar.visible and
+        if (self.gui.interactiveplot.colorbar.visible and
             self.axis_controllers['Colorbar'].scale.get() != self.previous_axis_scales['Colorbar']):
             need_quick_redraw = True
         
@@ -409,9 +410,9 @@ class Controls(tk.Frame,object):
             )
             need_full_redraw = True
 
-        # Redraw when swapping between Integrated/Surface plots
+        # Redraw when colorbar type changed
         if (not need_full_redraw and
-            self.colorbar_type.get() != self.previous_colorbar_type):
+            self.colorbar_type in changed_variables):
             need_full_redraw = True
 
         # Save the previous scales

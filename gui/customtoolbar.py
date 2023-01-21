@@ -88,8 +88,23 @@ class CustomToolbar(NavigationToolbar2Tk):
     def set_xy_message(self, *args, **kwargs):
         if sys.version_info.major < 3: types = (str,unicode)
         else: types = str
+
+        
         for arg in args:
             if isinstance(arg, types):
+                if '\n' in arg:
+                    nlidx = arg.index('\n')
+                    leftbraceidx = nlidx + arg[nlidx:].index('[')
+                    rightbraceidx = nlidx + arg[leftbraceidx:].index(']')
+                    color_str = arg[leftbraceidx+1:rightbraceidx+1]
+
+                    if color_str != '':
+                        scale = self.gui.controls.axis_controllers['Colorbar'].scale.get()
+                        color = None
+                        if scale == 'log10': color = "%g" % (np.log10(float(color_str)))
+                        elif scale == '10^': color = "%g" % (10**float(color_str))
+                        if color is not None:
+                            arg = arg.replace("["+color_str+"]", "["+color+"]")
                 self.gui.interactiveplot.xycoords.set(arg)
                 break
         else:
@@ -202,19 +217,21 @@ class CustomToolbar(NavigationToolbar2Tk):
                             + sorted(filetypes.items()))
         tk_filetypes = [(name, '*.%s' % ext) for ext, name in sorted_filetypes]
         
-        # adding a default extension seems to break the
-        # asksaveasfilename dialog when you choose various save types
-        # from the dropdown.  Passing in the empty string seems to
-        # work - JDH!
-        
-        defaultextension = ''
-        initialfile = os.path.basename(self.savename) if self.savename else self.canvas.get_default_filename()
-        
+        if self.savename: initialfile = os.path.basename(self.savename)
+        else:
+            split = self.gui.filecontrols.current_file.get().split(".")
+            if len(split) > 0: initialfile = split[0]+".png"
+            else: initialfile = self.canvas.get_default_filename()
+
         savename = tk.filedialog.asksaveasfilename(
-            master=self.canvas.get_tk_widget().master,
-            title="Save the figure",
+            master=self.gui,
+            title="Save As...",
             filetypes=tk_filetypes,
-            defaultextension=defaultextension,
+            # Using a default extension seems to break the
+            # asksaveasfilename dialog when you choose various save types
+            # from the dropdown.  Passing in the empty string seems to
+            # work
+            defaultextension='',
             initialdir=self.initialdir,
             initialfile=initialfile,
         )

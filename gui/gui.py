@@ -219,7 +219,10 @@ class GUI(tk.Frame,object):
                     self.interactiveplot.ax.set_xlim(xlimits.get())
                 if all(np.isfinite(ylim)):
                     self.interactiveplot.ax.set_ylim(ylimits.get())
-            
+
+            if self.interactiveplot.tracking and self.data.is_image:
+                self.interactiveplot.clear_tracking()
+                    
             self.interactiveplot.update()
 
             self.controls.update_colorbar_controller()

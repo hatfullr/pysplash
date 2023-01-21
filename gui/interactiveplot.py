@@ -289,6 +289,9 @@ class InteractivePlot(ResizableFrame,object):
     def draw(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot.draw")
         #self.loading_wheel.show()
+
+        if self.colorbar.visible and self.colorbar.axiscontroller_connected:
+            self.colorbar.update_bad_values()
         
         self.canvas.draw_idle()
         self.canvas.flush_events()
@@ -444,9 +447,9 @@ class InteractivePlot(ResizableFrame,object):
             if A is None or A_display_units is None or A_physical_units is None:
                 raise Exception("One of A, A_display_units, or A_physical_units was None. This should never happen.")
             
-            m = self.gui.get_display_data('m')
-            h = self.gui.get_display_data('h')
-            rho = self.gui.get_display_data('rho')
+            m = self.gui.get_display_data('m', scaled=False)
+            h = self.gui.get_display_data('h', scaled=False)
+            rho = self.gui.get_display_data('rho', scaled=False)
 
             idx = self.gui.get_data('u') != 0
 
@@ -565,7 +568,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
-
+        
         if self._first_after_calculate:
             xydata = self.get_xy_data()
             renderer= self.canvas.get_renderer()
@@ -601,7 +604,7 @@ class InteractivePlot(ResizableFrame,object):
             #    self.canvas.blit_artists.append(self.drawn_object)
 
             self.update_help_text()
-
+            
             self.gui.event_generate("<<PlotUpdate>>")
             
             self.draw()
@@ -790,7 +793,7 @@ class InteractivePlot(ResizableFrame,object):
 
         curr_xlim = self.gui.controls.axis_controllers['XAxis'].limits.get()
         curr_ylim = self.gui.controls.axis_controllers['YAxis'].limits.get()
-
+        
         if self.tracking:
             xy = self.get_xy_data()
             x = xy[:,0][self.track_id.get()]
