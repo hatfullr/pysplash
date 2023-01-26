@@ -13,12 +13,12 @@ PySplash is a GUI inspired by SPLASH for quickly and easily plotting StarSmasher
 It is strongly encouraged that you use Python3 and install Numba. Doing so will allow PySplash to access the GPU and run up to ~450x faster.
 
 ## Setup
-Link the executable `pysplash` to your user's bin directory after downloading. In the PySplash directory, run these command:
+Link the executable `pysplash` to your user's bin directory after downloading. In the PySplash directory, run these commands:
 ```bash
 mkdir ~/bin
 ln -s pysplash ~/bin
 ```
-Check if your bin directory is included in yur `PATH` variable,
+Check if your bin directory is included in your `PATH` variable,
 ```bash
 echo $PATH | grep "$HOME/bin"
 ```
