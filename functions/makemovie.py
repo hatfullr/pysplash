@@ -327,7 +327,7 @@ class MakeMovie(PopupWindow, object):
             blit=False,
         )
         
-        self.anim.save(self.path.get())
+        self.anim.save(self.path.get(), writer="ImageMagick")
         self.progressbar.set_text("Done")
         self.progressbar.configure(value=0)
         

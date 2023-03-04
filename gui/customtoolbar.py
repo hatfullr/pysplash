@@ -8,18 +8,23 @@ else:
     import tkinter.ttk as ttk
     import tkinter.font as tkFont
 from widgets.button import Button
+from widgets.linkbutton import LinkButton
+from widgets.tooltip import ToolTip
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.collections import PathCollection
 from functions.hotkeystostring import hotkeys_to_string
 from functions.configuresubplots import ConfigureSubplots
 from gui.interactiveplot import InteractivePlot
+from lib.tkvariable import BooleanVar
 import matplotlib
 import numpy as np
 import sys
 import os
+from copy import copy
 
 class CustomToolbar(NavigationToolbar2Tk):
     matplotlib_default_cursor = matplotlib.backend_tools.Cursors.POINTER
+    link_icon_path = os.path.join("images","link.png")
     def __init__(self,master,gui,canvas,**kwargs):
         self.toolitems = (
             (u'Home', u'Reset original view', u'home', u'home'),
@@ -33,6 +38,19 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.toolbar = NavigationToolbar2Tk
         self.toolbar.__init__(self,self.canvas,master)
 
+        self.link = BooleanVar(self, False, "link")
+        self._buttons['Link'] = LinkButton(
+            self,
+            variable=self.link,
+            command=self._link_button_pressed,
+        )
+        ToolTip.createToolTip(
+            self._buttons['Link'],
+            "Enforce equal aspect ratio",
+        )
+        self._buttons['Link'].pack(side='left')
+        spacer = self._Spacer()
+        
         # Set the cursor to a + sign when the mouse is inside the axes and
         # a regular pointer arrow when outside the axes
         self.canvas.mpl_connect('axes_enter_event', self.on_axes_enter_event)
@@ -54,7 +72,10 @@ class CustomToolbar(NavigationToolbar2Tk):
                 child.destroy()
 
         self.toolbar.set_message = self.set_xy_message
-        
+
+    def set_cursor(self, *args, **kwargs):
+        self.canvas.set_cursor(*args, **kwargs)
+
     def home(self,*args,**kwargs):
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
@@ -101,7 +122,10 @@ class CustomToolbar(NavigationToolbar2Tk):
                     if color_str != '':
                         scale = self.gui.controls.axis_controllers['Colorbar'].scale.get()
                         color = None
-                        if scale == 'log10': color = "%g" % (np.log10(float(color_str)))
+                        if scale == 'log10':
+                            num = float(color_str)
+                            if num != 0: color = "%g" % np.log10(num)
+                            else: color = "%g" % np.nan
                         elif scale == '10^': color = "%g" % (10**float(color_str))
                         if color is not None:
                             arg = arg.replace("["+color_str+"]", "["+color+"]")
@@ -286,3 +310,68 @@ class CustomToolbar(NavigationToolbar2Tk):
         # to the default outside the axes
         if str(self.canvas.get_tk_widget().cget('cursor')) == matplotlib.backends._backend_tk.cursord[InteractivePlot.default_cursor_inside_axes]:
             self.set_cursor(InteractivePlot.default_cursor_outside_axes)
+
+    def _link_button_pressed(self, *args, **kwargs):
+        def get_information(*args, **kwargs):
+            xaxis_controller = self.gui.controls.axis_controllers['XAxis']
+            yaxis_controller = self.gui.controls.axis_controllers['YAxis']
+            
+            xlim = np.array([xaxis_controller.limits.low.get(), xaxis_controller.limits.high.get()])
+            ylim = np.array([yaxis_controller.limits.low.get(), yaxis_controller.limits.high.get()])
+            xlim_orig = copy(xlim)
+            ylim_orig = copy(ylim)
+
+            center = np.array((0.5*(xlim[0]+xlim[1]), 0.5*(ylim[0]+ylim[1])))
+            
+            ax = self.gui.interactiveplot.ax
+            axbbox = ax.patch.get_window_extent(renderer=ax.get_figure().canvas.get_renderer())
+            
+            ax_aspect = float(axbbox.width) / float(axbbox.height)
+
+            return xlim, xlim_orig, ylim, ylim_orig, abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0]), center, ax_aspect
+            
+        
+        if self.link.get():
+            xlim, xlim_orig, ylim, ylim_orig, dx, dy, center, ax_aspect = get_information()
+
+            if dx < dy:
+                dx = ax_aspect*dy
+                xlim[0] = center[0] - 0.5*dx
+                xlim[1] = center[0] + 0.5*dx
+            elif dy < dx:
+                dy = (1./ax_aspect)*dx
+                ylim[0] = center[1] - 0.5*dy
+                ylim[1] = center[1] + 0.5*dy
+
+            limits_set = False
+            if any(np.abs((xlim - xlim_orig)/xlim_orig) > 1.e-6):
+                self.gui.controls.axis_controllers['XAxis'].limits.set_limits(xlim)
+                limits_set = True
+            if any(np.abs((ylim - ylim_orig)/ylim_orig) > 1.e-6):
+                self.gui.controls.axis_controllers['YAxis'].limits.set_limits(ylim)
+                limits_set = True
+            
+            if limits_set: self.gui.controls.update_button.invoke()
+            
+            # Turn off the aspect link when the axis limits are changed asymmetrically
+            def check_aspect(*args, **kwargs):
+                if self.link.get():
+                    xlim, xlim_orig, ylim, ylim_orig, dx, dy, center, ax_aspect = get_information()
+                    current_aspect = dx/dy
+                    if abs((current_aspect - ax_aspect)/ax_aspect) > 1.e-6:
+                        self._buttons['Link'].invoke()
+            
+            self._link_bind_id = self.gui.bind("<<AfterPlotUpdate>>", check_aspect)
+            self._link_bind_id2 = self.gui.interactiveplot.bind("<Configure>", check_aspect)
+            
+        else:
+            if hasattr(self, "_link_bind_id"):
+                if self._link_bind_id is not None:
+                    self.gui.unbind("<<AfterPlotUpdate>>", self._link_bind_id)
+                    self._link_bind_id = None
+            if hasattr(self, "_link_bind_id2"):
+                if self._link_bind_id2 is not None:
+                    self.gui.interactiveplot.unbind("<Configure>", self._link_bind_id2)
+                    self._link_bind_id2 = None
+        
+    

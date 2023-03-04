@@ -74,11 +74,12 @@ class ArtistEditor(VerticalScrolledFrame, object):
             if (not isinstance(value, (float,int,str,tuple,list,np.ndarray)) or
                 (isinstance(value, (tuple,list,np.ndarray)) and len(value) > 4)):
                 continue
-            
+
             try: self.artist.set(**{name:value})
             except AttributeError as e:
-                if "object has no property '" not in str(e): raise
-                else: continue
+                continue
+                #if "object has no property '" not in str(e): raise
+                #else: continue
             else:
                 self.properties[name] = value
                 self.initial_properties[name] = value

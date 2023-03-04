@@ -172,7 +172,7 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
         self.thread = None
         
         self.set_data(self._data)
-
+        
         self.after_calculate()
         if self.aftercalculate is not None:
             self.aftercalculate(*args,**kwargs)

@@ -72,7 +72,10 @@ class AxisController(LabelledFrame,object):
                     # Apply the scaling to the resulting data
                     if not self.is_colorbar:
                         scale = self.scale.get()
-                        if scale == 'log10': self._data = np.log10(self._data)
+                        if scale == 'log10':
+                            idx = self._data != 0
+                            self._data[idx] = np.log10(self._data[idx])
+                            self._data[~idx] = np.nan
                         elif scale == '10^':
                             if self.scale.can_data_overflow_with_pow10(self._data):
                                 self.scale.set('linear')

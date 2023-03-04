@@ -148,8 +148,10 @@ class GUI(tk.Frame,object):
         
         if first:
             # Setup the limits on the interactive plot using user's preferences
-            self.interactiveplot.ax.set_xlim(self.controls.axis_controllers['XAxis'].limits.get())
-            self.interactiveplot.ax.set_ylim(self.controls.axis_controllers['YAxis'].limits.get())
+            xlim = self.controls.axis_controllers['XAxis'].limits.get()
+            ylim = self.controls.axis_controllers['YAxis'].limits.get()
+            if xlim[0] != xlim[1]: self.interactiveplot.ax.set_xlim(xlim)
+            if ylim[0] != ylim[1]: self.interactiveplot.ax.set_ylim(ylim)
             self.interactiveplot.colorbar.set_clim(self.controls.axis_controllers['Colorbar'].limits.get())
 
             if self.interactiveplot.tracking:
@@ -215,10 +217,10 @@ class GUI(tk.Frame,object):
                 self.interactiveplot.reset_xylim(which='ylim')
             else:
                 xlim, ylim = xlimits.get(), ylimits.get()
-                if all(np.isfinite(xlim)):
-                    self.interactiveplot.ax.set_xlim(xlimits.get())
-                if all(np.isfinite(ylim)):
-                    self.interactiveplot.ax.set_ylim(ylimits.get())
+                if all(np.isfinite(xlim)) and xlim[0] != xlim[1]:
+                    self.interactiveplot.ax.set_xlim(xlim)
+                if all(np.isfinite(ylim)) and ylim[0] != ylim[1]:
+                    self.interactiveplot.ax.set_ylim(ylim)
 
             if self.interactiveplot.tracking and self.data.is_image:
                 self.interactiveplot.clear_tracking()

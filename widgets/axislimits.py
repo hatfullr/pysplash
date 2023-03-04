@@ -93,9 +93,9 @@ class AxisLimits(tk.LabelFrame,object):
         if axis:
             self.axis=axis
             if isinstance(self.axis, XAxis):
-                self.cid = self.axis.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
+                self.cid = self.axis.axes.callbacks.connect("xlim_changed",self.on_axis_limits_changed)
             elif isinstance(self.axis, YAxis):
-                self.cid = self.axis.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
+                self.cid = self.axis.axes.callbacks.connect("ylim_changed",self.on_axis_limits_changed)
             self.connected = True
             # Update the entry widgets
             self.on_axis_limits_changed()

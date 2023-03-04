@@ -73,8 +73,8 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar.set_clim")
         if None not in cminmax:
             lim = self.get_cax_limits()
-            self.vmin = cminmax[0]
-            self.vmax = cminmax[1]
+            self.vmin = min(cminmax)
+            self.vmax = max(cminmax)
             self.norm = matplotlib.colors.Normalize(vmin=self.vmin,vmax=self.vmax)
 
             if self.axiscontroller_connected:
@@ -83,14 +83,15 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
             if np.isnan(self.vmin): self.vmin = 0 # Fallback in emergency
             if np.isnan(self.vmax): self.vmax = 1 # Fallback in emergency
-            
+
             # Implicitly calls update_axesimage_clim when cax limits are modified
-            if self.side in ['right', 'left']:
-                self.cax.set_ylim(self.vmin,self.vmax)
-            elif self.side in ['top', 'bottom']:
-                self.cax.set_xlim(self.vmin,self.vmax)
-            else:
-                raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
+            if self.vmax != self.vmin:
+                if self.side in ['right', 'left']:
+                    self.cax.set_ylim(self.vmin,self.vmax)
+                elif self.side in ['top', 'bottom']:
+                    self.cax.set_xlim(self.vmin,self.vmax)
+                else:
+                    raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
 
             self.draw_all()
     

@@ -773,6 +773,9 @@ class InteractivePlot(ResizableFrame,object):
     def zoom(self, event, which="both"):
         if globals.debug > 1: print("interactiveplot.zoom")
         if not event_in_axis(self.ax, event): return
+
+        if self.gui.plottoolbar.link.get() and which != 'both':
+            self.gui.plottoolbar.link.set(False)
         
         event = tkevent_to_matplotlibmouseevent(self.ax, event)
 

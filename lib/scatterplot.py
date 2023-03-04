@@ -1,9 +1,7 @@
 import sys
 if sys.version_info.major < 3:
-    import Tkinter as tk
     from customaxesimage import CustomAxesImage
 else:
-    import tkinter as tk
     from lib.customaxesimage import CustomAxesImage
 
 import globals
@@ -77,14 +75,15 @@ class ScatterPlot(CustomAxesImage,object):
         self.y = y
         self.s = s
         self.c = c
-
+        
         if self.c is None: self.c = np.full(len(x),ScatterPlot.default_color_index,dtype=int)
-
+        
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
         
         cmap = kwargs.pop('cmap',ScatterPlot.cmap)
         norm = None
+
         if cmap == ScatterPlot.cmap:
             norm = matplotlib.colors.Normalize(vmin=0,vmax=ScatterPlot.Ncolors)
             
