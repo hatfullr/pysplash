@@ -5,7 +5,7 @@ else:
     from lib.customaxesimage import CustomAxesImage
 
 import globals
-from time import time
+import time
 import numpy as np
 import math
 import multiprocessing
@@ -111,7 +111,7 @@ class ScatterPlot(CustomAxesImage,object):
     
     def calculate(self,*args,**kwargs):
         if globals.debug > 1: print("scatterplot.calculate")
-        if globals.debug > 0: start = time()
+        if globals.debug > 0: start = time.time()
         xmin,xmax,ymin,ymax = list(self.ax.get_xlim())+list(self.ax.get_ylim())
         idx = np.logical_and(
             np.logical_and(self.x > xmin, self.x < xmax),
@@ -128,7 +128,7 @@ class ScatterPlot(CustomAxesImage,object):
             else:
                 self.calculate_data_cpu(self.x[idx],self.y[idx],self.c[idx])
 
-            if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time()-start))
+            if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time.time()-start))
 
     if has_jit:
         # The string argument to cuda.jit might make it run faster, I'm not sure.

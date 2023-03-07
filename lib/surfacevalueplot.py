@@ -10,7 +10,7 @@ import kernel
 import globals
 from time import time
 from collections import Counter
-if globals.debug > 0: from time import time
+if globals.debug > 0: import time
 
 try:
     from numba import cuda, types
@@ -55,7 +55,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
 
     def calculate(self,*args,**kwargs):
         if globals.debug > 1: print("surfacevalueplot.calculate")
-        if globals.debug > 0: start = time()
+        if globals.debug > 0: start = time.time()
 
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()
@@ -77,7 +77,7 @@ class SurfaceValuePlot(CustomAxesImage,object):
             self._data = np.full(np.shape(self._data),np.nan,dtype=np.double)
             self.calculate_data(idx)
             #self._data *= self.units / self.cunits
-        if globals.debug > 0: print("surfacevalueplot.calculate took %f seconds" % (time()-start))
+        if globals.debug > 0: print("surfacevalueplot.calculate took %f seconds" % (time.time()-start))
 
     
     if has_jit:

@@ -292,7 +292,7 @@ class InteractivePlot(ResizableFrame,object):
 
         if self.colorbar.visible and self.colorbar.axiscontroller_connected:
             self.colorbar.update_bad_values()
-        
+            
         self.canvas.draw_idle()
         self.canvas.flush_events()
         
@@ -310,7 +310,7 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1:
             print("interactiveplot._update")
             print("    self.ax = ",self.ax)
-
+        
         if self.gui.data is None:
             self.draw()
             return
@@ -388,7 +388,7 @@ class InteractivePlot(ResizableFrame,object):
         # Don't try to plot anything if there's no data to plot
         if x is None or y is None:
             # Update the 'help' text in the plot
-            self.update_help_text()
+            #self.update_help_text()
             self.draw()
             self.loading_wheel.hide()
             return
@@ -568,7 +568,7 @@ class InteractivePlot(ResizableFrame,object):
 
     def after_calculate(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.after_calculate")
-        
+
         if self._first_after_calculate:
             xydata = self.get_xy_data()
             renderer= self.canvas.get_renderer()
@@ -596,18 +596,20 @@ class InteractivePlot(ResizableFrame,object):
             
             # Make absolutely sure that the only drawn object on the axis is
             # the one we just created
-            for child in self.ax.get_children():
-                if isinstance(child,matplotlib.image.AxesImage) and child is not self.drawn_object:
-                    child.remove()
+            if not self.gui.time_mode.get():
+                for child in self.ax.get_children():
+                    if isinstance(child,matplotlib.image.AxesImage) and child is not self.drawn_object:
+                        child.remove()
 
             #if self.drawn_object not in self.canvas.blit_artists:
             #    self.canvas.blit_artists.append(self.drawn_object)
 
-            self.update_help_text()
+            #self.update_help_text()
             
             self.gui.event_generate("<<PlotUpdate>>")
             
-            self.draw()
+            if not self.gui.time_mode.get(): self.draw()
+            #self.draw()
             
             self.previous_xlim = self.ax.get_xlim()
             self.previous_ylim = self.ax.get_ylim()
@@ -616,7 +618,7 @@ class InteractivePlot(ResizableFrame,object):
             if not self.gui.time_mode.get():
                 self.gui.message.clear(check="Drawing plot")
             else: self.gui.message.clear(check="Creating time mode plot...")
-            self.enable()
+            #self.enable()
             
             # It is ridiculous, but Matplotlib has some sort of bug with annotations
             # where sometimes the annotations cannot be seen. We reload them here to
@@ -1056,17 +1058,21 @@ class InteractivePlot(ResizableFrame,object):
 
     def get_xy_data(self, *args, **kwargs):
         if globals.debug > 1: print("interactiveplot.get_xy_data")
+
+        if self.gui.time_mode.get():
+            extent = self.drawn_object.get_extent()
+            return np.array([[extent[0], extent[2]],[extent[1],extent[3]]])
         if self.gui.data.is_image:
             extent = self.drawn_object.get_extent()
             return np.array([[extent[0], extent[2]],[extent[1],extent[3]]])
-        else:
-            if self.drawn_object is not None:
-                return np.column_stack((self.drawn_object.x,self.drawn_object.y))
-            else:
-                return np.column_stack((
-                    self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
-                    self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
-                ))
+        
+        if self.drawn_object is not None:
+            return np.column_stack((self.drawn_object.x,self.drawn_object.y))
+
+        return np.column_stack((
+            self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
+            self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
+        ))
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):

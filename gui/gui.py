@@ -81,7 +81,7 @@ class GUI(tk.Frame,object):
         self.create_widgets()
         self.place_widgets()
 
-        self.widget_controller = GUIWidgetController(self)
+        #self.widget_controller = GUIWidgetController(self)
 
         self.controls.axis_controllers['Colorbar'].combobox.configure(values=[],extra=[''])
 
@@ -123,14 +123,16 @@ class GUI(tk.Frame,object):
             self.menubar.data.disable()
             self.menubar.particle.disable()
             self.menubar.functions.disable()
+            self.has_data.set(False)
+            self.data_is_image.set(False)
         else:
             value = Data(value,mask=mask)
             self.menubar.data.enable()
             self.menubar.particle.enable()
             self.menubar.functions.enable()
-
-        self.has_data.set(value is not None)
-        self.data_is_image.set(value.is_image)
+        
+            self.has_data.set(True)
+            self.data_is_image.set(value.is_image)
             
         self._data = value
         self.event_generate("<<DataChanged>>")
@@ -605,6 +607,9 @@ class GUI(tk.Frame,object):
 
         if self.filecontrols.current_file not in globals.state_variables:
             globals.state_variables.append(self.filecontrols.current_file)
+
+        # Read in the current data file
+        self.read()
 
         # Stale the axis controllers so that we obtain the correct data
         # (the shape of the data has changed now)

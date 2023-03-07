@@ -115,11 +115,11 @@ class ComboboxChoiceControls(ttk.Combobox, object):
         self._listbox.bind("<Down>", self.next, add="+")
 
     def __setitem__(self,item,value):
-        super(ComboboxExtraOptions,self).__setitem__(item,value)
+        super(ComboboxChoiceControls,self).__setitem__(item,value)
         if item == 'values': self._on_values_set()
 
     def set(self,value):
-        super(ComboboxExtraOptions,self).set(self._sanitize_selection(value))
+        super(ComboboxChoiceControls,self).set(self._sanitize_selection(value))
 
     def configure(self, *args, **kwargs):
         result = super(ComboboxChoiceControls, self).configure(*args, **kwargs)

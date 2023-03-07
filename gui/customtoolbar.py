@@ -285,11 +285,17 @@ class CustomToolbar(NavigationToolbar2Tk):
 
     def disable(self,*args,**kwargs):
         for child in self.winfo_children():
-            child.configure(state='disabled')
+            try:
+                child.configure(state='disabled')
+            except tk.TclError as e:
+                if "unknown option" not in str(e): raise(e)
 
     def enable(self,*args,**kwargs):
         for child in self.winfo_children():
-            child.configure(state='normal')
+            try:
+                child.configure(state='normal')
+            except tk.TclError as e:
+                if "unknown option" not in str(e): raise(e)
 
     def configure_subplots(self,*args,**kwargs):
         ConfigureSubplots(self.gui)

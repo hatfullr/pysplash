@@ -98,7 +98,7 @@ class Controls(tk.Frame,object):
     def on_visible(self, *args, **kwargs):
         self.current_state = {str(v):v.get() for v in globals.state_variables}
         for i,variable in enumerate(globals.state_variables):
-            variable.trace('w',self.on_state_change)
+            variable.trace('w', self.on_state_change)
         self.winfo_toplevel().unbind("<Visibility>", self.bid)
         self.save_state()
         
@@ -228,9 +228,6 @@ class Controls(tk.Frame,object):
 
     def on_state_change(self,*args,**kwargs):
         if globals.debug > 1: print("controls.on_state_change")
-
-        # By default, indicate a change in state
-        indicate_state_change = True
         
         # If the state is changing because a variable has been modified
         if len(args) >= 1:
@@ -240,9 +237,6 @@ class Controls(tk.Frame,object):
             var = self.string_to_state_variable(variable)
             if var is not None:
                 self.current_state[variable] = var.get()
-            # Do not indicate a state change if the current state is the same as the saved state
-            if len(self.compare_states(self.current_state,self.saved_state)) <= 0:
-                indicate_state_change = False
 
         # We can indicate a change in state even if a variable has not been modified
         
@@ -251,7 +245,7 @@ class Controls(tk.Frame,object):
         # Compare the current state to the previous state
         if self.saved_state is None: return
 
-        if indicate_state_change:
+        if len(self.compare_states(self.current_state,self.saved_state)) > 0:
             self.update_button.configure(state='!disabled')
         else:
             self.update_button.configure(state='disabled')

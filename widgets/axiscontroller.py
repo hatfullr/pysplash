@@ -67,10 +67,11 @@ class AxisController(LabelledFrame,object):
     def data(self):
         if self.gui.data is not None and not self.gui.data.is_image:
             if self.stale:
-                self._data, self._physical_units, self._display_units = self.combobox.get()
-                if self._data is not None:
+                if not self.is_colorbar:
+                    self._data, self._physical_units, self._display_units = self.combobox.get()
+                    if self._data is not None:
                     # Apply the scaling to the resulting data
-                    if not self.is_colorbar:
+                    #if not self.is_colorbar:
                         scale = self.scale.get()
                         if scale == 'log10':
                             idx = self._data != 0
@@ -154,7 +155,6 @@ class AxisController(LabelledFrame,object):
             
             if self.gui.data is not None:
                 # When the user selects time as an axis, we need to change global behaviors
-                
                 if not self.gui.time_mode.get():
                     if value in self.gui.data['data'].keys():
                         if np.any(self.gui.get_display_data(value, raw=True) <= 0):

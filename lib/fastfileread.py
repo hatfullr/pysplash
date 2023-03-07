@@ -1,6 +1,6 @@
 import numpy as np
 import os.path
-from time import time
+import time
 from multiprocessing import Pool
 import warnings
 import itertools
@@ -400,7 +400,7 @@ class FastFileRead(object):
         self._data = [None]*len(fileobjs)
         
         for i,fileobj in enumerate(fileobjs):
-            start = time()
+            start = time.time()
             with open(fileobj['path'],'rb') as f:
                 fileobj['buffer'] = mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ)
                 self._prepare_file(fileobj)
@@ -409,7 +409,7 @@ class FastFileRead(object):
                 else: # Binary file
                     self._data[i] = self._read_binary(fileobj)
                 fileobj['buffer'].close()
-                if self.verbose: print("%10f %s" % (time()-start,fileobj['path']))
+                if self.verbose: print("%10f %s" % (time.time()-start,fileobj['path']))
         if len(self._data) == 1: self._data = self._data[0]
 
     def _prepare_file(self,fileobj):

@@ -12,7 +12,7 @@ import matplotlib.image
 import globals
 from read_file import read_file
 from copy import copy
-from time import time
+import time
 import collections
 
 try:
@@ -132,7 +132,7 @@ class TimeModePlot(CustomAxesImage, object):
         
     def calculate(self, *args, **kwargs):
         if globals.debug > 1: print("timemodeplot.calculate")
-        if globals.debug > 0: start = time()
+        if globals.debug > 0: start = time.time()
 
         # Remove the interactive plot's currently drawn object
         for child in self.ax.get_children():
@@ -150,19 +150,19 @@ class TimeModePlot(CustomAxesImage, object):
         for i,(image,idx,group,xpixels) in enumerate(zip(self.images, self.group_idx, self.group_filenames, group_xpixels)):
             if self._interrupt: return
             self.get_data(group)
-            time = self.gui.controls.axis_controllers['XAxis'].data
+            t = self.gui.controls.axis_controllers['XAxis'].data
             y = self.gui.controls.axis_controllers['YAxis'].data
 
-            valid = np.logical_and(np.isfinite(time), np.isfinite(y))
+            valid = np.logical_and(np.isfinite(t), np.isfinite(y))
 
             if not np.any(valid):
                 image.remove()
                 continue
             
-            time = time[valid]
+            t = t[valid]
             y = y[valid]
 
-            unique_time = np.unique(time)
+            unique_time = np.unique(t)
             xbins = np.empty(len(unique_time)+1)
             xbins[:-1] = unique_time
             # This is sort-of a guess at the duration of the last time step. We don't ask for dt
@@ -170,7 +170,7 @@ class TimeModePlot(CustomAxesImage, object):
             xbins[-1] = unique_time[-1]+(unique_time[-1]-unique_time[-2])
 
             if self._interrupt: return
-            pixels, extent = self.calculate_data_cpu(time, y, xbins)
+            pixels, extent = self.calculate_data_cpu(t, y, xbins)
 
             new_data.append(pixels)
             
@@ -185,9 +185,9 @@ class TimeModePlot(CustomAxesImage, object):
             image.set_extent(extent)
             canvas.draw_idle()
 
-        self.gui.data = None
-            
-        if globals.debug > 0: print("timemodeplot.calculate took %f seconds" % (time()-start))
+        self.gui.data = None # Remove previously stored temporary data
+        
+        if globals.debug > 0: print("timemodeplot.calculate took %f seconds" % (time.time()-start))
 
     def calculate_data_cpu(self, x, y, xbins):
         if globals.debug > 1: print("timemodeplot.calculate_data_cpu")

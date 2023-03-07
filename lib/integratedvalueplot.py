@@ -8,7 +8,7 @@ import numpy as np
 import math
 import kernel
 import globals
-if globals.debug > 0: from time import time
+if globals.debug > 0: import time
 
 try:
     from numba import cuda
@@ -95,7 +95,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
 
     def calculate(self,*args,**kwargs):
         if globals.debug > 1: print("integratedvalueplot.calculate")
-        if globals.debug > 0: start = time()
+        if globals.debug > 0: start = time.time()
 
         xmin,xmax = self.ax.get_xlim()
         ymin,ymax = self.ax.get_ylim()
@@ -125,7 +125,7 @@ class IntegratedValuePlot(CustomAxesImage,object):
             self._data = np.zeros(np.shape(self._data),dtype=np.double)
             self.calculate_data(idx)
             #self._data *= self.units / self.cunits
-        if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time()-start))
+        if globals.debug > 0: print("integratedvalueplot.calculate took %f seconds" % (time.time()-start))
 
     
     if has_jit:

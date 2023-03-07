@@ -86,13 +86,16 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
 
             # Implicitly calls update_axesimage_clim when cax limits are modified
             if self.vmax != self.vmin:
+                #if self.axis_controller is not None:
+                #    self.axis_controller.limits.set_limits((self.vmin, self.vmax))
+                #else:
                 if self.side in ['right', 'left']:
                     self.cax.set_ylim(self.vmin,self.vmax)
                 elif self.side in ['top', 'bottom']:
                     self.cax.set_xlim(self.vmin,self.vmax)
                 else:
                     raise Exception("expected one of 'left', 'right', 'top', or 'bottom' for colorbar side but got '"+str(self.side)+"'")
-
+            
             self.draw_all()
     
     def find_axesimage(self, *args, **kwargs):
@@ -136,12 +139,6 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         
         # When the AxisScale buttons are clicked
         self.axis_controller.bind("<<OnScaleChanged>>", self.on_scale_changed, add="+")
-        for var in [self.axis_controller.limits.low, self.axis_controller.limits.high]:
-            if var in globals.state_variables: globals.state_variables.remove(var)
-        
-        # Whenever the limits in the axis controller are edited, update the plot
-        self.axis_controller.limits.low.trace('w', self.on_axis_controller_limits_changed)
-        self.axis_controller.limits.high.trace('w', self.on_axis_controller_limits_changed)
 
     # When an AxesImage is created, we connect this colorbar to it
     # by calling this function. When the AxesImage is removed from
@@ -347,6 +344,7 @@ class CustomColorbar(matplotlib.colorbar.ColorbarBase,object):
         if globals.debug > 1: print("customcolorbar._on_axis_controller_limits_changed")
         if self._after_limits_changed_cid is not None:
             self.axis_controller.after_cancel(self._after_limits_changed_cid)
+            self._after_limits_changed_cid = None
         vmin, vmax = self.axis_controller.limits.low.get(), self.axis_controller.limits.high.get()
         self.set_clim((vmin, vmax))
 
