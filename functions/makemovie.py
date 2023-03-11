@@ -293,24 +293,23 @@ class MakeMovie(PopupWindow, object):
             if not self.already_did_it: self.already_did_it = i == nframes-1
             if self.already_did_it: return None,
             self.gui.filecontrols.current_file.set(filenames[i])
+
+            xmin = xlow_start + dx_low*i
+            xmax = xhigh_start + dx_high*i
+            ymin = ylow_start + dy_low*i
+            ymax = yhigh_start + dy_high*i
             
-            self.gui.controls.axis_controllers['XAxis'].limits.low.set(xlow_start + dx_low*i)
-            self.gui.controls.axis_controllers['XAxis'].limits.high.set(xhigh_start + dx_high*i)
-            self.gui.controls.axis_controllers['YAxis'].limits.low.set(ylow_start + dy_low*i)
-            self.gui.controls.axis_controllers['YAxis'].limits.high.set(yhigh_start + dy_high*i)
+            self.gui.interactiveplot.ax.set_xlim((xmin,xmax))
+            self.gui.interactiveplot.ax.set_ylim((ymin,ymax))
+
             if self.gui.interactiveplot.colorbar.visible:
-                self.gui.controls.axis_controllers['Colorbar'].limits.low.set(clow_start + dc_low*i)
-                self.gui.controls.axis_controllers['Colorbar'].limits.high.set(chigh_start + dc_high*i)
+                cmin = clow_start + dc_low*i
+                cmax = chigh_start + dc_high*i
+                self.gui.interactiveplot.colorbar.set_clim(cmin, cmax)
+                #self.gui.controls.axis_controllers['Colorbar'].limits.low.set(cmin)
+                #self.gui.controls.axis_controllers['Colorbar'].limits.high.set(cmax)
             
             self.gui.controls.update_button.invoke()
-
-            #while not self.ready_to_advance:
-            #    self.gui.update_idletasks()
-            #self.ready_to_advance = False
-
-            #if isinstance(self.gui.interactiveplot.drawn_object, CustomAxesImage):
-            #    while self.gui.interactiveplot.drawn_object.calculating:
-            #        self.gui.update()
 
             self._progress += self._progress_step
             self.progressbar.set_text("Creating movie... (%3.2f%%)" % self._progress)
