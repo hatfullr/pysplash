@@ -38,7 +38,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.toolbar = NavigationToolbar2Tk
         self.toolbar.__init__(self,self.canvas,master)
 
-        if self.gui is not None: return
+        if self.gui is None: return
         
         self.link = BooleanVar(self, False, "link")
         self._buttons['Link'] = LinkButton(
