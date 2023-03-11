@@ -124,7 +124,7 @@ class AxisController(LabelledFrame,object):
             textvariable=self.label,
         )
         
-        self.limits = AxisLimits(self,self,adaptivecommands=(self.set_adaptive_limits,None),allowadaptive=self.allowadaptive)
+        self.limits = AxisLimits(self,self,adaptivecommands=(self.on_limits_adaptive_on, self.on_limits_adaptive_off),allowadaptive=self.allowadaptive)
         self.units_and_scale_frame = tk.Frame(self)
         self.units = AxisUnits(self.units_and_scale_frame, self)
         self.scale = AxisScale(self.units_and_scale_frame, self)
@@ -309,3 +309,19 @@ class AxisController(LabelledFrame,object):
                 if None not in newlim:
                     self.limits.set_limits(newlim)
 
+    def on_limits_adaptive_on(self,*args,**kwargs):
+        if globals.debug > 1: print("axiscontroller.on_limits_adaptive_on")
+        self.set_adaptive_limits()
+        
+        # If any of the axis controller limits are adaptive, disable the pan button
+        self.gui.plottoolbar.disable_button("Pan")
+
+    def on_limits_adaptive_off(self,*args,**kwargs):
+        if globals.debug > 1: print("axiscontroller.on_limits_adaptive_off")
+
+        # If all the axis controller limits are not adaptive, re-enable the pan button
+        for axis in ["XAxis", "YAxis"]:
+            if self.gui.controls.axis_controllers[axis].limits.adaptive.get(): break
+        else:
+            self.gui.plottoolbar.enable_button("Pan")
+            

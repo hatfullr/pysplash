@@ -55,6 +55,7 @@ class InteractivePlot(ResizableFrame,object):
     default_cursor_outside_axes = matplotlib.backend_tools.Cursors.POINTER
     # This needs to be a list or tuple
     plot_types_allowed_tracking = (ScatterPlot, SurfaceValuePlot)
+    plot_types_allowed_finding = (ScatterPlot, SurfaceValuePlot)
     
     colorbar_plots = (PointDensityPlot, SurfaceValuePlot, IntegratedValuePlot, TimeModePlot)
     
@@ -183,6 +184,10 @@ class InteractivePlot(ResizableFrame,object):
         if np.any(~np.isfinite(value)):
             self.clear_tracking(reason="the particle has a non-finite value on the plot")
         else:
+            # Any time the origin gets set we should make sure the adaptive limits are
+            # turned off
+            self.gui.controls.axis_controllers['XAxis'].limits.adaptive_off()
+            self.gui.controls.axis_controllers['YAxis'].limits.adaptive_off()
             self._origin = value
 
     def create_variables(self):
@@ -303,10 +308,10 @@ class InteractivePlot(ResizableFrame,object):
         if globals.plot_update_delay > 0:
             if self._after_id_update is not None:
                 self.after_cancel(self._after_id_update)
-            self._after_id_update = self.after(globals.plot_update_delay, self._update)
-        else: self._update()
+            self._after_id_update = self.after(globals.plot_update_delay, lambda *a, **kw: self._update(*args, **kwargs))
+        else: self._update(*args, **kwargs)
     
-    def _update(self,*args, **kwargs):
+    def _update(self,*args, **kw):
         if globals.debug > 1:
             print("interactiveplot._update")
             print("    self.ax = ",self.ax)
@@ -838,6 +843,10 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.start_pan")
         if not event_in_axis(self.ax, event): return
 
+        if self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get() or self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get():
+            self.gui.message("Cannot pan while using adaptive limits")
+            return
+
         if self.tracking:
             self.gui.message("Cannot pan while tracking a particle. Press "+hotkeys_to_string("track particle")+" outside the axis to disable.")
             return
@@ -858,6 +867,7 @@ class InteractivePlot(ResizableFrame,object):
         if globals.debug > 1: print("interactiveplot.drag_pan")
         if not event_in_axis(self.ax, event): return
         if self.tracking: return
+        if self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get() or self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get(): return
         
         event.key = 1
         event.y = self.canvas.get_tk_widget().winfo_height() - event.y
@@ -871,6 +881,7 @@ class InteractivePlot(ResizableFrame,object):
     def stop_pan(self, event):
         if globals.debug > 1: print("interactiveplot.stop_pan")
         if self.tracking: return
+        if self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get() or self.gui.controls.axis_controllers['XAxis'].limits.adaptive.get(): return
         
         self.gui.plottoolbar.release_pan(event)
         # Reconnect the scroll wheel zoom binding
@@ -936,42 +947,37 @@ class InteractivePlot(ResizableFrame,object):
     # position
     def track_particle(self, event=None, index=None):
         if globals.debug > 1: print("interactiveplot.track_particle")
-
+        
         if globals.time_mode:
             self.gui.message("Cannot track particles while in time mode")
             return
-
+        
         if index is None:
             if None in self.mouse: # Mouse is outside the axis
                 self.clear_tracking()
                 return
         
-        # Only do this if we are in either a scatter plot or a surface value plot
-        if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
-            self.tracking = event is not None or index is not None
-            
-            # Only get the mouse coordinates if this method was called by pressing the hotkey
-            # Find the particle closest to the mouse position
-            if event is not None:
-                self.track_id.set(self.get_closest_particle_to_mouse())
-            else:
-                if index is None:
-                    raise ValueError("Method track_particle must be called with keyword 'index' != None when keyword 'event' is not specified or is None")
-                self.track_id.set(index)
-            
-            # We are not allowed to have adaptive limits while tracking
-            xlimits = self.gui.controls.axis_controllers['XAxis'].limits
-            ylimits = self.gui.controls.axis_controllers['YAxis'].limits
-            xlimits.adaptive_off()
-            ylimits.adaptive_off()
-            
-            # Update the origin
-            self.origin = self.get_xy_data()[self.track_id.get()]
-            
-            self.gui.message("Started tracking particle "+str(self.track_id.get()))
+        # Only do this if we are in an allowed plot type
+        if not isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
+            self.gui.message("Cannot track particles in this plot type")
+            return
+        
+        self.tracking = event is not None or index is not None
+        
+        # Only get the mouse coordinates if this method was called by pressing the hotkey
+        # Find the particle closest to the mouse position
+        if event is not None:
+            self.track_id.set(self.get_closest_particle_to_mouse())
+        else:
+            if index is None:
+                raise ValueError("Method track_particle must be called with keyword 'index' != None when keyword 'event' is not specified or is None")
+            self.track_id.set(index)
+        
+        # Update the origin
+        self.origin = self.get_xy_data()[self.track_id.get()]
 
-            if isinstance(self.drawn_object, InteractivePlot.plot_types_allowed_tracking):
-                self.update()
+        self.gui.message("Started tracking particle "+str(self.track_id.get()))
+        self.update()
 
 
     def track_and_annotate(self, event):
@@ -1113,10 +1119,11 @@ class InteractivePlot(ResizableFrame,object):
 
     def _set_style(self,*args,**kwargs):
         if globals.debug > 1: print("interactiveplot._set_style")
-        self.set_style(self.style.get())
+        InteractivePlot.set_style(self.fig, self.style.get())
         
     # style is a list or tuple
-    def set_style(self,style):
+    @staticmethod
+    def set_style(fig, style):
         if globals.debug > 1: print("interactiveplot.set_style")
         
         if not isinstance(style, (list,tuple)):
@@ -1135,12 +1142,13 @@ class InteractivePlot(ResizableFrame,object):
                 if key not in rcParams.keys():
                     rcParams[key] = d[key]
 
-        self.update_rcParams(rcParams)
+        InteractivePlot.update_rcParams(fig, rcParams)
         
     # Matplotlib refuses to change its style after it has already drawn stuff.
     # So here we instead force changes to the artists to simulate as if everything
     # was redrawn
-    def update_rcParams(self,new_rcParams):
+    @staticmethod
+    def update_rcParams(fig, new_rcParams):
         if globals.debug > 1: print("interactiveplot.update_rcParams")
         # Completely update the figure by clearing everything and redrawing.
         # Most things in rcParams are supported, but some are not
@@ -1152,9 +1160,8 @@ class InteractivePlot(ResizableFrame,object):
                 matplotlib.pyplot.rcParams[key] = val
 
 
-            for ax in self.fig.get_children():
+            for ax in fig.get_children():
                 if not isinstance(ax, matplotlib.axes._base._AxesBase): continue
-                #ax = self.ax
                 figure = ax.get_figure()
                 
                 # Store keywords
@@ -1267,7 +1274,7 @@ class InteractivePlot(ResizableFrame,object):
                             for side,spine in ax.spines.items(): 
                                 spine.set_color(val)
                 
-                for child in self.get_all_ax_children(ax=ax):
+                for child in InteractivePlot.get_all_ax_children_static(ax):
                     # Make global edits to text
                     if hasattr(child, "set_fontproperties"):
                         child.set_fontproperties(font)
@@ -1276,19 +1283,22 @@ class InteractivePlot(ResizableFrame,object):
                             child.set_color(textkw['text.color'])
         
         # Draw the new figure
-        self.canvas.draw()
+        fig.canvas.draw()
 
-
-    def get_all_ax_children(self,ax=None,obj=None,result=[]):
+    def get_all_ax_children(self, ax=None,obj=None,result=[]):
         if globals.debug > 1: print("interactiveplot.get_all_ax_children")
         if ax is None: ax = self.ax
-        
+        return InteractivePlot.get_all_ax_children_static(ax,obj=obj,result=result)
+
+    @staticmethod
+    def get_all_ax_children_static(ax,obj=None,result=[]):
+        if globals.debug > 1: print("interactiveplot.get_all_ax_children_static")
         if obj is None: obj = ax
         if obj is not ax and obj not in result: result.append(obj)
         if hasattr(obj,"get_children"):
             for child in obj.get_children():
                 if child not in result: result.append(child)
-                self.get_all_ax_children(ax=ax,obj=child,result=result)
+                InteractivePlot.get_all_ax_children_static(ax,obj=child,result=result)
         else:
             if child not in result: result.append(obj)
         return result

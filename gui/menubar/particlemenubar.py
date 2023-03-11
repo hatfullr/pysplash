@@ -8,7 +8,9 @@ import matplotlib
 import lib.tkvariable as tkvariable
 from lib.tkvariable import BooleanVar
 from functions.findparticle import FindParticle
+from functions.trackparticle import TrackParticle
 from functions.annotateparticle import AnnotateParticle
+from functions.plotquantityvstime import PlotQuantityVsTime
 from gui.menubar.menu import Menu
 from gui.menubar.particlesettings import ParticleSettings
 from lib.scatterplot import ScatterPlot
@@ -50,6 +52,20 @@ class ParticleMenuBar(Menu, object):
         )
 
         self.add_command(
+            "Quick Find",
+            command=lambda *args,**kwargs: FindParticle.find(self.gui, tkvariable.get("particle", widget=".!gui.findparticle")),
+            state='disabled',
+            hotkey="quick find particle",
+        )
+
+        self.add_command(
+            "Track",
+            command=lambda *args,**kwargs: TrackParticle(self.gui),
+            state='disabled',
+            hotkey="track particle prompt",
+        )
+
+        self.add_command(
             "Annotate",
             command=lambda *args,**kwargs: AnnotateParticle(self.gui),
             state='disabled',
@@ -80,7 +96,13 @@ class ParticleMenuBar(Menu, object):
             command=self.update_neighbor_annotations,
             state='disabled',
         )
-        
+
+        self.add_command(
+            "Plot quantity vs. time",
+            command=lambda *args, **kwargs: PlotQuantityVsTime(self.gui),
+            state='disabled',
+        )
+
         self.add_command(
             "Settings",
             command=self.settings.deiconify,

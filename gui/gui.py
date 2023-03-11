@@ -163,6 +163,12 @@ class GUI(tk.Frame,object):
             self.interactiveplot.colorbar.update_cmap(self.controls.colorbar_cmap.get())
             self.controls.colorbar_cmap_combobox.bind("<<ComboboxSelected>>", lambda *args, **kwargs: self.interactiveplot.colorbar.update_cmap(self.controls.colorbar_cmap.get()), add="+")
             self.controls.colorbar_cmap.set(self.interactiveplot.colorbar.cmap.name)
+
+            # Enable/disable plot control buttons based on whether or not adaptive limits are enabled or disabled
+            for axis in ["XAxis", "YAxis"]:
+                if self.controls.axis_controllers[axis].limits.adaptive.get():
+                    self.controls.axis_controllers[axis].on_limits_adaptive_on()
+                    
         
         if len(self.filenames) > 0:
             currentfile = self.filecontrols.current_file.get()

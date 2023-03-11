@@ -38,6 +38,8 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.toolbar = NavigationToolbar2Tk
         self.toolbar.__init__(self,self.canvas,master)
 
+        if self.gui is not None: return
+        
         self.link = BooleanVar(self, False, "link")
         self._buttons['Link'] = LinkButton(
             self,
@@ -77,6 +79,7 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.canvas.set_cursor(*args, **kwargs)
 
     def home(self,*args,**kwargs):
+        if self.gui is None: super(CustomToolbar, self).home(*args, **kwargs)
         # Turn off adaptive limits on the X and Y axes
         # Reset the view
         self.gui.interactiveplot.clear_tracking()
@@ -190,6 +193,9 @@ class CustomToolbar(NavigationToolbar2Tk):
             self.gui.controls.on_state_change()
 
     def press_pan(self,*args,**kwargs):
+        if self.gui is None:
+            return super(CustomToolbar,self).press_pan(*args,**kwargs)
+        
         self.cancel_queued_zoom()
         
         super(CustomToolbar,self).press_pan(*args,**kwargs)
@@ -201,6 +207,9 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.set_cursor(matplotlib.backend_tools.Cursors.MOVE)
 
     def release_pan(self, *args, **kwargs):
+        if self.gui is None:
+            return super(CustomToolbar, self).release_pan(*args, **kwargs)
+        
         super(CustomToolbar, self).release_pan(*args, **kwargs)
         
         # Update the axis limits in the GUI
@@ -219,6 +228,8 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.set_cursor(InteractivePlot.default_cursor_inside_axes if self._mouse_in_axes else InteractivePlot.default_cursor_outside_axes)
         
     def remove_rubberband(self,event=None):
+        if self.gui is None:
+            return super(CustomToolbar,self).remove_rubberband()
         # We have to override this function because for some reason it does
         # not work properly in matplotlib
         version = matplotlib.__version__.split(".")
@@ -231,6 +242,9 @@ class CustomToolbar(NavigationToolbar2Tk):
 # https://github.com/matplotlib/matplotlib/blob/1ff14f140546b8df3f17543ff8dac3ddd210c0f1/lib/matplotlib/backends/_backend_tk.py#L782
             
     def save_figure_as(self, *args, **kwargs):
+        if self.gui is None:
+            return super(CustomToolbar, self).save_figure_as(*args, **kwargs)
+        
         filetypes = self.canvas.get_supported_filetypes().copy()
         default_filetype = self.canvas.get_default_filetype()
 
@@ -270,6 +284,9 @@ class CustomToolbar(NavigationToolbar2Tk):
         self.save_figure()
             
     def save_figure(self, *args, **kwargs):
+        if self.gui is None:
+            return super(CustomToolbar, self).save_figure(*args, **kwargs)
+        
         # If we haven't done a "Save As" yet, then do that first
         if not self.savename: self.save_figure_as()
 
@@ -297,6 +314,17 @@ class CustomToolbar(NavigationToolbar2Tk):
             except tk.TclError as e:
                 if "unknown option" not in str(e): raise(e)
 
+    def _set_button_state(self, name, state):
+        if name not in self._buttons.keys():
+            print("Key '"+str(name)+"' not found in _buttons dict. Valid keys are: "+", ".join(["'"+key+"'" for key in self._buttons.keys()]))
+        self._buttons[name].configure(state=state)
+                
+    def disable_button(self, name):
+        self._set_button_state(name, 'disabled')
+
+    def enable_button(self, name):
+        self._set_button_state(name, 'normal')
+        
     def configure_subplots(self,*args,**kwargs):
         ConfigureSubplots(self.gui)
 

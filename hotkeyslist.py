@@ -6,10 +6,6 @@
 # only work when the focus is not set on any particular widget.
 
 hotkeyslist = {
-
-
-
-    
     # Controls hotkeys
     "next file" : {
         "keylist" : ["<Right>"],
@@ -51,6 +47,18 @@ hotkeyslist = {
         "keylist" : ["f"],
         "display" : "Ctrl+f",
         "modifiers": ["<Control>"],
+        "type" : "global",
+    },
+    "quick find particle" : {
+        "keylist" : ["f"],
+        "display" : "Ctrl+Shift+f",
+        "modifiers": ["<Control>","<Shift>"],
+        "type" : "global",
+    },
+    "track particle prompt" : {
+        "keylist" : ["t"],
+        "display" : "Ctrl+t",
+        "modifiers" : ["<Control>"],
         "type" : "global",
     },
     "annotate particle" : {

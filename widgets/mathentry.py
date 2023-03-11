@@ -100,25 +100,33 @@ class MathEntry(FlashingEntry, object):
         codetext.pack(side='top', fill='both', expand=True)
 
         
-    def get_variables_and_units(self, *args, **kwargs):
+    def get_variables_and_units(self, data=None, get_display_data_method=None, get_display_units_method=None, get_physical_units_method=None):
         if self.get_variables_and_units_override is not None:
             return self.get_variables_and_units_override(*args, **kwargs)
         
         # Get the keys to the data dictionary in GUI
-        if self.gui.data is None: return None, None, None
-        data = self.gui.data['data']
+        if data is None: return None, None, None
+        data = data['data']
+
+        if get_display_data_method is None:
+            get_display_data_method = lambda key: self.gui.get_display_data(key,identifier=self.get(),scaled=False)
+        if get_display_units_method is None:
+            get_display_units_method = lambda key: np.array([self.gui.get_physical_units(key)])
+        if get_physical_units_method is None:
+            get_physical_units_method = lambda key: np.array([self.gui.get_display_units(key)])
         
-        variables = {key:self.gui.get_display_data(key,identifier=self.get(),scaled=False) for key in data.keys()}
-        physical_units = {key:np.array([self.gui.get_physical_units(key)]) for key in data.keys()}
-        display_units = {key:np.array([self.gui.get_display_units(key)]) for key in data.keys()}
+        variables = {key: get_display_data_method(key) for key in data.keys()}
+        physical_units = {key: get_display_units_method(key) for key in data.keys()}
+        display_units = {key: get_physical_units_method(key) for key in data.keys()}
 
         return variables, physical_units, display_units
     
     def get_data(self, *args, **kwargs):
         text = kwargs.pop('text',None)
         if text is None: text = self.get()
-        
-        variables, physical_units, display_units = self.get_variables_and_units()
+
+        kwargs['data'] = kwargs.get('data', self.gui.data)
+        variables, physical_units, display_units = self.get_variables_and_units(*args, **kwargs)
         
         if (text.strip() == "" or
             (variables is None and physical_units is None and display_units is None)):
