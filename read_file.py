@@ -147,6 +147,11 @@ def starsmasher(filename):
         edotunit, # uraddot
         1., # temperature
         1., # tau
+        eunit*munit, # dEemergdt
+        eunit*munit, # dEdiffdt
+        eunit*munit, # dEmaxdiffdt
+        eunit, # uraddotcool
+        eunit, # uraddotheat
     ]
 
     physical_units = [
@@ -174,6 +179,11 @@ def starsmasher(filename):
         edotunit, # uraddot
         1., # temperature
         1., # tau
+        eunit*munit, # dEemergdt
+        eunit*munit, # dEdiffdt
+        eunit*munit, # dEmaxdiffdt
+        eunit, # uraddotcool
+        eunit, # uraddotheat
     ]
 
     data, header = read_starsmasher(filename, return_headers=True)

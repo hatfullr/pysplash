@@ -121,8 +121,7 @@ class PlotQuantityVsTime(PopupWindow,object):
             )
 
             # Plot the data
-            self.progressbar.set_text("Plotting data...")
-
+            self.progressbar.configure(value=0)
             self.ax = PopoutAxis(self.gui)
             self.ax.plot(time, y)
             
@@ -148,7 +147,6 @@ class PlotQuantityVsTime(PopupWindow,object):
         time = []
         
         ystring = self.yaxis.get()
-        print(ystring)
         compact_support = None
         datalength = None
         for i,filename in enumerate(self.gui.filenames):

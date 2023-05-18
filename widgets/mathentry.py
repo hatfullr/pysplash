@@ -55,6 +55,16 @@ class MathEntry(FlashingEntry, object):
         self.bind("<<ValidateSuccess>>", self.on_validate_success,add="+")
 
         self.get_variables_and_units_override = None
+        
+        self._error_mode = False
+        try:
+            result = self.get_data()
+            if None in result: self.enter_error_mode()
+        except Exception as e:
+            self.enter_error_mode(error=e)
+
+    @property
+    def error_mode(self): return self._error_mode
 
     def configure(self,*args,**kwargs):
         super(MathEntry,self).configure(*args,**kwargs)
@@ -122,6 +132,7 @@ class MathEntry(FlashingEntry, object):
         return variables, physical_units, display_units
     
     def get_data(self, *args, **kwargs):
+        if self._error_mode: return None, None, None
         text = kwargs.pop('text',None)
         if text is None: text = self.get()
 
@@ -139,8 +150,13 @@ class MathEntry(FlashingEntry, object):
             text = imp+text
 
         # We feed in the unscaled variables only
-        loc = {}
-        exec(text, variables, loc)
+        try:
+            loc = {}
+            exec(text, variables, loc)
+        except NameError as e:
+            self.enter_error_mode(error=e)
+            return None, None, None
+            
         result1 = loc['result']
         loc = {}
         exec(text, physical_units, loc)
@@ -183,3 +199,30 @@ class MathEntry(FlashingEntry, object):
         if self.bid: self.unbind("<FocusOut>", self.bid)
         self.bid = None
         self.event_generate("<<MathEntrySaved>>")
+
+    def enter_error_mode(self, *args, **kwargs):
+        error = kwargs.get('error', None)
+        errtext = ""
+        if error is None:
+            errtext = "UnknownError"
+        else:
+            errtext = type(error).__name__ + ": "+str(error)
+        self.delete(0, 'end')
+        self.insert(0, errtext)
+
+        self.on_validate_fail()
+
+        if not self._error_mode: 
+            self.err_bid = self.bind("<Button-1>", self.exit_error_mode, add="+")
+            self.err_bid2 = self.bind("<KeyPress>", self.exit_error_mode, add="+")
+            self._error_mode = True
+
+    def exit_error_mode(self, *args, **kwargs):
+        # If we were in error mode
+        if self._error_mode:
+            self.delete(0, 'end')
+            self.unbind("<Button-1>", self.err_bid)
+            self.unbind("<KeyPress>", self.err_bid2)
+            self.err_bid = None
+            self.err_bid2 = None
+            self._error_mode = False

@@ -576,6 +576,7 @@ class InteractivePlot(ResizableFrame,object):
 
         if self._first_after_calculate:
             xydata = self.get_xy_data()
+            if xydata is None: return # Escape if there was some error
             renderer= self.canvas.get_renderer()
             for ID, annotation in self.plot_annotations.items():
                 try: int(ID)
@@ -900,6 +901,7 @@ class InteractivePlot(ResizableFrame,object):
             return
 
         xy = self.get_xy_data()
+        if xy is None: return # Escape if there was some error
         colors = self.colors if self.colors is not None else np.full(len(xy), ScatterPlot.default_color_index)
 
         # Only do this if we are in a scatter plot
@@ -1074,11 +1076,12 @@ class InteractivePlot(ResizableFrame,object):
         
         if self.drawn_object is not None:
             return np.column_stack((self.drawn_object.x,self.drawn_object.y))
+        
+        x = self.gui.controls.axis_controllers['XAxis'].combobox.get()[0]
+        y = self.gui.controls.axis_controllers['YAxis'].combobox.get()[0]
 
-        return np.column_stack((
-            self.gui.controls.axis_controllers['XAxis'].combobox.get()[0],
-            self.gui.controls.axis_controllers['YAxis'].combobox.get()[0],
-        ))
+        if x is None or y is None: return None
+        return np.column_stack((x,y))
 
     # event needs to be a Matplotlib event from mpl_connect
     def press_select(self, event):
