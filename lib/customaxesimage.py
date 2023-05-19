@@ -170,7 +170,6 @@ class CustomAxesImage(matplotlib.image.AxesImage,object):
     def _after_calculate(self,*args,**kwargs):
         if globals.debug > 1: print("customaxesimage._after_calculate")
         self.thread = None
-        
         self.set_data(self._data)
         
         self.after_calculate()

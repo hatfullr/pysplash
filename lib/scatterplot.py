@@ -36,7 +36,7 @@ def update_cmap():
     ncolors = ScatterPlot.Ncolors
     
     IDs = np.array_split(np.arange(len(newcolors)),ncolors+1) 
-    chunks = np.array_split(np.empty(newcolors.shape),ncolors+1)
+    chunks = np.array_split(np.full(newcolors.shape, np.nan),ncolors+1)
     chunks[0] = [1.,1.,1.,1.] # white
     chunks[1] = [0.,0.,0.,1.] # black
     chunks[ScatterPlot.default_color_index] = matplotlib.colors.to_rgba(globals.default_particle_color)
@@ -56,6 +56,7 @@ def update_cmap():
     
     for i,chunk in zip(IDs,chunks):
         newcolors[i] = chunk
+    
     ScatterPlot.cmap = matplotlib.colors.ListedColormap(newcolors)
 
 class ScatterPlot(CustomAxesImage,object):
@@ -80,13 +81,12 @@ class ScatterPlot(CustomAxesImage,object):
         
         self.cpu_mp_time = 0.
         self.cpu_serial_time = np.inf
-        
-        cmap = kwargs.pop('cmap',ScatterPlot.cmap)
-        norm = None
 
-        if cmap == ScatterPlot.cmap:
+        cmap = kwargs.pop('cmap', ScatterPlot.cmap)
+        norm = None
+        if cmap is ScatterPlot.cmap:
             norm = matplotlib.colors.Normalize(vmin=0,vmax=ScatterPlot.Ncolors)
-            
+        
         super(ScatterPlot,self).__init__(
             self.ax,
             np.full((1,1),np.nan,dtype='uint8'),
@@ -127,7 +127,7 @@ class ScatterPlot(CustomAxesImage,object):
                 self.calculate_data_gpu(self.x[idx],self.y[idx],self.c[idx])
             else:
                 self.calculate_data_cpu(self.x[idx],self.y[idx],self.c[idx])
-
+            
             if globals.debug > 0: print("scatterplot.calculate took %f seconds" % (time.time()-start))
 
     if has_jit:
