@@ -57,11 +57,6 @@ class MathEntry(FlashingEntry, object):
         self.get_variables_and_units_override = None
         
         self._error_mode = False
-        try:
-            result = self.get_data()
-            if None in result: self.enter_error_mode()
-        except Exception as e:
-            self.enter_error_mode(error=e)
 
     @property
     def error_mode(self): return self._error_mode
@@ -153,8 +148,14 @@ class MathEntry(FlashingEntry, object):
         try:
             loc = {}
             exec(text, variables, loc)
-        except NameError as e:
-            self.enter_error_mode(error=e)
+        except Exception as e:
+            if type(e) == NameError:
+                self.enter_error_mode(error=e)
+            else:
+                text = self.get()
+                if "NameError: " in text:
+                    self.enter_error_mode(error=NameError(text.replace("NameError: ","")))
+                else: raise(e)
             return None, None, None
             
         result1 = loc['result']
